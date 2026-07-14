@@ -215,9 +215,9 @@ export default function EmployeeProfilePage() {
               </>
             )}
           </div>
-          <p className="text-muted-foreground mt-1">
+          <div className="text-muted-foreground mt-1">
             {isLoading ? <Skeleton className="h-4 w-32" /> : employee?.employeeCode}
-          </p>
+          </div>
         </div>
         
         {!isLoading && employee && (
@@ -291,9 +291,9 @@ export default function EmployeeProfilePage() {
                 
                 <div>
                   <h2 className="text-xl font-bold">{isLoading ? <Skeleton className="h-6 w-32 mx-auto" /> : employee?.fullName}</h2>
-                  <p className="text-muted-foreground mt-1">
+                  <div className="text-muted-foreground mt-1">
                     {isLoading ? <Skeleton className="h-4 w-24 mx-auto" /> : employee?.employment?.jobTitle || "No Title"}
-                  </p>
+                  </div>
                 </div>
               </div>
 

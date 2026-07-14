@@ -130,10 +130,10 @@ export default function EmployeeDashboard() {
           </Avatar>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{profile.fullName}</h1>
-            <p className="text-muted-foreground flex items-center gap-2 mt-1">
+            <div className="text-muted-foreground flex items-center gap-2 mt-1">
               <Badge variant="outline">{profile.employeeCode}</Badge>
               {profile.employment.jobTitle}
-            </p>
+            </div>
           </div>
         </div>
         {!isEditing && (
@@ -304,6 +304,22 @@ export default function EmployeeDashboard() {
               ) : (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
+                    <div>
+                      <p className="text-sm text-muted-foreground flex items-center gap-1.5"><User className="h-3.5 w-3.5" /> Full Name</p>
+                      <p className="font-medium mt-1">{[profile.firstName, profile.otherName, profile.lastName].filter(Boolean).join(" ")}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Gender</p>
+                      <p className="font-medium mt-1">{profile.gender || "Not provided"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Date of Birth</p>
+                      <p className="font-medium mt-1">{profile.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString() : "Not provided"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Nationality</p>
+                      <p className="font-medium mt-1">{profile.nationality || "Not provided"}</p>
+                    </div>
                     <div>
                       <p className="text-sm text-muted-foreground flex items-center gap-1.5"><Phone className="h-3.5 w-3.5" /> Phone</p>
                       <p className="font-medium mt-1">{profile.phone}</p>
