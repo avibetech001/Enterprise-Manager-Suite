@@ -1,0 +1,87 @@
+I want to build a modern Enterprise Management System (EMS) called 5th Element.
+
+This system is for internal company use only and should have a clean grey-and-white SaaS design.
+
+The system should have only two login portals:
+
+1. Management Login (Employer & HR)
+2. Employee Login
+
+FIRST-TIME SYSTEM SETUP
+
+When the system is launched for the first time and no Employer (Super Admin) account exists, the application should display a First-Time Setup page instead of the login page.
+
+The First-Time Setup page should allow the organization to create the first Employer (Super Admin) account by entering:
+
+- Company Name
+- Employer Full Name
+- Company Email
+- Phone Number
+- Password
+- Confirm Password
+
+Once the account is successfully created:
+
+- The Employer should automatically be assigned the Super Admin role.
+- The company information should be saved.
+- The system should disable the First-Time Setup page permanently.
+- The system should redirect the Employer to the Management Dashboard.
+
+Only one Super Admin account should be created through this setup process.
+
+After the initial setup is completed:
+
+- The First-Time Setup page should never be accessible again.
+- Public Management Sign Up should be disabled.
+- Only the Employer (Super Admin) should be able to create additional Management accounts (HR users).
+- HR users cannot create other HR accounts unless granted permission by the Employer.
+
+MANAGEMENT LOGIN
+
+Employer and HR should use the same Management Login page.
+
+Only users with the company's email domain (for example @5thelement.com) should be allowed to log in.
+
+After login, the system should determine whether the user is an Employer or HR based on their assigned role and display the appropriate dashboard and permissions.
+
+Employer (Super Admin):
+- Full access to every feature in the system.
+- Create HR accounts.
+- Assign or revoke HR permissions.
+- Manage all users.
+- Configure company settings.
+- Configure attendance settings.
+- Manage departments, projects, reports, and system settings.
+
+HR:
+- Uses the same Management Login.
+- Only sees modules and features permitted by the Employer through Role-Based Access Control (RBAC).
+
+EMPLOYEE LOGIN
+
+Employees should use a separate Employee Login portal.
+
+Employees cannot register themselves.
+
+Employee accounts can only be created by an authorized Employer or HR user.
+
+When HR or the Employer creates a new employee, the system should generate an activation link that can be sent via WhatsApp or email. The employee uses this link to activate their account and create their own password before logging in for the first time.
+
+Use Role-Based Access Control (RBAC) throughout the application.
+
+Do not build all features yet.
+
+First, create:
+
+- Project structure
+- Authentication
+- First-Time Setup
+- Routing
+- Role-Based Access Control
+- Database schema
+- User management
+- Dashboard layouts
+- Sidebar navigation
+- Company settings
+
+The system should be scalable, secure, and ready for additional modules.

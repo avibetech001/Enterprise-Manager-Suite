@@ -1,0 +1,1 @@
+- [Orval zod email format](orval-zod-email.md) — avoid `format: email` in openapi.yaml; orval emits zod-v4 `zod.email()` which breaks the zod v3 catalog build.

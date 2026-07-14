@@ -1,0 +1,25 @@
+import { ReactNode } from "react";
+
+export function AuthLayout({ children, title, subtitle }: { children: ReactNode; title: string; subtitle?: string }) {
+  return (
+    <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="h-12 w-12 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-xl mb-6 shadow-sm">
+            5E
+          </div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+          {subtitle && <p className="text-sm text-muted-foreground mt-2">{subtitle}</p>}
+        </div>
+        
+        {children}
+        
+        <div className="mt-12 text-center">
+          <p className="text-xs text-muted-foreground">
+            5th Element Enterprise Management System
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
