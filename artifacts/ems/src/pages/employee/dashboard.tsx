@@ -32,15 +32,14 @@ const updateProfileSchema = z.object({
     relationship: z.string().optional(),
     phone: z.string().optional(),
     address: z.string().optional(),
-  }).nullable().optional().refine(
-    (ec) => {
-      if (!ec) return true;
-      const anyFilled = !!(ec.name || ec.relationship || ec.phone || ec.address);
-      if (!anyFilled) return true;
-      return !!(ec.name && ec.relationship && ec.phone);
-    },
-    { message: "Emergency contact needs a name, relationship, and phone number." }
-  )
+  }).nullable().optional().superRefine((ec, ctx) => {
+    if (!ec) return;
+    const anyFilled = !!(ec.name || ec.relationship || ec.phone || ec.address);
+    if (!anyFilled) return;
+    if (!ec.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["name"], message: "Name is required when adding an emergency contact" });
+    if (!ec.relationship) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["relationship"], message: "Relationship is required when adding an emergency contact" });
+    if (!ec.phone) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["phone"], message: "Phone is required when adding an emergency contact" });
+  })
 });
 
 type ProfileFormValues = z.infer<typeof updateProfileSchema>;
@@ -155,7 +154,17 @@ export default function EmployeeDashboard() {
             <CardContent>
               {isEditing ? (
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <form
+                    onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                      const first = Object.values(errors)[0] as any;
+                      const message =
+                        first?.message ||
+                        first?.name?.message || first?.relationship?.message || first?.phone?.message ||
+                        "Please fix the highlighted fields.";
+                      toast.error("Can't save yet", { description: message });
+                    })}
+                    className="space-y-4"
+                  >
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <FormField
                         control={form.control}

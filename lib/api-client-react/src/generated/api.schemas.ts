@@ -194,8 +194,6 @@ export interface EmploymentDetails {
   jobTitle: string | null;
   employmentType: EmploymentType | null;
   /** @nullable */
-  reportingManagerId: number | null;
-  /** @nullable */
   startDate: string | null;
   employmentStatus: EmploymentStatus;
 }
@@ -213,8 +211,6 @@ export interface Employee {
   gender: string | null;
   /** @nullable */
   dateOfBirth: string | null;
-  /** @nullable */
-  maritalStatus: string | null;
   /** @nullable */
   nationality: string | null;
   phone: string;
@@ -246,7 +242,6 @@ export interface EmployeeInput {
   otherName?: string;
   gender?: string;
   dateOfBirth?: string;
-  maritalStatus?: string;
   nationality?: string;
   /** @minLength 1 */
   phone: string;
@@ -261,8 +256,6 @@ export interface EmployeeInput {
   departmentId?: number | null;
   jobTitle?: string;
   employmentType?: EmploymentType;
-  /** @nullable */
-  reportingManagerId?: number | null;
   startDate?: string;
   employmentStatus?: EmploymentStatus;
 }
@@ -278,8 +271,6 @@ export interface EmployeeUpdate {
   gender?: string | null;
   /** @nullable */
   dateOfBirth?: string | null;
-  /** @nullable */
-  maritalStatus?: string | null;
   /** @nullable */
   nationality?: string | null;
   /** @minLength 1 */
@@ -300,8 +291,6 @@ export interface EmployeeUpdate {
   /** @nullable */
   jobTitle?: string | null;
   employmentType?: EmploymentType | null;
-  /** @nullable */
-  reportingManagerId?: number | null;
   /** @nullable */
   startDate?: string | null;
   employmentStatus?: EmploymentStatus;

@@ -23,8 +23,6 @@ export interface Employee {
   /** @nullable */
   dateOfBirth: string | null;
   /** @nullable */
-  maritalStatus: string | null;
-  /** @nullable */
   nationality: string | null;
   phone: string;
   /** @nullable */

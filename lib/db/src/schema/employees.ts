@@ -23,7 +23,6 @@ export const employeeProfilesTable = pgTable("employee_profiles", {
   otherName: text("other_name"),
   gender: text("gender"),
   dateOfBirth: date("date_of_birth"),
-  maritalStatus: text("marital_status"),
   nationality: text("nationality"),
   personalEmail: text("personal_email"),
   residentialAddress: text("residential_address"),
@@ -71,10 +70,6 @@ export const employmentInfoTable = pgTable("employment_info", {
   ),
   jobTitle: text("job_title"),
   employmentType: text("employment_type"),
-  reportingManagerId: integer("reporting_manager_id").references(
-    (): any => usersTable.id,
-    { onDelete: "set null" },
-  ),
   startDate: date("start_date"),
   employmentStatus: text("employment_status").notNull().default("probation"),
   updatedAt: timestamp("updated_at", { withTimezone: true })

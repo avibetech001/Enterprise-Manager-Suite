@@ -17,7 +17,6 @@ export interface EmployeeInput {
   otherName?: string;
   gender?: string;
   dateOfBirth?: string;
-  maritalStatus?: string;
   nationality?: string;
   /** @minLength 1 */
   phone: string;
@@ -32,8 +31,6 @@ export interface EmployeeInput {
   departmentId?: number | null;
   jobTitle?: string;
   employmentType?: EmploymentType;
-  /** @nullable */
-  reportingManagerId?: number | null;
   startDate?: string;
   employmentStatus?: EmploymentStatus;
 }

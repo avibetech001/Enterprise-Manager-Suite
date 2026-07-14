@@ -117,11 +117,6 @@ export default function EmployeesPage() {
     return departments?.find(d => d.id === id)?.name || "—";
   };
 
-  const getManagerName = (managerId: number | null) => {
-    if (!managerId) return "—";
-    return employees?.find(e => e.id === managerId)?.fullName || "—";
-  };
-
   const handleCreateSubmit = (data: any) => {
     createEmployee.mutate({ data }, {
       onSuccess: (newEmployee) => {
@@ -356,9 +351,6 @@ export default function EmployeesPage() {
                           </>
                         )}
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">{getManagerName(emp.employment.reportingManagerId)}</div>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col gap-1 items-start">

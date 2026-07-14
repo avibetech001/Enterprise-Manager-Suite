@@ -17,7 +17,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useListDepartments, useListEmployees } from "@workspace/api-client-react";
+import { useListDepartments } from "@workspace/api-client-react";
+import { toast } from "sonner";
 
 const employeeSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -25,7 +26,6 @@ const employeeSchema = z.object({
   otherName: z.string().optional(),
   gender: z.string().optional(),
   dateOfBirth: z.string().optional(),
-  maritalStatus: z.string().optional(),
   nationality: z.string().optional(),
   phone: z.string().min(1, "WhatsApp/Phone is required"),
   personalEmail: z.string().email("Invalid email").optional().or(z.literal("")),
@@ -39,19 +39,17 @@ const employeeSchema = z.object({
     relationship: z.string().optional(),
     phone: z.string().optional(),
     address: z.string().optional()
-  }).optional().refine(
-    (ec) => {
-      if (!ec) return true;
-      const anyFilled = !!(ec.name || ec.relationship || ec.phone || ec.address);
-      if (!anyFilled) return true;
-      return !!(ec.name && ec.relationship && ec.phone);
-    },
-    { message: "Emergency contact needs a name, relationship, and phone number." }
-  ),
+  }).optional().superRefine((ec, ctx) => {
+    if (!ec) return;
+    const anyFilled = !!(ec.name || ec.relationship || ec.phone || ec.address);
+    if (!anyFilled) return;
+    if (!ec.name) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["name"], message: "Name is required when adding an emergency contact" });
+    if (!ec.relationship) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["relationship"], message: "Relationship is required when adding an emergency contact" });
+    if (!ec.phone) ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["phone"], message: "Phone is required when adding an emergency contact" });
+  }),
   departmentId: z.coerce.number().optional().nullable(),
   jobTitle: z.string().optional(),
   employmentType: z.enum(["full_time", "part_time", "contract", "intern"]).optional().nullable(),
-  reportingManagerId: z.coerce.number().optional().nullable(),
   startDate: z.string().optional(),
   employmentStatus: z.enum(["probation", "active", "on_leave", "suspended", "terminated"]).optional()
 });
@@ -67,7 +65,6 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: EmployeeFormProps) {
   const { data: departments } = useListDepartments();
-  const { data: employees } = useListEmployees();
 
   const form = useForm<EmployeeFormValues>({
     resolver: zodResolver(employeeSchema),
@@ -77,7 +74,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
       otherName: "",
       gender: "",
       dateOfBirth: "",
-      maritalStatus: "",
       nationality: "",
       phone: "",
       personalEmail: "",
@@ -95,7 +91,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
       departmentId: null,
       jobTitle: "",
       employmentType: null,
-      reportingManagerId: null,
       startDate: "",
       employmentStatus: "active"
     }
@@ -109,7 +104,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
         otherName: initialData.otherName || "",
         gender: initialData.gender || "",
         dateOfBirth: initialData.dateOfBirth ? initialData.dateOfBirth.split('T')[0] : "",
-        maritalStatus: initialData.maritalStatus || "",
         nationality: initialData.nationality || "",
         phone: initialData.phone,
         personalEmail: initialData.personalEmail || "",
@@ -124,7 +118,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
         departmentId: initialData.employment.departmentId,
         jobTitle: initialData.employment.jobTitle || "",
         employmentType: initialData.employment.employmentType || null,
-        reportingManagerId: initialData.employment.reportingManagerId,
         startDate: initialData.employment.startDate ? initialData.employment.startDate.split('T')[0] : "",
         employmentStatus: initialData.employment.employmentStatus || "active",
       });
@@ -138,7 +131,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
     if (!payload.otherName) delete payload.otherName;
     if (!payload.gender) delete payload.gender;
     if (!payload.dateOfBirth) delete payload.dateOfBirth;
-    if (!payload.maritalStatus) delete payload.maritalStatus;
     if (!payload.nationality) delete payload.nationality;
     if (!payload.personalEmail) delete payload.personalEmail;
     if (!payload.companyEmail) delete payload.companyEmail;
@@ -167,7 +159,17 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="flex flex-col h-full">
+      <form
+        onSubmit={form.handleSubmit(handleSubmit, (errors) => {
+          const first = Object.values(errors)[0] as any;
+          const message =
+            first?.message ||
+            first?.name?.message || first?.relationship?.message || first?.phone?.message ||
+            "Please fix the highlighted fields.";
+          toast.error("Can't save yet", { description: message });
+        })}
+        className="flex flex-col h-full"
+      >
         <ScrollArea className="flex-1 px-1">
           <div className="space-y-6 pb-6">
             {/* Personal Information */}
@@ -201,21 +203,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
                 )} />
                 <FormField control={form.control} name="dateOfBirth" render={({ field }) => (
                   <FormItem><FormLabel>Date of Birth</FormLabel><FormControl><Input type="date" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={form.control} name="maritalStatus" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Marital Status</FormLabel>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="Single">Single</SelectItem>
-                        <SelectItem value="Married">Married</SelectItem>
-                        <SelectItem value="Divorced">Divorced</SelectItem>
-                        <SelectItem value="Widowed">Widowed</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
                 )} />
                 <FormField control={form.control} name="nationality" render={({ field }) => (
                   <FormItem><FormLabel>Nationality</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
@@ -284,22 +271,6 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
                         <SelectItem value="part_time">Part Time</SelectItem>
                         <SelectItem value="contract">Contract</SelectItem>
                         <SelectItem value="intern">Intern</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-
-                <FormField control={form.control} name="reportingManagerId" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Reporting Manager</FormLabel>
-                    <Select value={field.value?.toString() || "none"} onValueChange={(v) => field.onChange(v === "none" ? null : parseInt(v))}>
-                      <FormControl><SelectTrigger><SelectValue placeholder="Select manager" /></SelectTrigger></FormControl>
-                      <SelectContent>
-                        <SelectItem value="none">None</SelectItem>
-                        {employees?.filter(e => e.id !== initialData?.id).map(e => 
-                          <SelectItem key={e.id} value={e.id.toString()}>{e.fullName}</SelectItem>
-                        )}
                       </SelectContent>
                     </Select>
                     <FormMessage />

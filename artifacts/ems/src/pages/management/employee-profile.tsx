@@ -100,11 +100,6 @@ export default function EmployeeProfilePage() {
     return departments?.find(d => d.id === deptId)?.name || "Unknown Department";
   };
 
-  const getManagerName = (managerId: number | null) => {
-    if (!managerId) return "No Manager";
-    return employees?.find(e => e.id === managerId)?.fullName || "Unknown Manager";
-  };
-
   const handleStatusChange = (newStatus: "active" | "inactive" | "suspended") => {
     updateEmployee.mutate(
       { id, data: { accountStatus: newStatus } },
@@ -350,10 +345,6 @@ export default function EmployeeProfilePage() {
                   <div>
                     <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-1"><Briefcase className="h-3.5 w-3.5" /> Employment Type</div>
                     <div className="font-medium capitalize">{employee?.employment?.employmentType?.replace('_', ' ') || "Not Set"}</div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-1"><UserCircle2 className="h-3.5 w-3.5" /> Reporting Manager</div>
-                    <div className="font-medium">{getManagerName(employee?.employment?.reportingManagerId || null)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-muted-foreground flex items-center gap-1.5 mb-1"><Clock className="h-3.5 w-3.5" /> Status</div>

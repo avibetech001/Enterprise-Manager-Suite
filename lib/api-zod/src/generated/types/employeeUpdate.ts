@@ -22,8 +22,6 @@ export interface EmployeeUpdate {
   /** @nullable */
   dateOfBirth?: string | null;
   /** @nullable */
-  maritalStatus?: string | null;
-  /** @nullable */
   nationality?: string | null;
   /** @minLength 1 */
   phone?: string;
@@ -43,8 +41,6 @@ export interface EmployeeUpdate {
   /** @nullable */
   jobTitle?: string | null;
   employmentType?: EmploymentType | null;
-  /** @nullable */
-  reportingManagerId?: number | null;
   /** @nullable */
   startDate?: string | null;
   employmentStatus?: EmploymentStatus;

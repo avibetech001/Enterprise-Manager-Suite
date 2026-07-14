@@ -1091,7 +1091,6 @@ components:
           departmentId,
           jobTitle,
           employmentType,
-          reportingManagerId,
           startDate,
           employmentStatus,
         ]
@@ -1104,8 +1103,6 @@ components:
           oneOf:
             - $ref: "#/components/schemas/EmploymentType"
             - type: "null"
-        reportingManagerId:
-          type: ["integer", "null"]
         startDate:
           type: ["string", "null"]
         employmentStatus:
@@ -1124,7 +1121,6 @@ components:
           fullName,
           gender,
           dateOfBirth,
-          maritalStatus,
           nationality,
           phone,
           personalEmail,
@@ -1158,8 +1154,6 @@ components:
         gender:
           type: ["string", "null"]
         dateOfBirth:
-          type: ["string", "null"]
-        maritalStatus:
           type: ["string", "null"]
         nationality:
           type: ["string", "null"]
@@ -1209,8 +1203,6 @@ components:
           type: string
         dateOfBirth:
           type: string
-        maritalStatus:
-          type: string
         nationality:
           type: string
         phone:
@@ -1236,8 +1228,6 @@ components:
           type: string
         employmentType:
           $ref: "#/components/schemas/EmploymentType"
-        reportingManagerId:
-          type: ["integer", "null"]
         startDate:
           type: string
         employmentStatus:
@@ -1257,8 +1247,6 @@ components:
         gender:
           type: ["string", "null"]
         dateOfBirth:
-          type: ["string", "null"]
-        maritalStatus:
           type: ["string", "null"]
         nationality:
           type: ["string", "null"]
@@ -1287,8 +1275,6 @@ components:
           oneOf:
             - $ref: "#/components/schemas/EmploymentType"
             - type: "null"
-        reportingManagerId:
-          type: ["integer", "null"]
         startDate:
           type: ["string", "null"]
         employmentStatus:

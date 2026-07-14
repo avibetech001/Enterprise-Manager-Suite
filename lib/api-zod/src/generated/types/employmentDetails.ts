@@ -15,8 +15,6 @@ export interface EmploymentDetails {
   jobTitle: string | null;
   employmentType: EmploymentType | null;
   /** @nullable */
-  reportingManagerId: number | null;
-  /** @nullable */
   startDate: string | null;
   employmentStatus: EmploymentStatus;
 }

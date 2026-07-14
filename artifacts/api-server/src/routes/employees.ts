@@ -74,7 +74,6 @@ function serializeEmployee(
     fullName: user.fullName,
     gender: profile?.gender ?? null,
     dateOfBirth: profile?.dateOfBirth ?? null,
-    maritalStatus: profile?.maritalStatus ?? null,
     nationality: profile?.nationality ?? null,
     phone: user.phone,
     personalEmail: profile?.personalEmail ?? null,
@@ -101,7 +100,6 @@ function serializeEmployee(
           | "contract"
           | "intern"
           | null) ?? null,
-      reportingManagerId: employment?.reportingManagerId ?? null,
       startDate: employment?.startDate ?? null,
       employmentStatus: (employment?.employmentStatus ?? "probation") as
         | "probation"
@@ -175,19 +173,6 @@ async function departmentBelongsToCompany(
       ),
     );
   return !!dept;
-}
-
-async function managerBelongsToCompany(
-  managerId: number,
-  companyId: number,
-): Promise<boolean> {
-  const [manager] = await db
-    .select()
-    .from(usersTable)
-    .where(
-      and(eq(usersTable.id, managerId), eq(usersTable.companyId, companyId)),
-    );
-  return !!manager;
 }
 
 function slugify(value: string): string {
@@ -285,17 +270,6 @@ router.post(
       res.status(400).json({ error: "Invalid department." });
       return;
     }
-    if (
-      input.reportingManagerId != null &&
-      !(await managerBelongsToCompany(
-        input.reportingManagerId,
-        currentUser.companyId,
-      ))
-    ) {
-      res.status(400).json({ error: "Invalid reporting manager." });
-      return;
-    }
-
     const companyEmail = (
       input.companyEmail?.trim() ||
       (await generateCompanyEmail(
@@ -355,7 +329,6 @@ router.post(
         otherName: input.otherName ?? null,
         gender: input.gender ?? null,
         dateOfBirth: input.dateOfBirth ?? null,
-        maritalStatus: input.maritalStatus ?? null,
         nationality: input.nationality ?? null,
         personalEmail: input.personalEmail ?? null,
         residentialAddress: input.residentialAddress ?? null,
@@ -376,7 +349,6 @@ router.post(
         departmentId: input.departmentId ?? null,
         jobTitle: input.jobTitle ?? null,
         employmentType: input.employmentType ?? null,
-        reportingManagerId: input.reportingManagerId ?? null,
         startDate: input.startDate ?? null,
         employmentStatus: input.employmentStatus ?? "probation",
       });
@@ -529,15 +501,6 @@ router.patch(
       res.status(400).json({ error: "Invalid department." });
       return;
     }
-    if (
-      input.reportingManagerId != null &&
-      (input.reportingManagerId === user.id ||
-        !(await managerBelongsToCompany(input.reportingManagerId, companyId)))
-    ) {
-      res.status(400).json({ error: "Invalid reporting manager." });
-      return;
-    }
-
     // users table changes
     const rel = await loadEmployeeRelations(user.id);
     const firstName = input.firstName ?? rel.profile?.firstName ?? "";
@@ -578,8 +541,6 @@ router.patch(
     if (input.gender !== undefined) profileChanges.gender = input.gender;
     if (input.dateOfBirth !== undefined)
       profileChanges.dateOfBirth = input.dateOfBirth;
-    if (input.maritalStatus !== undefined)
-      profileChanges.maritalStatus = input.maritalStatus;
     if (input.nationality !== undefined)
       profileChanges.nationality = input.nationality;
     if (input.personalEmail !== undefined)
@@ -627,8 +588,6 @@ router.patch(
     if (input.jobTitle !== undefined) employmentChanges.jobTitle = input.jobTitle;
     if (input.employmentType !== undefined)
       employmentChanges.employmentType = input.employmentType;
-    if (input.reportingManagerId !== undefined)
-      employmentChanges.reportingManagerId = input.reportingManagerId;
     if (input.startDate !== undefined)
       employmentChanges.startDate = input.startDate;
     if (input.employmentStatus !== undefined)
