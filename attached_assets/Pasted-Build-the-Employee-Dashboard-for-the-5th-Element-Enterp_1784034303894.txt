@@ -1,0 +1,188 @@
+Build the Employee Dashboard for the 5th Element Enterprise Management System (EMS).
+
+Only authenticated employees should have access to this dashboard.
+
+The dashboard should have a modern grey-and-white SaaS design with responsive layouts, smooth animations, summary cards, tables, and a sidebar navigation.
+
+==================================================
+EMPLOYEE DASHBOARD OVERVIEW
+==================================================
+
+Display a welcome section showing:
+
+- Employee Profile Photo
+- Employee Name
+- Employee ID
+- Job Title
+- Department
+- Employment Type
+
+Display summary cards showing:
+
+- Today's Attendance Status
+- Leave Balance
+- Active Projects
+- Pending Fund Requests
+- Pending Requisitions
+
+==================================================
+SIDEBAR
+==================================================
+
+The Employee sidebar should include:
+
+- Dashboard
+- My Profile
+- Attendance
+- Leave
+- My Projects
+- Fund Requests
+- Requisitions
+- Company Policies
+- Knowledge Base
+- Notifications
+- Settings
+
+==================================================
+MY PROFILE
+==================================================
+
+Employees should be able to:
+
+View:
+
+- Employee ID
+- Profile Photo
+- Full Name
+- Company Email
+- Phone Number
+- Department
+- Job Title
+- Reporting Manager
+- Employment Type
+- Employment Start Date
+
+Employees should only be able to edit:
+
+- Phone Number
+- Residential Address
+- Emergency Contact
+- Profile Photo
+- Password
+
+Employees should NOT be able to edit:
+
+- Employee ID
+- Department
+- Job Title
+- Reporting Manager
+- Company Email
+- Employment Type
+
+==================================================
+ATTENDANCE
+==================================================
+
+Employees should be able to:
+
+- Scan Attendance QR Code
+- View today's attendance
+- View attendance history
+- Filter attendance by date
+- Export their attendance history as PDF
+
+==================================================
+LEAVE
+==================================================
+
+Employees should be able to:
+
+- Submit Leave Request
+- View Leave Balance
+- View Leave History
+- Track Leave Status
+
+==================================================
+PROJECTS
+==================================================
+
+Employees should be able to:
+
+- View Assigned Projects
+- View Deliverables
+- View Deadlines
+- View Timelines
+- View Assigned Team Members
+- View Project Progress
+
+==================================================
+FUND REQUESTS
+==================================================
+
+Employees should be able to:
+
+- Submit Fund Request
+- View Request History
+- Track Approval Status
+
+==================================================
+REQUISITIONS
+==================================================
+
+Employees should be able to:
+
+- Submit Internal Requests
+- View Request Status
+- View Request History
+
+==================================================
+COMPANY
+==================================================
+
+Employees should be able to view:
+
+- Company Announcements
+- Company Policies
+- Knowledge Base
+- Vision
+- Mission
+- Core Values
+
+==================================================
+NOTIFICATIONS
+==================================================
+
+Display notifications for:
+
+- Leave Approval
+- Leave Rejection
+- Project Assignment
+- Attendance Alerts
+- Fund Request Updates
+- Requisition Updates
+- Company Announcements
+
+==================================================
+SETTINGS
+==================================================
+
+Employees should be able to:
+
+- Change Password
+- Enable Two-Factor Authentication (optional)
+- Update Profile Photo
+
+==================================================
+UI
+==================================================
+
+Use a modern dashboard with:
+
+- Sidebar
+- Statistics Cards
+- Tables
+- Charts
+- Responsive Design
+- Grey-and-White Theme
+- Professional Icons
+- Smooth Animations
