@@ -39,6 +39,32 @@ export const PERMISSION_CATALOG = [
     description: "Configure attendance policies and rules.",
   },
   {
+    key: "manage_leave" as const,
+    label: "Manage Leave",
+    description: "Review, approve, and reject employee leave requests.",
+  },
+  {
+    key: "manage_projects" as const,
+    label: "Manage Projects",
+    description: "Create projects, assign team members, and track progress.",
+  },
+  {
+    key: "manage_finance" as const,
+    label: "Manage Fund Requests",
+    description: "Review, approve, and reject employee fund requests.",
+  },
+  {
+    key: "manage_requisitions" as const,
+    label: "Manage Requisitions",
+    description: "Review and fulfill internal requisition requests.",
+  },
+  {
+    key: "manage_content" as const,
+    label: "Manage Company Content",
+    description:
+      "Publish announcements, company policies, and knowledge base articles.",
+  },
+  {
     key: "view_reports" as const,
     label: "View Reports",
     description: "Access company reports and analytics.",

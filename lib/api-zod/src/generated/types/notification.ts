@@ -12,6 +12,6 @@ export interface Notification {
   type: string;
   message: string;
   /** @nullable */
-  readAt: string | null;
+  readAt: Date | null;
   createdAt: Date;
 }

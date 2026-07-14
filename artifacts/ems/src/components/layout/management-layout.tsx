@@ -2,7 +2,7 @@ import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@/components/ui/sidebar";
 import { useGetCurrentSession, useLogout } from "@workspace/api-client-react";
-import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock } from "lucide-react";
+import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, PackageOpen, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 
@@ -79,10 +79,65 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                   
                   {(hasPerm("manage_attendance_settings") || isSuperAdmin) && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton isActive={location === "/settings/attendance"} asChild>
-                        <Link href="/settings/attendance">
+                      <SidebarMenuButton isActive={location === "/attendance"} asChild>
+                        <Link href="/attendance">
                           <CalendarClock className="h-4 w-4" />
-                          <span>Attendance (Soon)</span>
+                          <span>Attendance</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_leave") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/leave"} asChild>
+                        <Link href="/leave">
+                          <Palmtree className="h-4 w-4" />
+                          <span>Leave</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_projects") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/projects"} asChild>
+                        <Link href="/projects">
+                          <FolderKanban className="h-4 w-4" />
+                          <span>Projects</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_finance") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/fund-requests"} asChild>
+                        <Link href="/fund-requests">
+                          <Wallet className="h-4 w-4" />
+                          <span>Fund Requests</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_requisitions") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/requisitions"} asChild>
+                        <Link href="/requisitions">
+                          <PackageOpen className="h-4 w-4" />
+                          <span>Requisitions</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_content") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/content"} asChild>
+                        <Link href="/content">
+                          <ScrollText className="h-4 w-4" />
+                          <span>Content</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

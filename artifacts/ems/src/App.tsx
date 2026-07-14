@@ -17,6 +17,21 @@ import ActivatePage from '@/pages/activate';
 
 import ManagementDashboard from '@/pages/management/dashboard';
 import EmployeeDashboard from '@/pages/employee/dashboard';
+import EmployeeProfileSelfPage from '@/pages/employee/my-profile';
+import EmployeeAttendancePage from '@/pages/employee/attendance';
+import EmployeeLeavePage from '@/pages/employee/leave';
+import EmployeeProjectsPage from '@/pages/employee/projects';
+import EmployeeFundRequestsPage from '@/pages/employee/fund-requests';
+import EmployeeRequisitionsPage from '@/pages/employee/requisitions';
+import EmployeePoliciesPage from '@/pages/employee/policies';
+import EmployeeKnowledgeBasePage from '@/pages/employee/knowledge-base';
+import EmployeeSettingsPage from '@/pages/employee/settings';
+import ManagementAttendancePage from '@/pages/management/attendance';
+import ManagementLeavePage from '@/pages/management/leave';
+import ManagementProjectsPage from '@/pages/management/projects';
+import ManagementFundRequestsPage from '@/pages/management/fund-requests';
+import ManagementRequisitionsPage from '@/pages/management/requisitions';
+import ManagementContentPage from '@/pages/management/content';
 
 // Future imports for Mgmt
 import EmployeesPage from '@/pages/management/employees';
@@ -78,6 +93,25 @@ function Router() {
           </EmployeeLayout>
         </EmployeeGuard>
       </Route>
+      {([
+        ["/employee/profile", EmployeeProfileSelfPage],
+        ["/employee/attendance", EmployeeAttendancePage],
+        ["/employee/leave", EmployeeLeavePage],
+        ["/employee/projects", EmployeeProjectsPage],
+        ["/employee/fund-requests", EmployeeFundRequestsPage],
+        ["/employee/requisitions", EmployeeRequisitionsPage],
+        ["/employee/policies", EmployeePoliciesPage],
+        ["/employee/knowledge-base", EmployeeKnowledgeBasePage],
+        ["/employee/settings", EmployeeSettingsPage],
+      ] as const).map(([path, Page]) => (
+        <Route key={path} path={path}>
+          <EmployeeGuard>
+            <EmployeeLayout>
+              <Page />
+            </EmployeeLayout>
+          </EmployeeGuard>
+        </Route>
+      ))}
 
       {/* Management Routes */}
       <Route path="/dashboard">
@@ -128,27 +162,22 @@ function Router() {
         </ManagementGuard>
       </Route>
       
-      <Route path="/settings/attendance">
-        <ManagementGuard>
-          <ManagementLayout>
-            <div className="p-6">
-              <h1 className="text-3xl font-bold tracking-tight">Attendance Settings</h1>
-              <p className="text-muted-foreground mt-4">Coming soon.</p>
-            </div>
-          </ManagementLayout>
-        </ManagementGuard>
-      </Route>
-      
-      <Route path="/reports">
-        <ManagementGuard>
-          <ManagementLayout>
-            <div className="p-6">
-              <h1 className="text-3xl font-bold tracking-tight">Reports</h1>
-              <p className="text-muted-foreground mt-4">Coming soon.</p>
-            </div>
-          </ManagementLayout>
-        </ManagementGuard>
-      </Route>
+      {([
+        ["/attendance", ManagementAttendancePage],
+        ["/leave", ManagementLeavePage],
+        ["/projects", ManagementProjectsPage],
+        ["/fund-requests", ManagementFundRequestsPage],
+        ["/requisitions", ManagementRequisitionsPage],
+        ["/content", ManagementContentPage],
+      ] as const).map(([path, Page]) => (
+        <Route key={path} path={path}>
+          <ManagementGuard>
+            <ManagementLayout>
+              <Page />
+            </ManagementLayout>
+          </ManagementGuard>
+        </Route>
+      ))}
 
       <Route component={NotFound} />
     </Switch>

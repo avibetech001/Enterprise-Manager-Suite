@@ -12,4 +12,9 @@ export interface CompanyUpdate {
   email?: string;
   /** @minLength 1 */
   phone?: string;
+  vision?: string;
+  mission?: string;
+  coreValues?: string;
+  /** @minimum 0 */
+  annualLeaveDays?: number;
 }

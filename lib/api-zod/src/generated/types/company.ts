@@ -12,5 +12,12 @@ export interface Company {
   email: string;
   phone: string;
   domain: string;
+  /** @nullable */
+  vision: string | null;
+  /** @nullable */
+  mission: string | null;
+  /** @nullable */
+  coreValues: string | null;
+  annualLeaveDays: number;
   createdAt: Date;
 }

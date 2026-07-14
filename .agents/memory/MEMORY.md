@@ -1,2 +1,4 @@
 - [Orval zod email format](orval-zod-email.md) — avoid `format: email` in openapi.yaml; orval emits zod-v4 `zod.email()` which breaks the zod v3 catalog build.
 - [connect-pg-simple in esbuild](session-store-esbuild.md) — keep createTableIfMissing false; bundled table.sql is missing, so sessions silently fail (login 200, then 401s).
+- [OpenAPI zod timestamps & enums](openapi-zod-timestamps.md) — nullable timestamps need `format: date-time`; new permission keys must also go into the openapi PermissionKey enum, or responses 500 at zod parse.
+- shadcn form.tsx: a bare FormItem/FormLabel outside a FormField render prop crashes the page ("useFormField should be used within <FormField>") — use a plain div + p/Label for read-only rows.

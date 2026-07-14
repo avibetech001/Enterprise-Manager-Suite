@@ -85,6 +85,11 @@ export const PermissionKey = {
   manage_departments: 'manage_departments',
   manage_company_settings: 'manage_company_settings',
   manage_attendance_settings: 'manage_attendance_settings',
+  manage_leave: 'manage_leave',
+  manage_projects: 'manage_projects',
+  manage_finance: 'manage_finance',
+  manage_requisitions: 'manage_requisitions',
+  manage_content: 'manage_content',
   view_reports: 'view_reports',
 } as const;
 
@@ -112,6 +117,13 @@ export interface Company {
   email: string;
   phone: string;
   domain: string;
+  /** @nullable */
+  vision: string | null;
+  /** @nullable */
+  mission: string | null;
+  /** @nullable */
+  coreValues: string | null;
+  annualLeaveDays: number;
   createdAt: string;
 }
 
@@ -126,6 +138,11 @@ export interface CompanyUpdate {
   email?: string;
   /** @minLength 1 */
   phone?: string;
+  vision?: string;
+  mission?: string;
+  coreValues?: string;
+  /** @minimum 0 */
+  annualLeaveDays?: number;
 }
 
 export interface ManagementUser {
@@ -343,7 +360,290 @@ export interface EmployeeActivateInput {
   acceptPolicies: boolean;
 }
 
+export interface ChangePasswordInput {
+  currentPassword: string;
+  /** @minLength 8 */
+  newPassword: string;
+  /** @minLength 8 */
+  confirmPassword: string;
+}
+
+export interface AttendanceRecord {
+  id: number;
+  companyId: number;
+  userId: number;
+  forDate: string;
+  checkInAt: string;
+  /** @nullable */
+  checkOutAt: string | null;
+}
+
+export interface LeaveBalance {
+  allocation: number;
+  used: number;
+  remaining: number;
+}
+
+export interface CompanyPost {
+  id: number;
+  companyId: number;
+  kind: string;
+  title: string;
+  body: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EmployeeSummary {
+  attendanceToday: AttendanceRecord | null;
+  leaveBalance: LeaveBalance;
+  activeProjects: number;
+  pendingFundRequests: number;
+  pendingRequisitions: number;
+  announcements: CompanyPost[];
+}
+
+export interface AttendanceCode {
+  code: string;
+  forDate: string;
+}
+
+export interface CheckInInput {
+  /** @minLength 1 */
+  code: string;
+}
+
+export type AttendanceRecordWithUser = AttendanceRecord & ({
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
+});
+
+export type LeaveCreateInputType = typeof LeaveCreateInputType[keyof typeof LeaveCreateInputType];
+
+
+export const LeaveCreateInputType = {
+  annual: 'annual',
+  sick: 'sick',
+  unpaid: 'unpaid',
+  compassionate: 'compassionate',
+  other: 'other',
+} as const;
+
+export interface LeaveCreateInput {
+  type: LeaveCreateInputType;
+  /** @minLength 1 */
+  startDate: string;
+  /** @minLength 1 */
+  endDate: string;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface LeaveRequest {
+  id: number;
+  companyId: number;
+  userId: number;
+  type: string;
+  startDate: string;
+  endDate: string;
+  days: number;
+  reason: string;
+  status: string;
+  /** @nullable */
+  reviewNote: string | null;
+  createdAt: string;
+}
+
+export type LeaveRequestWithUser = LeaveRequest & ({
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
+});
+
+export type ReviewInputStatus = typeof ReviewInputStatus[keyof typeof ReviewInputStatus];
+
+
+export const ReviewInputStatus = {
+  approved: 'approved',
+  rejected: 'rejected',
+  fulfilled: 'fulfilled',
+} as const;
+
+export interface ReviewInput {
+  status: ReviewInputStatus;
+  reviewNote?: string;
+}
+
+export interface ProjectDeliverable {
+  id: number;
+  projectId: number;
+  title: string;
+  /** @nullable */
+  dueDate: string | null;
+  status: string;
+}
+
+export interface ProjectMember {
+  userId: number;
+  fullName: string;
+}
+
+export interface ProjectDetail {
+  id: number;
+  companyId: number;
+  name: string;
+  /** @nullable */
+  description: string | null;
+  status: string;
+  /** @nullable */
+  startDate: string | null;
+  /** @nullable */
+  deadline: string | null;
+  progress: number;
+  members: ProjectMember[];
+  deliverables: ProjectDeliverable[];
+  createdAt: string;
+}
+
+export type ProjectDeliverableInputStatus = typeof ProjectDeliverableInputStatus[keyof typeof ProjectDeliverableInputStatus];
+
+
+export const ProjectDeliverableInputStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  done: 'done',
+} as const;
+
+export interface ProjectDeliverableInput {
+  /** @minLength 1 */
+  title: string;
+  dueDate?: string;
+  status?: ProjectDeliverableInputStatus;
+}
+
+export type ProjectInputStatus = typeof ProjectInputStatus[keyof typeof ProjectInputStatus];
+
+
+export const ProjectInputStatus = {
+  planning: 'planning',
+  active: 'active',
+  on_hold: 'on_hold',
+  completed: 'completed',
+} as const;
+
+export interface ProjectInput {
+  /** @minLength 1 */
+  name: string;
+  description?: string;
+  status?: ProjectInputStatus;
+  startDate?: string;
+  deadline?: string;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progress?: number;
+  memberIds?: number[];
+  deliverables?: ProjectDeliverableInput[];
+}
+
+export interface FundRequestInput {
+  /** @minLength 1 */
+  amount: string;
+  /** @minLength 1 */
+  purpose: string;
+  details?: string;
+}
+
+export interface FundRequest {
+  id: number;
+  companyId: number;
+  userId: number;
+  amount: string;
+  purpose: string;
+  /** @nullable */
+  details: string | null;
+  status: string;
+  /** @nullable */
+  reviewNote: string | null;
+  createdAt: string;
+}
+
+export type FundRequestWithUser = FundRequest & ({
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
+});
+
+export interface RequisitionInput {
+  /** @minLength 1 */
+  item: string;
+  /** @minimum 1 */
+  quantity: number;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface Requisition {
+  id: number;
+  companyId: number;
+  userId: number;
+  item: string;
+  quantity: number;
+  reason: string;
+  status: string;
+  /** @nullable */
+  reviewNote: string | null;
+  createdAt: string;
+}
+
+export type RequisitionWithUser = Requisition & ({
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
+});
+
+export type CompanyPostInputKind = typeof CompanyPostInputKind[keyof typeof CompanyPostInputKind];
+
+
+export const CompanyPostInputKind = {
+  announcement: 'announcement',
+  policy: 'policy',
+  knowledge_base: 'knowledge_base',
+} as const;
+
+export interface CompanyPostInput {
+  kind: CompanyPostInputKind;
+  /** @minLength 1 */
+  title: string;
+  /** @minLength 1 */
+  body: string;
+}
+
 export type ListEmployeesParams = {
 includeArchived?: boolean;
 };
+
+export type ListMyAttendanceParams = {
+from?: string;
+to?: string;
+};
+
+export type ListAttendanceRecordsParams = {
+date?: string;
+};
+
+export type ListPostsParams = {
+kind?: ListPostsKind;
+};
+
+export type ListPostsKind = typeof ListPostsKind[keyof typeof ListPostsKind];
+
+
+export const ListPostsKind = {
+  announcement: 'announcement',
+  policy: 'policy',
+  knowledge_base: 'knowledge_base',
+} as const;
 

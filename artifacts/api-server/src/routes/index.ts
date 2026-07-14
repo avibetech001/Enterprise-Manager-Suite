@@ -7,6 +7,7 @@ import usersRouter from "./users";
 import departmentsRouter from "./departments";
 import employeesRouter from "./employees";
 import notificationsRouter from "./notifications";
+import modulesRouter from "./modules";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(usersRouter);
 router.use(departmentsRouter);
 router.use(employeesRouter);
 router.use(notificationsRouter);
+router.use(modulesRouter);
 
 export default router;

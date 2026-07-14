@@ -54,7 +54,7 @@ export const CompleteSetupResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
@@ -64,6 +64,10 @@ export const CompleteSetupResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 })
@@ -85,7 +89,7 @@ export const ManagementLoginResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
@@ -95,6 +99,10 @@ export const ManagementLoginResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 })
@@ -116,7 +124,7 @@ export const EmployeeLoginResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
@@ -126,6 +134,10 @@ export const EmployeeLoginResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 })
@@ -148,7 +160,7 @@ export const GetCurrentSessionResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
@@ -158,6 +170,10 @@ export const GetCurrentSessionResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 })
@@ -172,6 +188,10 @@ export const GetCompanyResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 
@@ -181,12 +201,18 @@ export const GetCompanyResponse = zod.object({
  */
 
 
+export const updateCompanyBodyAnnualLeaveDaysMin = 0;
+
 
 
 export const UpdateCompanyBody = zod.object({
   "name": zod.string().min(1).optional(),
   "email": zod.string().optional(),
-  "phone": zod.string().min(1).optional()
+  "phone": zod.string().min(1).optional(),
+  "vision": zod.string().optional(),
+  "mission": zod.string().optional(),
+  "coreValues": zod.string().optional(),
+  "annualLeaveDays": zod.number().min(updateCompanyBodyAnnualLeaveDaysMin).optional()
 })
 
 export const UpdateCompanyResponse = zod.object({
@@ -195,6 +221,10 @@ export const UpdateCompanyResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 
@@ -203,7 +233,7 @@ export const UpdateCompanyResponse = zod.object({
  * @summary List the catalog of assignable RBAC permissions
  */
 export const ListPermissionsResponseItem = zod.object({
-  "key": zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports']),
+  "key": zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports']),
   "label": zod.string(),
   "description": zod.string()
 })
@@ -220,7 +250,7 @@ export const ListManagementUsersResponseItem = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
@@ -241,7 +271,7 @@ export const CreateManagementUserBody = zod.object({
   "email": zod.string(),
   "phone": zod.string().min(1),
   "password": zod.string().min(createManagementUserBodyPasswordMin),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])).optional()
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])).optional()
 })
 
 export const CreateManagementUserResponse = zod.object({
@@ -251,7 +281,7 @@ export const CreateManagementUserResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
@@ -271,7 +301,7 @@ export const UpdateManagementUserParams = zod.object({
 export const UpdateManagementUserBody = zod.object({
   "fullName": zod.string().min(1).optional(),
   "phone": zod.string().min(1).optional(),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])).optional(),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])).optional(),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']).optional()
 })
 
@@ -282,7 +312,7 @@ export const UpdateManagementUserResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
@@ -822,7 +852,7 @@ export const ListNotificationsResponseItem = zod.object({
   "companyId": zod.number(),
   "type": zod.string(),
   "message": zod.string(),
-  "readAt": zod.string().nullable(),
+  "readAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
@@ -840,7 +870,7 @@ export const MarkNotificationReadResponse = zod.object({
   "companyId": zod.number(),
   "type": zod.string(),
   "message": zod.string(),
-  "readAt": zod.string().nullable(),
+  "readAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -934,7 +964,7 @@ export const ActivateEmployeeResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
@@ -944,8 +974,687 @@ export const ActivateEmployeeResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "domain": zod.string(),
+  "vision": zod.string().nullable(),
+  "mission": zod.string().nullable(),
+  "coreValues": zod.string().nullable(),
+  "annualLeaveDays": zod.number(),
   "createdAt": zod.coerce.date()
 })
 })
+
+
+/**
+ * @summary Employee dashboard summary (attendance, leave, projects, requests)
+ */
+export const GetMySummaryResponse = zod.object({
+  "attendanceToday": zod.union([zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "forDate": zod.string(),
+  "checkInAt": zod.coerce.date(),
+  "checkOutAt": zod.coerce.date().nullable()
+}),zod.null()]),
+  "leaveBalance": zod.object({
+  "allocation": zod.number(),
+  "used": zod.number(),
+  "remaining": zod.number()
+}),
+  "activeProjects": zod.number(),
+  "pendingFundRequests": zod.number(),
+  "pendingRequisitions": zod.number(),
+  "announcements": zod.array(zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Change the current user's password
+ */
+export const changeMyPasswordBodyNewPasswordMin = 8;
+
+export const changeMyPasswordBodyConfirmPasswordMin = 8;
+
+
+
+export const ChangeMyPasswordBody = zod.object({
+  "currentPassword": zod.string(),
+  "newPassword": zod.string().min(changeMyPasswordBodyNewPasswordMin),
+  "confirmPassword": zod.string().min(changeMyPasswordBodyConfirmPasswordMin)
+})
+
+export const ChangeMyPasswordResponse = zod.void()
+
+
+/**
+ * @summary Get (or create) today's attendance check-in code (management)
+ */
+export const GetAttendanceCodeResponse = zod.object({
+  "code": zod.string(),
+  "forDate": zod.string()
+})
+
+
+/**
+ * @summary Check in for today using the attendance code
+ */
+
+
+
+export const CheckInBody = zod.object({
+  "code": zod.string().min(1)
+})
+
+export const CheckInResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "forDate": zod.string(),
+  "checkInAt": zod.coerce.date(),
+  "checkOutAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Check out for today
+ */
+export const CheckOutResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "forDate": zod.string(),
+  "checkInAt": zod.coerce.date(),
+  "checkOutAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary List the current employee's attendance history
+ */
+export const ListMyAttendanceQueryParams = zod.object({
+  "from": zod.coerce.string().optional(),
+  "to": zod.coerce.string().optional()
+})
+
+export const ListMyAttendanceResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "forDate": zod.string(),
+  "checkInAt": zod.coerce.date(),
+  "checkOutAt": zod.coerce.date().nullable()
+})
+export const ListMyAttendanceResponse = zod.array(ListMyAttendanceResponseItem)
+
+
+/**
+ * @summary List attendance records for the company (management)
+ */
+export const ListAttendanceRecordsQueryParams = zod.object({
+  "date": zod.coerce.string().optional()
+})
+
+export const ListAttendanceRecordsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "forDate": zod.string(),
+  "checkInAt": zod.coerce.date(),
+  "checkOutAt": zod.coerce.date().nullable()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+export const ListAttendanceRecordsResponse = zod.array(ListAttendanceRecordsResponseItem)
+
+
+/**
+ * @summary Get the current employee's leave balance for this year
+ */
+export const GetMyLeaveBalanceResponse = zod.object({
+  "allocation": zod.number(),
+  "used": zod.number(),
+  "remaining": zod.number()
+})
+
+
+/**
+ * @summary List the current employee's leave requests
+ */
+export const ListMyLeaveRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "type": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "days": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyLeaveRequestsResponse = zod.array(ListMyLeaveRequestsResponseItem)
+
+
+/**
+ * @summary List all leave requests for the company (management)
+ */
+export const ListLeaveRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "type": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "days": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+export const ListLeaveRequestsResponse = zod.array(ListLeaveRequestsResponseItem)
+
+
+/**
+ * @summary Submit a leave request (employee)
+ */
+
+
+
+
+
+export const CreateLeaveRequestBody = zod.object({
+  "type": zod.enum(['annual', 'sick', 'unpaid', 'compassionate', 'other']),
+  "startDate": zod.string().min(1),
+  "endDate": zod.string().min(1),
+  "reason": zod.string().min(1)
+})
+
+export const CreateLeaveRequestResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "type": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "days": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Approve or reject a leave request (management)
+ */
+export const ReviewLeaveRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewLeaveRequestBody = zod.object({
+  "status": zod.enum(['approved', 'rejected', 'fulfilled']),
+  "reviewNote": zod.string().optional()
+})
+
+export const ReviewLeaveRequestResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "type": zod.string(),
+  "startDate": zod.string(),
+  "endDate": zod.string(),
+  "days": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+
+
+/**
+ * @summary List projects the current employee is assigned to
+ */
+export const ListMyProjectsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyProjectsResponse = zod.array(ListMyProjectsResponseItem)
+
+
+/**
+ * @summary List all company projects (management)
+ */
+export const ListProjectsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+export const ListProjectsResponse = zod.array(ListProjectsResponseItem)
+
+
+/**
+ * @summary Create a project (management)
+ */
+
+export const createProjectBodyProgressMin = 0;
+export const createProjectBodyProgressMax = 100;
+
+
+
+
+export const CreateProjectBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "status": zod.enum(['planning', 'active', 'on_hold', 'completed']).optional(),
+  "startDate": zod.string().optional(),
+  "deadline": zod.string().optional(),
+  "progress": zod.number().min(createProjectBodyProgressMin).max(createProjectBodyProgressMax).optional(),
+  "memberIds": zod.array(zod.number()).optional(),
+  "deliverables": zod.array(zod.object({
+  "title": zod.string().min(1),
+  "dueDate": zod.string().optional(),
+  "status": zod.enum(['pending', 'in_progress', 'done']).optional()
+})).optional()
+})
+
+export const CreateProjectResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a project, its members, and deliverables (management)
+ */
+export const UpdateProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateProjectBodyProgressMin = 0;
+export const updateProjectBodyProgressMax = 100;
+
+
+
+
+export const UpdateProjectBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "status": zod.enum(['planning', 'active', 'on_hold', 'completed']).optional(),
+  "startDate": zod.string().optional(),
+  "deadline": zod.string().optional(),
+  "progress": zod.number().min(updateProjectBodyProgressMin).max(updateProjectBodyProgressMax).optional(),
+  "memberIds": zod.array(zod.number()).optional(),
+  "deliverables": zod.array(zod.object({
+  "title": zod.string().min(1),
+  "dueDate": zod.string().optional(),
+  "status": zod.enum(['pending', 'in_progress', 'done']).optional()
+})).optional()
+})
+
+export const UpdateProjectResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a project (management)
+ */
+export const DeleteProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteProjectResponse = zod.void()
+
+
+/**
+ * @summary List the current employee's fund requests
+ */
+export const ListMyFundRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyFundRequestsResponse = zod.array(ListMyFundRequestsResponseItem)
+
+
+/**
+ * @summary List all fund requests (management)
+ */
+export const ListFundRequestsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+export const ListFundRequestsResponse = zod.array(ListFundRequestsResponseItem)
+
+
+/**
+ * @summary Submit a fund request (employee)
+ */
+
+
+
+
+export const CreateFundRequestBody = zod.object({
+  "amount": zod.string().min(1),
+  "purpose": zod.string().min(1),
+  "details": zod.string().optional()
+})
+
+export const CreateFundRequestResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Approve or reject a fund request (management)
+ */
+export const ReviewFundRequestParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewFundRequestBody = zod.object({
+  "status": zod.enum(['approved', 'rejected', 'fulfilled']),
+  "reviewNote": zod.string().optional()
+})
+
+export const ReviewFundRequestResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+
+
+/**
+ * @summary List the current employee's requisitions
+ */
+export const ListMyRequisitionsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "item": zod.string(),
+  "quantity": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyRequisitionsResponse = zod.array(ListMyRequisitionsResponseItem)
+
+
+/**
+ * @summary List all requisitions (management)
+ */
+export const ListRequisitionsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "item": zod.string(),
+  "quantity": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+export const ListRequisitionsResponse = zod.array(ListRequisitionsResponseItem)
+
+
+/**
+ * @summary Submit an internal requisition (employee)
+ */
+
+
+
+
+
+export const CreateRequisitionBody = zod.object({
+  "item": zod.string().min(1),
+  "quantity": zod.number().min(1),
+  "reason": zod.string().min(1)
+})
+
+export const CreateRequisitionResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "item": zod.string(),
+  "quantity": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Approve, reject, or fulfill a requisition (management)
+ */
+export const ReviewRequisitionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ReviewRequisitionBody = zod.object({
+  "status": zod.enum(['approved', 'rejected', 'fulfilled']),
+  "reviewNote": zod.string().optional()
+})
+
+export const ReviewRequisitionResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "item": zod.string(),
+  "quantity": zod.number(),
+  "reason": zod.string(),
+  "status": zod.string(),
+  "reviewNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+
+
+/**
+ * @summary List company posts (announcements, policies, knowledge base)
+ */
+export const ListPostsQueryParams = zod.object({
+  "kind": zod.enum(['announcement', 'policy', 'knowledge_base']).optional()
+})
+
+export const ListPostsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListPostsResponse = zod.array(ListPostsResponseItem)
+
+
+/**
+ * @summary Create a company post (management)
+ */
+
+
+
+
+export const CreatePostBody = zod.object({
+  "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
+  "title": zod.string().min(1),
+  "body": zod.string().min(1)
+})
+
+export const CreatePostResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a company post (management)
+ */
+export const UpdatePostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const UpdatePostBody = zod.object({
+  "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
+  "title": zod.string().min(1),
+  "body": zod.string().min(1)
+})
+
+export const UpdatePostResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "kind": zod.string(),
+  "title": zod.string(),
+  "body": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a company post (management)
+ */
+export const DeletePostParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePostResponse = zod.void()
 
 

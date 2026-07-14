@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -10,6 +10,10 @@ export const companiesTable = pgTable("companies", {
   // Derived from the company email domain (e.g. "5thelement.com").
   // Only accounts whose email matches this domain may log in.
   domain: text("domain").notNull(),
+  vision: text("vision"),
+  mission: text("mission"),
+  coreValues: text("core_values"),
+  annualLeaveDays: integer("annual_leave_days").notNull().default(20),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

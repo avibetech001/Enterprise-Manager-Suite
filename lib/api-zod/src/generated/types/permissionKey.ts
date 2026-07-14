@@ -15,5 +15,10 @@ export const PermissionKey = {
   manage_departments: 'manage_departments',
   manage_company_settings: 'manage_company_settings',
   manage_attendance_settings: 'manage_attendance_settings',
+  manage_leave: 'manage_leave',
+  manage_projects: 'manage_projects',
+  manage_finance: 'manage_finance',
+  manage_requisitions: 'manage_requisitions',
+  manage_content: 'manage_content',
   view_reports: 'view_reports',
 } as const;

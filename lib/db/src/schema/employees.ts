@@ -78,12 +78,16 @@ export const employmentInfoTable = pgTable("employment_info", {
     .$onUpdate(() => new Date()),
 });
 
-// Notifications for management users (company-wide feed)
+// Notifications. userId = null -> management feed (company-wide);
+// userId set -> targeted at that employee.
 export const notificationsTable = pgTable("notifications", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id")
     .notNull()
     .references(() => companiesTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id").references(() => usersTable.id, {
+    onDelete: "cascade",
+  }),
   type: text("type").notNull(),
   message: text("message").notNull(),
   readAt: timestamp("read_at", { withTimezone: true }),

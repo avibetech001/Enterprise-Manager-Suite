@@ -7,6 +7,7 @@ import {
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form,
   FormControl,
@@ -27,6 +28,10 @@ const companySchema = z.object({
   name: z.string().min(1, "Company name is required"),
   email: z.string().email("Valid email is required").optional().or(z.literal("")),
   phone: z.string().min(1, "Phone number is required"),
+  vision: z.string().optional(),
+  mission: z.string().optional(),
+  coreValues: z.string().optional(),
+  annualLeaveDays: z.coerce.number().min(0, "Must be 0 or more"),
 });
 
 type CompanyFormValues = z.infer<typeof companySchema>;
@@ -45,6 +50,10 @@ export default function SettingsCompanyPage() {
       name: "",
       email: "",
       phone: "",
+      vision: "",
+      mission: "",
+      coreValues: "",
+      annualLeaveDays: 0,
     },
   });
 
@@ -54,6 +63,10 @@ export default function SettingsCompanyPage() {
         name: company.name,
         email: company.email || "",
         phone: company.phone || "",
+        vision: company.vision || "",
+        mission: company.mission || "",
+        coreValues: company.coreValues || "",
+        annualLeaveDays: company.annualLeaveDays ?? 0,
       });
     }
   }, [company, form]);
@@ -159,15 +172,80 @@ export default function SettingsCompanyPage() {
               </div>
 
               <div className="pt-4 border-t">
-                <FormItem>
-                  <FormLabel>Workspace Domain</FormLabel>
+                <div className="space-y-2">
+                  <p className="text-sm font-medium leading-none">Workspace Domain</p>
                   <div className="flex w-full max-w-sm items-center space-x-2">
                     <Input value={company?.domain || ""} disabled />
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     System identifier. Cannot be changed.
                   </p>
-                </FormItem>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight">Culture &amp; Policies</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Shape how your organization presents itself and how leave is allocated.
+                  </p>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="vision"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Vision</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Our vision is..." className="resize-none" {...field} disabled={!isSuperAdmin} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="mission"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Mission</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Our mission is..." className="resize-none" {...field} disabled={!isSuperAdmin} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="coreValues"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Core Values</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="List your core values..." className="resize-none" {...field} disabled={!isSuperAdmin} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="annualLeaveDays"
+                  render={({ field }) => (
+                    <FormItem className="max-w-xs">
+                      <FormLabel>Annual Leave Days</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} {...field} disabled={!isSuperAdmin} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </CardContent>
             {isSuperAdmin && (
