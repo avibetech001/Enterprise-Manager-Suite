@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgTable,
   serial,
@@ -33,6 +34,10 @@ export const usersTable = pgTable("users", {
     { onDelete: "set null" },
   ),
   jobTitle: text("job_title"),
+  // Unique per-company human-readable employee code, e.g. EMP-0001
+  employeeCode: text("employee_code"),
+  // Employee records are never permanently deleted; they are archived.
+  archived: boolean("archived").notNull().default(false),
   activationToken: text("activation_token").unique(),
   activationTokenExpiresAt: timestamp("activation_token_expires_at", {
     withTimezone: true,

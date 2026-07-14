@@ -46,7 +46,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(
   session({
-    store: new PgSession({ pool, createTableIfMissing: true }),
+    // The session table is created by lib/db setup; createTableIfMissing is
+    // disabled because its bundled table.sql is not available in the esbuild
+    // output.
+    store: new PgSession({ pool, createTableIfMissing: false }),
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,

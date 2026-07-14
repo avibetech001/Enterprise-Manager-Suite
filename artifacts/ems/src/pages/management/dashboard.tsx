@@ -9,8 +9,8 @@ export default function ManagementDashboard() {
 
   if (!session) return null;
 
-  const activeEmployees = employees?.filter(e => e.status === 'active')?.length || 0;
-  const pendingEmployees = employees?.filter(e => e.status === 'pending')?.length || 0;
+  const activeEmployees = employees?.filter(e => e.accountStatus === 'active')?.length || 0;
+  const pendingEmployees = employees?.filter(e => e.accountStatus === 'pending')?.length || 0;
 
   return (
     <div className="p-6 space-y-6">

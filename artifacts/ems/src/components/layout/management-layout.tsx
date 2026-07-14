@@ -4,6 +4,7 @@ import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, Sid
 import { useGetCurrentSession, useLogout } from "@workspace/api-client-react";
 import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { NotificationsBell } from "./notifications-bell";
 
 export function ManagementLayout({ children }: { children: ReactNode }) {
   const { data: session } = useGetCurrentSession();
@@ -148,6 +149,9 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
+          <header className="h-14 border-b border-border flex items-center justify-end px-4 gap-4 sticky top-0 bg-background z-10">
+            <NotificationsBell />
+          </header>
           <div className="flex-1 overflow-auto">
             {children}
           </div>

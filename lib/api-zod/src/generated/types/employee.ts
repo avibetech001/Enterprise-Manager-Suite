@@ -5,22 +5,44 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
-import type { Role } from './role';
+import type { EmergencyContact } from './emergencyContact';
+import type { EmploymentDetails } from './employmentDetails';
 import type { UserStatus } from './userStatus';
 
 export interface Employee {
   id: number;
+  employeeCode: string;
   companyId: number;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  otherName: string | null;
   fullName: string;
-  email: string;
+  /** @nullable */
+  gender: string | null;
+  /** @nullable */
+  dateOfBirth: string | null;
+  /** @nullable */
+  maritalStatus: string | null;
+  /** @nullable */
+  nationality: string | null;
   phone: string;
-  role: Role;
-  status: UserStatus;
-  createdAt: Date;
   /** @nullable */
-  departmentId: number | null;
+  personalEmail: string | null;
+  companyEmail: string;
   /** @nullable */
-  jobTitle: string | null;
+  residentialAddress: string | null;
+  /** @nullable */
+  state: string | null;
+  /** @nullable */
+  city: string | null;
+  /** @nullable */
+  profilePhotoUrl: string | null;
+  emergencyContact: EmergencyContact | null;
+  employment: EmploymentDetails;
+  accountStatus: UserStatus;
+  archived: boolean;
   /** @nullable */
   activationLink: string | null;
+  createdAt: Date;
 }

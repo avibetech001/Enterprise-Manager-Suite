@@ -20,6 +20,7 @@ import EmployeeDashboard from '@/pages/employee/dashboard';
 
 // Future imports for Mgmt
 import EmployeesPage from '@/pages/management/employees';
+import EmployeeProfilePage from '@/pages/management/employee-profile';
 import UsersPage from '@/pages/management/users';
 import DepartmentsPage from '@/pages/management/departments';
 import SettingsCompanyPage from '@/pages/management/settings-company';
@@ -91,6 +92,14 @@ function Router() {
         <ManagementGuard>
           <ManagementLayout>
             <EmployeesPage />
+          </ManagementLayout>
+        </ManagementGuard>
+      </Route>
+
+      <Route path="/employees/:id">
+        <ManagementGuard>
+          <ManagementLayout>
+            <EmployeeProfilePage />
           </ManagementLayout>
         </ManagementGuard>
       </Route>

@@ -1,1 +1,2 @@
 - [Orval zod email format](orval-zod-email.md) — avoid `format: email` in openapi.yaml; orval emits zod-v4 `zod.email()` which breaks the zod v3 catalog build.
+- [connect-pg-simple in esbuild](session-store-esbuild.md) — keep createTableIfMissing false; bundled table.sql is missing, so sessions silently fail (login 200, then 401s).

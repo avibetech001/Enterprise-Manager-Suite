@@ -1,0 +1,265 @@
+Build the Employee Management module for the 5th Element Enterprise Management System (EMS).
+
+Only the Employer (Super Admin) and authorized HR users should have access to this module through the Management Dashboard.
+
+The Employee Management module should allow Employer and HR to create, manage, update, and archive employee records.
+
+=====================================================
+EMPLOYEE DIRECTORY
+=====================================================
+
+Create a modern Employee Directory page displaying all employees in a responsive table.
+
+The table should display:
+
+- Employee ID
+- Profile Photo
+- Full Name
+- Company Email
+- Phone Number
+- Department
+- Job Title
+- Employment Type
+- Reporting Manager
+- Account Status
+- Employment Status
+- Date Joined
+- Actions
+
+Include:
+
+- Search bar
+- Advanced filters
+- Sorting
+- Pagination
+- Export to Excel, CSV, and PDF
+
+Allow searching by:
+
+- Employee ID
+- Name
+- Email
+- Phone Number
+- Department
+- Job Title
+
+=====================================================
+ADD NEW EMPLOYEE
+=====================================================
+
+Employer or HR should be able to create a new employee.
+
+The form should include:
+
+PERSONAL INFORMATION
+
+- First Name
+- Last Name
+- Other Name (Optional)
+- Gender
+- Date of Birth
+- Marital Status
+- Nationality
+- Phone Number (WhatsApp)
+- Personal Email (Optional)
+- Residential Address
+- State
+- City
+- Profile Picture
+
+EMERGENCY CONTACT
+
+- Contact Name
+- Relationship
+- Phone Number
+- Address
+
+EMPLOYMENT INFORMATION
+
+- Department
+- Job Title
+- Employment Type
+  - Full Time
+  - Part Time
+  - Contract
+  - Intern
+
+- Reporting Manager
+- Employment Start Date
+- Probation Period
+- Salary (Optional)
+- Employee Status
+
+=====================================================
+ACCOUNT CREATION
+=====================================================
+
+When HR or Employer creates an employee:
+
+The system should automatically:
+
+- Generate a unique Employee ID.
+- Generate a company email if one has not been assigned.
+- Create an Employee account.
+- Assign the Employee role.
+- Set account status to Pending Activation.
+- Generate a secure activation link.
+- Save all employee information.
+
+After creation, display:
+
+Employee Created Successfully
+
+Employee ID
+
+Company Email
+
+Buttons:
+
+- Send Activation Link via WhatsApp
+- Send Activation Link via Email
+- Copy Activation Link
+
+The activation link should expire after 24 hours.
+
+=====================================================
+FIRST LOGIN
+=====================================================
+
+When the employee opens the activation link:
+
+The employee should:
+
+- Verify identity.
+- Create a password.
+- Confirm password.
+- Accept Company Policies.
+- Activate the account.
+
+The account status changes from:
+
+Pending Activation → Active
+
+The employee is then redirected to the Employee Dashboard.
+
+=====================================================
+EMPLOYEE PROFILE
+=====================================================
+
+Each employee profile should include:
+
+PERSONAL DETAILS
+
+- Employee ID
+- Photo
+- Full Name
+- Company Email
+- Personal Email
+- Phone Number
+- Address
+- Date of Birth
+- Emergency Contact
+
+EMPLOYMENT DETAILS
+
+- Department
+- Job Title
+- Employment Type
+- Reporting Manager
+- Date Joined
+- Account Status
+- Employment Status
+
+WORK SUMMARY
+
+- Attendance Summary
+- Leave Balance
+- Assigned Projects
+- Project Deliverables
+- Fund Requests
+- Requisition History
+
+=====================================================
+ACCOUNT MANAGEMENT
+=====================================================
+
+Employer and authorized HR should be able to:
+
+- View Employee
+- Edit Employee
+- Change Department
+- Change Job Title
+- Change Reporting Manager
+- Update Contact Information
+- Reset Password
+- Resend Activation Link
+- Suspend Account
+- Deactivate Account
+- Archive Employee
+- Restore Archived Employee
+
+Employee records should never be permanently deleted.
+
+=====================================================
+PERMISSIONS
+=====================================================
+
+Employer
+
+- Full access.
+
+HR
+
+- Can only access Employee Management if permission is granted by the Employer.
+
+Employees
+
+- Cannot access Employee Management.
+- Can only edit permitted fields in their own profile.
+
+=====================================================
+NOTIFICATIONS
+=====================================================
+
+Notify Employer and HR when:
+
+- Employee account is created.
+- Employee activates account.
+- Employee profile is updated.
+
+=====================================================
+DATABASE
+=====================================================
+
+Create normalized database tables for:
+
+- Users
+- Employees
+- Employee Profiles
+- Emergency Contacts
+- Employment Information
+- Roles
+- Permissions
+
+Use proper foreign keys and relationships.
+
+=====================================================
+UI
+=====================================================
+
+Design the module with:
+
+- Modern SaaS interface
+- Grey and white theme
+- Dashboard summary cards
+- Responsive employee table
+- Search
+- Filters
+- Pagination
+- Employee Profile page
+- Add Employee modal
+- Edit Employee modal
+- Smooth animations
+- Professional icons
+
+Ensure the module integrates seamlessly with Attendance, Leave Management, Projects, Fund Requests, Requisitions, Reports, and Notifications.

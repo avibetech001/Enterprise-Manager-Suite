@@ -64,7 +64,7 @@ const userSchema = z.object({
   phone: z.string().min(1, "Phone number is required"),
   password: z.string().optional(),
   permissions: z.array(z.string()).optional(),
-  status: z.enum(["active", "pending", "inactive"]).optional(),
+  status: z.enum(["active", "pending", "inactive", "suspended"]).optional(),
 });
 
 type UserFormValues = z.infer<typeof userSchema>;

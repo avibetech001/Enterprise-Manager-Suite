@@ -22,6 +22,8 @@ tags:
     description: Department management
   - name: permissions
     description: RBAC permission catalog
+  - name: notifications
+    description: Management notifications
 paths:
   /healthz:
     get:
@@ -421,6 +423,12 @@ paths:
       operationId: listEmployees
       tags: [employees]
       summary: List employees
+      parameters:
+        - name: includeArchived
+          in: query
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: Employees
@@ -525,19 +533,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-    delete:
-      operationId: deleteEmployee
+  /employees/{id}/reset-password:
+    post:
+      operationId: resetEmployeePassword
       tags: [employees]
-      summary: Remove an employee
+      summary: Set a new password for an employee account
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetEmployeePasswordInput"
       responses:
         "204":
-          description: Deleted
+          description: Password reset
         "403":
           description: Not permitted
           content:
@@ -550,6 +565,165 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
+  /employees/{id}/archive:
+    post:
+      operationId: archiveEmployee
+      tags: [employees]
+      summary: Archive an employee (records are never permanently deleted)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Archived employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "403":
+          description: Not permitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /employees/{id}/restore:
+    post:
+      operationId: restoreEmployee
+      tags: [employees]
+      summary: Restore an archived employee
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Restored employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "403":
+          description: Not permitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /me/profile:
+    get:
+      operationId: getMyProfile
+      tags: [employees]
+      summary: Get the current employee's own full profile
+      responses:
+        "200":
+          description: Own profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateMyProfile
+      tags: [employees]
+      summary: Update permitted fields of one's own profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications for the current management user
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/{id}/read:
+    post:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark a notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notifications/read-all:
+    post:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "204":
+          description: All marked read
 
   /employees/{id}/resend-activation:
     post:
@@ -701,7 +875,15 @@ components:
 
     UserStatus:
       type: string
-      enum: [active, pending, inactive]
+      enum: [active, pending, inactive, suspended]
+
+    EmploymentType:
+      type: string
+      enum: [full_time, part_time, contract, intern]
+
+    EmploymentStatus:
+      type: string
+      enum: [probation, active, on_leave, suspended, terminated]
 
     PermissionKey:
       type: string
@@ -889,79 +1071,277 @@ components:
         description:
           type: string
 
+    EmergencyContact:
+      type: object
+      required: [name, relationship, phone]
+      properties:
+        name:
+          type: string
+        relationship:
+          type: string
+        phone:
+          type: string
+        address:
+          type: string
+
+    EmploymentDetails:
+      type: object
+      required:
+        [
+          departmentId,
+          jobTitle,
+          employmentType,
+          reportingManagerId,
+          startDate,
+          employmentStatus,
+        ]
+      properties:
+        departmentId:
+          type: ["integer", "null"]
+        jobTitle:
+          type: ["string", "null"]
+        employmentType:
+          oneOf:
+            - $ref: "#/components/schemas/EmploymentType"
+            - type: "null"
+        reportingManagerId:
+          type: ["integer", "null"]
+        startDate:
+          type: ["string", "null"]
+        employmentStatus:
+          $ref: "#/components/schemas/EmploymentStatus"
+
     Employee:
       type: object
       required:
         [
           id,
+          employeeCode,
           companyId,
+          firstName,
+          lastName,
+          otherName,
           fullName,
-          email,
+          gender,
+          dateOfBirth,
+          maritalStatus,
+          nationality,
           phone,
-          role,
-          status,
-          createdAt,
-          departmentId,
-          jobTitle,
+          personalEmail,
+          companyEmail,
+          residentialAddress,
+          state,
+          city,
+          profilePhotoUrl,
+          emergencyContact,
+          employment,
+          accountStatus,
+          archived,
           activationLink,
+          createdAt,
         ]
+      properties:
+        id:
+          type: integer
+        employeeCode:
+          type: string
+        companyId:
+          type: integer
+        firstName:
+          type: string
+        lastName:
+          type: string
+        otherName:
+          type: ["string", "null"]
+        fullName:
+          type: string
+        gender:
+          type: ["string", "null"]
+        dateOfBirth:
+          type: ["string", "null"]
+        maritalStatus:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+        phone:
+          type: string
+        personalEmail:
+          type: ["string", "null"]
+        companyEmail:
+          type: string
+        residentialAddress:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        profilePhotoUrl:
+          type: ["string", "null"]
+        emergencyContact:
+          oneOf:
+            - $ref: "#/components/schemas/EmergencyContact"
+            - type: "null"
+        employment:
+          $ref: "#/components/schemas/EmploymentDetails"
+        accountStatus:
+          $ref: "#/components/schemas/UserStatus"
+        archived:
+          type: boolean
+        activationLink:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    EmployeeInput:
+      type: object
+      required: [firstName, lastName, phone]
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        otherName:
+          type: string
+        gender:
+          type: string
+        dateOfBirth:
+          type: string
+        maritalStatus:
+          type: string
+        nationality:
+          type: string
+        phone:
+          type: string
+          minLength: 1
+        personalEmail:
+          type: string
+        companyEmail:
+          type: string
+        residentialAddress:
+          type: string
+        state:
+          type: string
+        city:
+          type: string
+        profilePhotoUrl:
+          type: string
+        emergencyContact:
+          $ref: "#/components/schemas/EmergencyContact"
+        departmentId:
+          type: ["integer", "null"]
+        jobTitle:
+          type: string
+        employmentType:
+          $ref: "#/components/schemas/EmploymentType"
+        reportingManagerId:
+          type: ["integer", "null"]
+        startDate:
+          type: string
+        employmentStatus:
+          $ref: "#/components/schemas/EmploymentStatus"
+
+    EmployeeUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 1
+        lastName:
+          type: string
+          minLength: 1
+        otherName:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        dateOfBirth:
+          type: ["string", "null"]
+        maritalStatus:
+          type: ["string", "null"]
+        nationality:
+          type: ["string", "null"]
+        phone:
+          type: string
+          minLength: 1
+        personalEmail:
+          type: ["string", "null"]
+        residentialAddress:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        profilePhotoUrl:
+          type: ["string", "null"]
+        emergencyContact:
+          oneOf:
+            - $ref: "#/components/schemas/EmergencyContact"
+            - type: "null"
+        departmentId:
+          type: ["integer", "null"]
+        jobTitle:
+          type: ["string", "null"]
+        employmentType:
+          oneOf:
+            - $ref: "#/components/schemas/EmploymentType"
+            - type: "null"
+        reportingManagerId:
+          type: ["integer", "null"]
+        startDate:
+          type: ["string", "null"]
+        employmentStatus:
+          $ref: "#/components/schemas/EmploymentStatus"
+        accountStatus:
+          $ref: "#/components/schemas/UserStatus"
+
+    MyProfileUpdate:
+      type: object
+      properties:
+        phone:
+          type: string
+          minLength: 1
+        personalEmail:
+          type: ["string", "null"]
+        residentialAddress:
+          type: ["string", "null"]
+        state:
+          type: ["string", "null"]
+        city:
+          type: ["string", "null"]
+        profilePhotoUrl:
+          type: ["string", "null"]
+        emergencyContact:
+          oneOf:
+            - $ref: "#/components/schemas/EmergencyContact"
+            - type: "null"
+
+    ResetEmployeePasswordInput:
+      type: object
+      required: [newPassword]
+      properties:
+        newPassword:
+          type: string
+          minLength: 8
+
+    Notification:
+      type: object
+      required: [id, companyId, type, message, readAt, createdAt]
       properties:
         id:
           type: integer
         companyId:
           type: integer
-        fullName:
+        type:
           type: string
-        email:
+        message:
           type: string
-        phone:
-          type: string
-        role:
-          $ref: "#/components/schemas/Role"
-        status:
-          $ref: "#/components/schemas/UserStatus"
+        readAt:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
-        departmentId:
-          type: ["integer", "null"]
-        jobTitle:
-          type: ["string", "null"]
-        activationLink:
-          type: ["string", "null"]
-
-    EmployeeInput:
-      type: object
-      required: [fullName, email, phone]
-      properties:
-        fullName:
-          type: string
-          minLength: 1
-        email:
-          type: string
-        phone:
-          type: string
-          minLength: 1
-        departmentId:
-          type: ["integer", "null"]
-        jobTitle:
-          type: string
-
-    EmployeeUpdate:
-      type: object
-      properties:
-        fullName:
-          type: string
-          minLength: 1
-        phone:
-          type: string
-          minLength: 1
-        departmentId:
-          type: ["integer", "null"]
-        jobTitle:
-          type: string
-        status:
-          $ref: "#/components/schemas/UserStatus"
 
     EmployeeActivationInfo:
       type: object
@@ -976,7 +1356,7 @@ components:
 
     EmployeeActivateInput:
       type: object
-      required: [token, password, confirmPassword]
+      required: [token, password, confirmPassword, acceptPolicies]
       properties:
         token:
           type: string
@@ -986,3 +1366,5 @@ components:
         confirmPassword:
           type: string
           minLength: 8
+        acceptPolicies:
+          type: boolean

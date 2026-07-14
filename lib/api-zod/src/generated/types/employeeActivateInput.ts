@@ -12,4 +12,5 @@ export interface EmployeeActivateInput {
   password: string;
   /** @minLength 8 */
   confirmPassword: string;
+  acceptPolicies: boolean;
 }

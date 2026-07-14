@@ -21,7 +21,10 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const activationSchema = z.object({
   password: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string().min(8, "Please confirm your password")
+  confirmPassword: z.string().min(8, "Please confirm your password"),
+  acceptPolicies: z.literal(true, {
+    errorMap: () => ({ message: "You must accept the company policies" })
+  })
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -130,6 +133,29 @@ export default function ActivatePage() {
                     <FormControl>
                       <Input type="password" {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="acceptPolicies"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                    <FormControl>
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary mt-0.5"
+                        checked={field.value}
+                        onChange={(e) => field.onChange(e.target.checked)}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        I accept the company policies
+                      </FormLabel>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}

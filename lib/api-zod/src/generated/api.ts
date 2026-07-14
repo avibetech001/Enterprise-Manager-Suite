@@ -55,7 +55,7 @@ export const CompleteSetupResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -86,7 +86,7 @@ export const ManagementLoginResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -117,7 +117,7 @@ export const EmployeeLoginResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -149,7 +149,7 @@ export const GetCurrentSessionResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -221,7 +221,7 @@ export const ListManagementUsersResponseItem = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
 export const ListManagementUsersResponse = zod.array(ListManagementUsersResponseItem)
@@ -252,7 +252,7 @@ export const CreateManagementUserResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
 
@@ -272,7 +272,7 @@ export const UpdateManagementUserBody = zod.object({
   "fullName": zod.string().min(1).optional(),
   "phone": zod.string().min(1).optional(),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])).optional(),
-  "status": zod.enum(['active', 'pending', 'inactive']).optional()
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']).optional()
 })
 
 export const UpdateManagementUserResponse = zod.object({
@@ -283,7 +283,7 @@ export const UpdateManagementUserResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
 
@@ -368,18 +368,47 @@ export const DeleteDepartmentResponse = zod.void()
 /**
  * @summary List employees
  */
+export const ListEmployeesQueryParams = zod.object({
+  "includeArchived": zod.coerce.boolean().optional()
+})
+
 export const ListEmployeesResponseItem = zod.object({
   "id": zod.number(),
+  "employeeCode": zod.string(),
   "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
   "phone": zod.string(),
-  "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "status": zod.enum(['active', 'pending', 'inactive']),
-  "createdAt": zod.coerce.date(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
   "departmentId": zod.number().nullable(),
   "jobTitle": zod.string().nullable(),
-  "activationLink": zod.string().nullable()
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
 })
 export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
@@ -391,26 +420,73 @@ export const ListEmployeesResponse = zod.array(ListEmployeesResponseItem)
 
 
 
+
 export const CreateEmployeeBody = zod.object({
-  "fullName": zod.string().min(1),
-  "email": zod.string(),
+  "firstName": zod.string().min(1),
+  "lastName": zod.string().min(1),
+  "otherName": zod.string().optional(),
+  "gender": zod.string().optional(),
+  "dateOfBirth": zod.string().optional(),
+  "maritalStatus": zod.string().optional(),
+  "nationality": zod.string().optional(),
   "phone": zod.string().min(1),
+  "personalEmail": zod.string().optional(),
+  "companyEmail": zod.string().optional(),
+  "residentialAddress": zod.string().optional(),
+  "state": zod.string().optional(),
+  "city": zod.string().optional(),
+  "profilePhotoUrl": zod.string().optional(),
+  "emergencyContact": zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}).optional(),
   "departmentId": zod.number().nullish(),
-  "jobTitle": zod.string().optional()
+  "jobTitle": zod.string().optional(),
+  "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']).optional(),
+  "reportingManagerId": zod.number().nullish(),
+  "startDate": zod.string().optional(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated']).optional()
 })
 
 export const CreateEmployeeResponse = zod.object({
   "id": zod.number(),
+  "employeeCode": zod.string(),
   "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
   "phone": zod.string(),
-  "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "status": zod.enum(['active', 'pending', 'inactive']),
-  "createdAt": zod.coerce.date(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
   "departmentId": zod.number().nullable(),
   "jobTitle": zod.string().nullable(),
-  "activationLink": zod.string().nullable()
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -423,16 +499,41 @@ export const GetEmployeeParams = zod.object({
 
 export const GetEmployeeResponse = zod.object({
   "id": zod.number(),
+  "employeeCode": zod.string(),
   "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
   "phone": zod.string(),
-  "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "status": zod.enum(['active', 'pending', 'inactive']),
-  "createdAt": zod.coerce.date(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
   "departmentId": zod.number().nullable(),
   "jobTitle": zod.string().nullable(),
-  "activationLink": zod.string().nullable()
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -447,37 +548,327 @@ export const UpdateEmployeeParams = zod.object({
 
 
 
+
 export const UpdateEmployeeBody = zod.object({
-  "fullName": zod.string().min(1).optional(),
+  "firstName": zod.string().min(1).optional(),
+  "lastName": zod.string().min(1).optional(),
+  "otherName": zod.string().nullish(),
+  "gender": zod.string().nullish(),
+  "dateOfBirth": zod.string().nullish(),
+  "maritalStatus": zod.string().nullish(),
+  "nationality": zod.string().nullish(),
   "phone": zod.string().min(1).optional(),
+  "personalEmail": zod.string().nullish(),
+  "residentialAddress": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "profilePhotoUrl": zod.string().nullish(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]).optional(),
   "departmentId": zod.number().nullish(),
-  "jobTitle": zod.string().optional(),
-  "status": zod.enum(['active', 'pending', 'inactive']).optional()
+  "jobTitle": zod.string().nullish(),
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]).optional(),
+  "reportingManagerId": zod.number().nullish(),
+  "startDate": zod.string().nullish(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated']).optional(),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']).optional()
 })
 
 export const UpdateEmployeeResponse = zod.object({
   "id": zod.number(),
+  "employeeCode": zod.string(),
   "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
   "phone": zod.string(),
-  "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "status": zod.enum(['active', 'pending', 'inactive']),
-  "createdAt": zod.coerce.date(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
   "departmentId": zod.number().nullable(),
   "jobTitle": zod.string().nullable(),
-  "activationLink": zod.string().nullable()
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
 })
 
 
 /**
- * @summary Remove an employee
+ * @summary Set a new password for an employee account
  */
-export const DeleteEmployeeParams = zod.object({
+export const ResetEmployeePasswordParams = zod.object({
   "id": zod.coerce.number()
 })
 
-export const DeleteEmployeeResponse = zod.void()
+export const resetEmployeePasswordBodyNewPasswordMin = 8;
+
+
+
+export const ResetEmployeePasswordBody = zod.object({
+  "newPassword": zod.string().min(resetEmployeePasswordBodyNewPasswordMin)
+})
+
+export const ResetEmployeePasswordResponse = zod.void()
+
+
+/**
+ * @summary Archive an employee (records are never permanently deleted)
+ */
+export const ArchiveEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ArchiveEmployeeResponse = zod.object({
+  "id": zod.number(),
+  "employeeCode": zod.string(),
+  "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
+  "fullName": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "phone": zod.string(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
+  "departmentId": zod.number().nullable(),
+  "jobTitle": zod.string().nullable(),
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Restore an archived employee
+ */
+export const RestoreEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const RestoreEmployeeResponse = zod.object({
+  "id": zod.number(),
+  "employeeCode": zod.string(),
+  "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
+  "fullName": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "phone": zod.string(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
+  "departmentId": zod.number().nullable(),
+  "jobTitle": zod.string().nullable(),
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get the current employee's own full profile
+ */
+export const GetMyProfileResponse = zod.object({
+  "id": zod.number(),
+  "employeeCode": zod.string(),
+  "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
+  "fullName": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "phone": zod.string(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
+  "departmentId": zod.number().nullable(),
+  "jobTitle": zod.string().nullable(),
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update permitted fields of one's own profile
+ */
+
+
+
+export const UpdateMyProfileBody = zod.object({
+  "phone": zod.string().min(1).optional(),
+  "personalEmail": zod.string().nullish(),
+  "residentialAddress": zod.string().nullish(),
+  "state": zod.string().nullish(),
+  "city": zod.string().nullish(),
+  "profilePhotoUrl": zod.string().nullish(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]).optional()
+})
+
+export const UpdateMyProfileResponse = zod.object({
+  "id": zod.number(),
+  "employeeCode": zod.string(),
+  "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
+  "fullName": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
+  "phone": zod.string(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
+  "departmentId": zod.number().nullable(),
+  "jobTitle": zod.string().nullable(),
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List notifications for the current management user
+ */
+export const ListNotificationsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "type": zod.string(),
+  "message": zod.string(),
+  "readAt": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+export const ListNotificationsResponse = zod.array(ListNotificationsResponseItem)
+
+
+/**
+ * @summary Mark a notification as read
+ */
+export const MarkNotificationReadParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkNotificationReadResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "type": zod.string(),
+  "message": zod.string(),
+  "readAt": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Mark all notifications as read
+ */
+export const MarkAllNotificationsReadResponse = zod.void()
 
 
 /**
@@ -489,16 +880,41 @@ export const ResendEmployeeActivationParams = zod.object({
 
 export const ResendEmployeeActivationResponse = zod.object({
   "id": zod.number(),
+  "employeeCode": zod.string(),
   "companyId": zod.number(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "otherName": zod.string().nullable(),
   "fullName": zod.string(),
-  "email": zod.string(),
+  "gender": zod.string().nullable(),
+  "dateOfBirth": zod.string().nullable(),
+  "maritalStatus": zod.string().nullable(),
+  "nationality": zod.string().nullable(),
   "phone": zod.string(),
-  "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "status": zod.enum(['active', 'pending', 'inactive']),
-  "createdAt": zod.coerce.date(),
+  "personalEmail": zod.string().nullable(),
+  "companyEmail": zod.string(),
+  "residentialAddress": zod.string().nullable(),
+  "state": zod.string().nullable(),
+  "city": zod.string().nullable(),
+  "profilePhotoUrl": zod.string().nullable(),
+  "emergencyContact": zod.union([zod.object({
+  "name": zod.string(),
+  "relationship": zod.string(),
+  "phone": zod.string(),
+  "address": zod.string().optional()
+}),zod.null()]),
+  "employment": zod.object({
   "departmentId": zod.number().nullable(),
   "jobTitle": zod.string().nullable(),
-  "activationLink": zod.string().nullable()
+  "employmentType": zod.union([zod.enum(['full_time', 'part_time', 'contract', 'intern']),zod.null()]),
+  "reportingManagerId": zod.number().nullable(),
+  "startDate": zod.string().nullable(),
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated'])
+}),
+  "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "archived": zod.boolean(),
+  "activationLink": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
 })
 
 
@@ -528,7 +944,8 @@ export const activateEmployeeBodyConfirmPasswordMin = 8;
 export const ActivateEmployeeBody = zod.object({
   "token": zod.string(),
   "password": zod.string().min(activateEmployeeBodyPasswordMin),
-  "confirmPassword": zod.string().min(activateEmployeeBodyConfirmPasswordMin)
+  "confirmPassword": zod.string().min(activateEmployeeBodyConfirmPasswordMin),
+  "acceptPolicies": zod.boolean()
 })
 
 export const ActivateEmployeeResponse = zod.object({
@@ -540,7 +957,7 @@ export const ActivateEmployeeResponse = zod.object({
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'view_reports'])),
-  "status": zod.enum(['active', 'pending', 'inactive']),
+  "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({

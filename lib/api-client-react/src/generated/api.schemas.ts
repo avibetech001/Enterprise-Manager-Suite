@@ -52,6 +52,28 @@ export const UserStatus = {
   active: 'active',
   pending: 'pending',
   inactive: 'inactive',
+  suspended: 'suspended',
+} as const;
+
+export type EmploymentType = typeof EmploymentType[keyof typeof EmploymentType];
+
+
+export const EmploymentType = {
+  full_time: 'full_time',
+  part_time: 'part_time',
+  contract: 'contract',
+  intern: 'intern',
+} as const;
+
+export type EmploymentStatus = typeof EmploymentStatus[keyof typeof EmploymentStatus];
+
+
+export const EmploymentStatus = {
+  probation: 'probation',
+  active: 'active',
+  on_leave: 'on_leave',
+  suspended: 'suspended',
+  terminated: 'terminated',
 } as const;
 
 export type PermissionKey = typeof PermissionKey[keyof typeof PermissionKey];
@@ -158,43 +180,163 @@ export interface DepartmentUpdate {
   description?: string;
 }
 
-export interface Employee {
-  id: number;
-  companyId: number;
-  fullName: string;
-  email: string;
+export interface EmergencyContact {
+  name: string;
+  relationship: string;
   phone: string;
-  role: Role;
-  status: UserStatus;
-  createdAt: string;
+  address?: string;
+}
+
+export interface EmploymentDetails {
   /** @nullable */
   departmentId: number | null;
   /** @nullable */
   jobTitle: string | null;
+  employmentType: EmploymentType | null;
+  /** @nullable */
+  reportingManagerId: number | null;
+  /** @nullable */
+  startDate: string | null;
+  employmentStatus: EmploymentStatus;
+}
+
+export interface Employee {
+  id: number;
+  employeeCode: string;
+  companyId: number;
+  firstName: string;
+  lastName: string;
+  /** @nullable */
+  otherName: string | null;
+  fullName: string;
+  /** @nullable */
+  gender: string | null;
+  /** @nullable */
+  dateOfBirth: string | null;
+  /** @nullable */
+  maritalStatus: string | null;
+  /** @nullable */
+  nationality: string | null;
+  phone: string;
+  /** @nullable */
+  personalEmail: string | null;
+  companyEmail: string;
+  /** @nullable */
+  residentialAddress: string | null;
+  /** @nullable */
+  state: string | null;
+  /** @nullable */
+  city: string | null;
+  /** @nullable */
+  profilePhotoUrl: string | null;
+  emergencyContact: EmergencyContact | null;
+  employment: EmploymentDetails;
+  accountStatus: UserStatus;
+  archived: boolean;
   /** @nullable */
   activationLink: string | null;
+  createdAt: string;
 }
 
 export interface EmployeeInput {
   /** @minLength 1 */
-  fullName: string;
-  email: string;
+  firstName: string;
+  /** @minLength 1 */
+  lastName: string;
+  otherName?: string;
+  gender?: string;
+  dateOfBirth?: string;
+  maritalStatus?: string;
+  nationality?: string;
   /** @minLength 1 */
   phone: string;
+  personalEmail?: string;
+  companyEmail?: string;
+  residentialAddress?: string;
+  state?: string;
+  city?: string;
+  profilePhotoUrl?: string;
+  emergencyContact?: EmergencyContact;
   /** @nullable */
   departmentId?: number | null;
   jobTitle?: string;
+  employmentType?: EmploymentType;
+  /** @nullable */
+  reportingManagerId?: number | null;
+  startDate?: string;
+  employmentStatus?: EmploymentStatus;
 }
 
 export interface EmployeeUpdate {
   /** @minLength 1 */
-  fullName?: string;
+  firstName?: string;
+  /** @minLength 1 */
+  lastName?: string;
+  /** @nullable */
+  otherName?: string | null;
+  /** @nullable */
+  gender?: string | null;
+  /** @nullable */
+  dateOfBirth?: string | null;
+  /** @nullable */
+  maritalStatus?: string | null;
+  /** @nullable */
+  nationality?: string | null;
   /** @minLength 1 */
   phone?: string;
   /** @nullable */
+  personalEmail?: string | null;
+  /** @nullable */
+  residentialAddress?: string | null;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  profilePhotoUrl?: string | null;
+  emergencyContact?: EmergencyContact | null;
+  /** @nullable */
   departmentId?: number | null;
-  jobTitle?: string;
-  status?: UserStatus;
+  /** @nullable */
+  jobTitle?: string | null;
+  employmentType?: EmploymentType | null;
+  /** @nullable */
+  reportingManagerId?: number | null;
+  /** @nullable */
+  startDate?: string | null;
+  employmentStatus?: EmploymentStatus;
+  accountStatus?: UserStatus;
+}
+
+export interface MyProfileUpdate {
+  /** @minLength 1 */
+  phone?: string;
+  /** @nullable */
+  personalEmail?: string | null;
+  /** @nullable */
+  residentialAddress?: string | null;
+  /** @nullable */
+  state?: string | null;
+  /** @nullable */
+  city?: string | null;
+  /** @nullable */
+  profilePhotoUrl?: string | null;
+  emergencyContact?: EmergencyContact | null;
+}
+
+export interface ResetEmployeePasswordInput {
+  /** @minLength 8 */
+  newPassword: string;
+}
+
+export interface Notification {
+  id: number;
+  companyId: number;
+  type: string;
+  message: string;
+  /** @nullable */
+  readAt: string | null;
+  createdAt: string;
 }
 
 export interface EmployeeActivationInfo {
@@ -209,5 +351,10 @@ export interface EmployeeActivateInput {
   password: string;
   /** @minLength 8 */
   confirmPassword: string;
+  acceptPolicies: boolean;
 }
+
+export type ListEmployeesParams = {
+includeArchived?: boolean;
+};
 
