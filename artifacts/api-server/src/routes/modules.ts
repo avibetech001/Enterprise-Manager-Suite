@@ -190,8 +190,21 @@ async function loadProjects(companyId: number, onlyUserId?: number) {
     );
     projects = projects.filter((p) => mine.has(p.id));
   }
+  const leadIds = [
+    ...new Set(projects.map((p) => p.leadUserId).filter((v): v is number => v !== null)),
+  ];
+  const leads = leadIds.length
+    ? await db
+        .select({ id: usersTable.id, fullName: usersTable.fullName })
+        .from(usersTable)
+        .where(
+          and(inArray(usersTable.id, leadIds), eq(usersTable.companyId, companyId)),
+        )
+    : [];
+  const leadNameById = new Map(leads.map((l) => [l.id, l.fullName]));
   return projects.map((p) => ({
     ...p,
+    leadName: p.leadUserId != null ? (leadNameById.get(p.leadUserId) ?? null) : null,
     members: members
       .filter((m) => m.projectId === p.id)
       .map(({ userId, fullName }) => ({ userId, fullName })),
@@ -1013,6 +1026,21 @@ router.get(
   },
 );
 
+// Returns the lead user id if it is a real user of this company, else null.
+async function resolveLeadUserId(
+  companyId: number,
+  leadUserId: number | null | undefined,
+): Promise<number | null> {
+  if (leadUserId == null) return null;
+  const [row] = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(
+      and(eq(usersTable.id, leadUserId), eq(usersTable.companyId, companyId)),
+    );
+  return row ? row.id : null;
+}
+
 // Returns the subset of memberIds that are real users of this company.
 async function validateMemberIds(
   companyId: number,
@@ -1080,6 +1108,7 @@ router.post(
     const me = req.currentUser!;
     const { memberIds: rawMemberIds, deliverables, ...fields } = parsed.data;
     const memberIds = await validateMemberIds(me.companyId, rawMemberIds);
+    const leadUserId = await resolveLeadUserId(me.companyId, fields.leadUserId);
     const [project] = await db
       .insert(projectsTable)
       .values({
@@ -1090,6 +1119,7 @@ router.post(
         startDate: fields.startDate || null,
         deadline: fields.deadline || null,
         progress: fields.progress ?? 0,
+        leadUserId,
       })
       .returning();
     await syncProjectRelations(project.id, memberIds, deliverables);
@@ -1122,6 +1152,7 @@ router.patch(
     const me = req.currentUser!;
     const { memberIds: rawMemberIds, deliverables, ...fields } = parsed.data;
     const memberIds = await validateMemberIds(me.companyId, rawMemberIds);
+    const leadUserId = await resolveLeadUserId(me.companyId, fields.leadUserId);
     const previousMembers = await db
       .select()
       .from(projectMembersTable)
@@ -1135,6 +1166,7 @@ router.patch(
         startDate: fields.startDate || null,
         deadline: fields.deadline || null,
         progress: fields.progress ?? 0,
+        leadUserId,
       })
       .where(
         and(eq(projectsTable.id, id), eq(projectsTable.companyId, me.companyId)),

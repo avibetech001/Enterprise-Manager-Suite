@@ -2463,6 +2463,8 @@ components:
           startDate,
           deadline,
           progress,
+          leadUserId,
+          leadName,
           members,
           deliverables,
           createdAt,
@@ -2484,6 +2486,10 @@ components:
           type: ["string", "null"]
         progress:
           type: integer
+        leadUserId:
+          type: ["integer", "null"]
+        leadName:
+          type: ["string", "null"]
         members:
           type: array
           items:
@@ -2551,6 +2557,8 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+        leadUserId:
+          type: ["integer", "null"]
         memberIds:
           type: array
           items:

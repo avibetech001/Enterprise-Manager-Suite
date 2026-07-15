@@ -20,6 +20,10 @@ export interface ProjectDetail {
   /** @nullable */
   deadline: string | null;
   progress: number;
+  /** @nullable */
+  leadUserId: number | null;
+  /** @nullable */
+  leadName: string | null;
   members: ProjectMember[];
   deliverables: ProjectDeliverable[];
   createdAt: Date;

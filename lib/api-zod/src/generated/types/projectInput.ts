@@ -20,6 +20,8 @@ export interface ProjectInput {
      * @maximum 100
      */
   progress?: number;
+  /** @nullable */
+  leadUserId?: number | null;
   memberIds?: number[];
   deliverables?: ProjectDeliverableInput[];
 }

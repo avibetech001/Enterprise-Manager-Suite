@@ -1472,6 +1472,8 @@ export const ListMyProjectsResponseItem = zod.object({
   "startDate": zod.string().nullable(),
   "deadline": zod.string().nullable(),
   "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
   "members": zod.array(zod.object({
   "userId": zod.number(),
   "fullName": zod.string()
@@ -1518,6 +1520,8 @@ export const UpdateMyProjectProgressResponse = zod.object({
   "startDate": zod.string().nullable(),
   "deadline": zod.string().nullable(),
   "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
   "members": zod.array(zod.object({
   "userId": zod.number(),
   "fullName": zod.string()
@@ -1545,6 +1549,8 @@ export const ListProjectsResponseItem = zod.object({
   "startDate": zod.string().nullable(),
   "deadline": zod.string().nullable(),
   "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
   "members": zod.array(zod.object({
   "userId": zod.number(),
   "fullName": zod.string()
@@ -1578,6 +1584,7 @@ export const CreateProjectBody = zod.object({
   "startDate": zod.string().optional(),
   "deadline": zod.string().optional(),
   "progress": zod.number().min(createProjectBodyProgressMin).max(createProjectBodyProgressMax).optional(),
+  "leadUserId": zod.number().nullish(),
   "memberIds": zod.array(zod.number()).optional(),
   "deliverables": zod.array(zod.object({
   "title": zod.string().min(1),
@@ -1595,6 +1602,8 @@ export const CreateProjectResponse = zod.object({
   "startDate": zod.string().nullable(),
   "deadline": zod.string().nullable(),
   "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
   "members": zod.array(zod.object({
   "userId": zod.number(),
   "fullName": zod.string()
@@ -1631,6 +1640,7 @@ export const UpdateProjectBody = zod.object({
   "startDate": zod.string().optional(),
   "deadline": zod.string().optional(),
   "progress": zod.number().min(updateProjectBodyProgressMin).max(updateProjectBodyProgressMax).optional(),
+  "leadUserId": zod.number().nullish(),
   "memberIds": zod.array(zod.number()).optional(),
   "deliverables": zod.array(zod.object({
   "title": zod.string().min(1),
@@ -1648,6 +1658,8 @@ export const UpdateProjectResponse = zod.object({
   "startDate": zod.string().nullable(),
   "deadline": zod.string().nullable(),
   "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
   "members": zod.array(zod.object({
   "userId": zod.number(),
   "fullName": zod.string()

@@ -28,9 +28,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Plus, Pencil, Trash2, FolderKanban, Users, CalendarClock, ListChecks } from "lucide-react";
+import { Plus, Pencil, Trash2, FolderKanban, Users, CalendarClock, ListChecks, Crown } from "lucide-react";
 import { toast } from "sonner";
 
 const STATUS_OPTIONS: ProjectInputStatus[] = ["planning", "active", "on_hold", "completed"];
@@ -57,6 +64,7 @@ interface FormState {
   startDate: string;
   deadline: string;
   progress: number;
+  leadUserId: number | null;
   memberIds: number[];
   deliverables: ProjectDeliverableInput[];
 }
@@ -68,6 +76,7 @@ const emptyForm: FormState = {
   startDate: "",
   deadline: "",
   progress: 0,
+  leadUserId: null,
   memberIds: [],
   deliverables: [],
 };
@@ -98,6 +107,7 @@ export default function ProjectsPage() {
         startDate: project.startDate || "",
         deadline: project.deadline || "",
         progress: project.progress,
+        leadUserId: project.leadUserId ?? null,
         memberIds: project.members.map((m) => m.userId),
         deliverables: project.deliverables.map((d) => ({
           title: d.title,
@@ -153,6 +163,7 @@ export default function ProjectsPage() {
       startDate: form.startDate || undefined,
       deadline: form.deadline || undefined,
       progress: form.progress,
+      leadUserId: form.leadUserId,
       memberIds: form.memberIds,
       deliverables: form.deliverables
         .filter((d) => d.title.trim())
@@ -269,6 +280,12 @@ export default function ProjectsPage() {
                     </div>
                     <Progress value={p.progress} />
                   </div>
+                  {p.leadName && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Crown className="h-3.5 w-3.5" />
+                      Lead: <span className="font-medium text-foreground">{p.leadName}</span>
+                    </div>
+                  )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">
                       <CalendarClock className="h-3.5 w-3.5" />
@@ -347,6 +364,28 @@ export default function ProjectsPage() {
                   onChange={(e) => setForm((f) => ({ ...f, deadline: e.target.value }))}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Project Lead</Label>
+              <Select
+                value={form.leadUserId !== null ? String(form.leadUserId) : "none"}
+                onValueChange={(v) =>
+                  setForm((f) => ({ ...f, leadUserId: v === "none" ? null : Number(v) }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No lead assigned" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No lead</SelectItem>
+                  {activeEmployees.map((emp) => (
+                    <SelectItem key={emp.id} value={String(emp.id)}>
+                      {emp.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

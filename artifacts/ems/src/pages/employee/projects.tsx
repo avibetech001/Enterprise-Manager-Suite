@@ -209,6 +209,11 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
               Deadline: {new Date(p.deadline).toLocaleDateString()}
             </span>
           )}
+          {p.leadName && (
+            <span className="flex items-center gap-1.5">
+              Lead: <span className="font-medium text-foreground">{p.leadName}</span>
+            </span>
+          )}
         </div>
 
         {p.members.length > 0 && (

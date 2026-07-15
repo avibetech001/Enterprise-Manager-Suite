@@ -114,6 +114,9 @@ export const projectsTable = pgTable("projects", {
   name: text("name").notNull(),
   description: text("description"),
   status: text("status").notNull().default("planning"),
+  leadUserId: integer("lead_user_id").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
   startDate: date("start_date"),
   deadline: date("deadline"),
   progress: integer("progress").notNull().default(0),

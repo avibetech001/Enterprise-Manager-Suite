@@ -1,6 +1,11 @@
 import { Router, type IRouter } from "express";
 import { and, count, eq } from "drizzle-orm";
-import { db, departmentsTable, usersTable } from "@workspace/db";
+import {
+  db,
+  departmentsTable,
+  usersTable,
+  employmentInfoTable,
+} from "@workspace/db";
 import {
   ListDepartmentsResponse,
   CreateDepartmentBody,
@@ -23,12 +28,19 @@ router.get("/departments", requireAuth, async (req, res): Promise<void> => {
 
   const counts = await db
     .select({
-      departmentId: usersTable.departmentId,
+      departmentId: employmentInfoTable.departmentId,
       employeeCount: count(),
     })
-    .from(usersTable)
-    .where(and(eq(usersTable.companyId, companyId), eq(usersTable.role, "employee")))
-    .groupBy(usersTable.departmentId);
+    .from(employmentInfoTable)
+    .innerJoin(usersTable, eq(employmentInfoTable.userId, usersTable.id))
+    .where(
+      and(
+        eq(usersTable.companyId, companyId),
+        eq(usersTable.role, "employee"),
+        eq(usersTable.archived, false),
+      ),
+    )
+    .groupBy(employmentInfoTable.departmentId);
 
   const countByDepartment = new Map(
     counts.map((c) => [c.departmentId, c.employeeCount]),
@@ -107,8 +119,15 @@ router.patch(
 
     const [{ employeeCount }] = await db
       .select({ employeeCount: count() })
-      .from(usersTable)
-      .where(eq(usersTable.departmentId, department.id));
+      .from(employmentInfoTable)
+      .innerJoin(usersTable, eq(employmentInfoTable.userId, usersTable.id))
+      .where(
+        and(
+          eq(employmentInfoTable.departmentId, department.id),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.archived, false),
+        ),
+      );
 
     res.json(UpdateDepartmentResponse.parse({ ...department, employeeCount }));
   },

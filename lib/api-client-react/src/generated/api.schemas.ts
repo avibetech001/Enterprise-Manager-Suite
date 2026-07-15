@@ -596,6 +596,10 @@ export interface ProjectDetail {
   /** @nullable */
   deadline: string | null;
   progress: number;
+  /** @nullable */
+  leadUserId: number | null;
+  /** @nullable */
+  leadName: string | null;
   members: ProjectMember[];
   deliverables: ProjectDeliverable[];
   createdAt: string;
@@ -673,6 +677,8 @@ export interface ProjectInput {
      * @maximum 100
      */
   progress?: number;
+  /** @nullable */
+  leadUserId?: number | null;
   memberIds?: number[];
   deliverables?: ProjectDeliverableInput[];
 }
