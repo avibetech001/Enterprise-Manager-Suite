@@ -40,6 +40,32 @@ export const attendanceRecordsTable = pgTable("attendance_records", {
     .notNull()
     .defaultNow(),
   checkOutAt: timestamp("check_out_at", { withTimezone: true }),
+  // "on_time" | "late"
+  checkInStatus: text("check_in_status"),
+  // "on_time" | "early"
+  checkOutStatus: text("check_out_status"),
+  // Distance from the office at the moment of scanning, in meters.
+  checkInDistanceM: integer("check_in_distance_m"),
+  checkOutDistanceM: integer("check_out_distance_m"),
+});
+
+// Per-company attendance rules: office location + allowed radius, and the
+// workday window used to flag late check-ins / early check-outs.
+export const attendanceSettingsTable = pgTable("attendance_settings", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .unique()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  officeLat: text("office_lat"),
+  officeLng: text("office_lng"),
+  radiusMeters: integer("radius_meters").notNull().default(200),
+  // JSON: { mon..sun: { mode: "office"|"remote"|"off", start?: "HH:MM", end?: "HH:MM" } }
+  weeklySchedule: text("weekly_schedule"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
 // ---------------------------------------------------------------------------
@@ -202,6 +228,32 @@ export const companyPostsTable = pgTable("company_posts", {
     .$onUpdate(() => new Date()),
 });
 
+// ---------------------------------------------------------------------------
+// Employee queries (disciplinary: query / deduction / fine)
+// ---------------------------------------------------------------------------
+
+// category: "query" | "deduction" | "fine"
+export const employeeQueriesTable = pgTable("employee_queries", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  issuedBy: integer("issued_by").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
+  category: text("category").notNull(),
+  // Monetary amount for deductions/fines, stored as text (e.g. "5000").
+  amount: text("amount"),
+  reason: text("reason").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type EmployeeQuery = typeof employeeQueriesTable.$inferSelect;
 export type AttendanceRecord = typeof attendanceRecordsTable.$inferSelect;
 export type LeaveRequest = typeof leaveRequestsTable.$inferSelect;
 export type Project = typeof projectsTable.$inferSelect;

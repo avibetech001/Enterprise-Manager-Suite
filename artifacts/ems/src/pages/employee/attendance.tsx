@@ -1,4 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { Html5Qrcode } from "html5-qrcode";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetMySummary,
@@ -22,7 +30,164 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { toast } from "sonner";
-import { CalendarClock, LogIn, LogOut, Printer } from "lucide-react";
+import { CalendarClock, Printer, ScanLine } from "lucide-react";
+
+function extractCode(decodedText: string): string {
+  // QR encodes a URL like https://.../employee/attendance?code=ABC123 — or may be the raw code.
+  try {
+    const url = new URL(decodedText);
+    const fromUrl = url.searchParams.get("code");
+    if (fromUrl) return fromUrl;
+  } catch {
+    // not a URL — treat as raw code
+  }
+  return decodedText.trim();
+}
+
+function QrScannerDialog({
+  open,
+  onOpenChange,
+  onScan,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onScan: (code: string) => void;
+}) {
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const onScanRef = useRef(onScan);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onScanRef.current = onScan;
+  onOpenChangeRef.current = onOpenChange;
+
+  useEffect(() => {
+    if (!open) return;
+    setError(null);
+    let cancelled = false;
+
+    // Defer so the dialog portal content (including #qr-scanner-region) is in the DOM.
+    const timer = window.setTimeout(() => {
+      if (cancelled) return;
+      if (!navigator.mediaDevices?.getUserMedia) {
+        setError("Camera is not available in this browser. Type the code manually instead.");
+        return;
+      }
+      if (!document.getElementById("qr-scanner-region")) {
+        setError("Could not start the camera. Type the code manually instead.");
+        return;
+      }
+      try {
+        const scanner = new Html5Qrcode("qr-scanner-region");
+        scannerRef.current = scanner;
+        scanner
+          .start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: { width: 220, height: 220 } },
+            (decodedText) => {
+              if (cancelled) return;
+              cancelled = true;
+              scanner
+                .stop()
+                .catch(() => undefined)
+                .finally(() => {
+                  onScanRef.current(extractCode(decodedText));
+                  onOpenChangeRef.current(false);
+                });
+            },
+            () => undefined // per-frame decode misses; ignore
+          )
+          .catch((err) => {
+            if (!cancelled) {
+              setError(
+                String(err).includes("NotAllowedError")
+                  ? "Camera access was denied. Allow camera permission and try again, or type the code manually."
+                  : "Could not start the camera. Type the code manually instead."
+              );
+            }
+          });
+      } catch {
+        setError("Could not start the camera. Type the code manually instead.");
+      }
+    }, 150);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      const s = scannerRef.current;
+      scannerRef.current = null;
+      if (s) {
+        try {
+          s.stop().catch(() => undefined);
+        } catch {
+          // already stopped
+        }
+      }
+    };
+  }, [open]);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Scan Attendance QR Code</DialogTitle>
+          <DialogDescription>
+            Point your camera at the QR code posted at your office.
+          </DialogDescription>
+        </DialogHeader>
+        {error ? (
+          <p className="text-sm text-destructive py-4">{error}</p>
+        ) : (
+          <div id="qr-scanner-region" className="w-full overflow-hidden rounded-lg" />
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// Best-effort geolocation; resolves null if unavailable/denied so the server
+// can decide whether location is required.
+function getPosition(): Promise<{ lat: number; lng: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    let settled = false;
+    const done = (val: { lat: number; lng: number } | null) => {
+      if (!settled) {
+        settled = true;
+        resolve(val);
+      }
+    };
+    // Hard timeout: getCurrentPosition's own `timeout` does not cover the time
+    // a permission prompt sits undecided, which would hang the check-in forever.
+    const timer = window.setTimeout(() => done(null), 10000);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        window.clearTimeout(timer);
+        done({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+      },
+      () => {
+        window.clearTimeout(timer);
+        done(null);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    );
+  });
+}
+
+function statusBadge(status: string | null | undefined) {
+  if (!status) return null;
+  const cls =
+    status === "on_time"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+      : "bg-amber-50 text-amber-700 border-amber-200";
+  return (
+    <Badge variant="outline" className={cls}>
+      <span className="capitalize">{status.replace("_", " ")}</span>
+    </Badge>
+  );
+}
 
 function formatTime(iso: string | null): string {
   if (!iso) return "—";
@@ -42,15 +207,10 @@ export default function EmployeeAttendance() {
   const checkIn = useCheckIn();
   const checkOut = useCheckOut();
 
-  const [code, setCode] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const urlCode = params.get("code");
-    if (urlCode) setCode(urlCode);
-  }, []);
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const urlCodeHandled = useRef(false);
 
   const params = {
     ...(from ? { from } : {}),
@@ -64,23 +224,38 @@ export default function EmployeeAttendance() {
   const isCheckedIn = !!today;
   const isCheckedOut = !!today?.checkOutAt;
 
+  // If the page was opened by scanning the QR with a phone camera
+  // (…/employee/attendance?code=XYZ), submit automatically.
+  useEffect(() => {
+    if (!summary || urlCodeHandled.current) return;
+    const params = new URLSearchParams(window.location.search);
+    const urlCode = params.get("code");
+    if (!urlCode) return;
+    urlCodeHandled.current = true;
+    window.history.replaceState({}, "", window.location.pathname);
+    if (!summary.attendanceToday) {
+      handleCheckIn(urlCode);
+    } else if (!summary.attendanceToday.checkOutAt) {
+      handleCheckOut(urlCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [summary]);
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetMySummaryQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListMyAttendanceQueryKey() });
   };
 
-  const handleCheckIn = () => {
-    if (!code.trim()) {
-      toast.error("Attendance code required", { description: "Enter today's attendance code." });
-      return;
-    }
+  const handleCheckIn = async (scannedCode: string) => {
+    const useCode = scannedCode.trim();
+    if (!useCode) return;
+    const pos = await getPosition();
     checkIn.mutate(
-      { data: { code: code.trim() } },
+      { data: { code: useCode, lat: pos?.lat ?? null, lng: pos?.lng ?? null } },
       {
         onSuccess: () => {
           invalidate();
           toast.success("Checked in successfully");
-          setCode("");
         },
         onError: (err) => {
           toast.error("Failed to check in", { description: err.data?.error || "Unknown error" });
@@ -89,16 +264,22 @@ export default function EmployeeAttendance() {
     );
   };
 
-  const handleCheckOut = () => {
-    checkOut.mutate(undefined, {
-      onSuccess: () => {
-        invalidate();
-        toast.success("Checked out successfully");
-      },
-      onError: (err) => {
-        toast.error("Failed to check out", { description: err.data?.error || "Unknown error" });
-      },
-    });
+  const handleCheckOut = async (scannedCode: string) => {
+    const useCode = scannedCode.trim();
+    if (!useCode) return;
+    const pos = await getPosition();
+    checkOut.mutate(
+      { data: { code: useCode, lat: pos?.lat ?? null, lng: pos?.lng ?? null } },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast.success("Checked out successfully");
+        },
+        onError: (err) => {
+          toast.error("Failed to check out", { description: err.data?.error || "Unknown error" });
+        },
+      }
+    );
   };
 
   const handleExportPDF = () => {
@@ -148,6 +329,17 @@ export default function EmployeeAttendance() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
+      <QrScannerDialog
+        open={scannerOpen}
+        onOpenChange={setScannerOpen}
+        onScan={(scanned) => {
+          if (!isCheckedIn) {
+            handleCheckIn(scanned);
+          } else if (!isCheckedOut) {
+            handleCheckOut(scanned);
+          }
+        }}
+      />
       <div>
         <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
           <CalendarClock className="h-7 w-7 text-muted-foreground" />
@@ -163,19 +355,13 @@ export default function EmployeeAttendance() {
         </CardHeader>
         <CardContent>
           {!isCheckedIn ? (
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3 max-w-md">
-              <div className="flex-1 space-y-1.5">
-                <Label htmlFor="attendance-code">Attendance Code</Label>
-                <Input
-                  id="attendance-code"
-                  placeholder="Enter today's code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </div>
-              <Button onClick={handleCheckIn} disabled={checkIn.isPending}>
-                <LogIn className="h-4 w-4 mr-2" />
-                Check In
+            <div className="space-y-3 max-w-md">
+              <p className="text-sm text-muted-foreground">
+                Scan the attendance QR code posted at your office to check in.
+              </p>
+              <Button onClick={() => setScannerOpen(true)} disabled={checkIn.isPending}>
+                <ScanLine className="h-4 w-4 mr-2" />
+                {checkIn.isPending ? "Checking in..." : "Scan QR to Check In"}
               </Button>
             </div>
           ) : (
@@ -183,11 +369,17 @@ export default function EmployeeAttendance() {
               <div className="flex flex-wrap items-center gap-6">
                 <div>
                   <p className="text-sm text-muted-foreground">Check In</p>
-                  <p className="font-medium mt-1">{formatTime(today!.checkInAt)}</p>
+                  <div className="font-medium mt-1 flex items-center gap-2">
+                    {formatTime(today!.checkInAt)}
+                    {statusBadge(today!.checkInStatus)}
+                  </div>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Check Out</p>
-                  <p className="font-medium mt-1">{formatTime(today!.checkOutAt)}</p>
+                  <div className="font-medium mt-1 flex items-center gap-2">
+                    {formatTime(today!.checkOutAt)}
+                    {statusBadge(today!.checkOutStatus)}
+                  </div>
                 </div>
                 <Badge
                   variant="outline"
@@ -201,10 +393,19 @@ export default function EmployeeAttendance() {
                 </Badge>
               </div>
               {!isCheckedOut && (
-                <Button variant="outline" onClick={handleCheckOut} disabled={checkOut.isPending}>
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Check Out
-                </Button>
+                <div className="space-y-3 max-w-md">
+                  <p className="text-sm text-muted-foreground">
+                    Scan the attendance QR code again to check out.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setScannerOpen(true)}
+                    disabled={checkOut.isPending}
+                  >
+                    <ScanLine className="h-4 w-4 mr-2" />
+                    {checkOut.isPending ? "Checking out..." : "Scan QR to Check Out"}
+                  </Button>
+                </div>
               )}
             </div>
           )}
@@ -249,6 +450,7 @@ export default function EmployeeAttendance() {
                   <TableHead>Check In</TableHead>
                   <TableHead>Check Out</TableHead>
                   <TableHead>Hours</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -258,6 +460,13 @@ export default function EmployeeAttendance() {
                     <TableCell>{formatTime(r.checkInAt)}</TableCell>
                     <TableCell>{formatTime(r.checkOutAt)}</TableCell>
                     <TableCell>{computeHours(r.checkInAt, r.checkOutAt)}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {r.checkInStatus === "late" && statusBadge("late")}
+                        {r.checkOutStatus === "early" && statusBadge("early")}
+                        {r.checkInStatus !== "late" && r.checkOutStatus !== "early" && statusBadge("on_time")}
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

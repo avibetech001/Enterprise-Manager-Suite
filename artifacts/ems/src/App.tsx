@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@/components/theme-provider';
 import { Toaster } from '@/components/ui/toaster';
 import { Toaster as SonnerToaster } from 'sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -22,22 +23,24 @@ import EmployeeAttendancePage from '@/pages/employee/attendance';
 import EmployeeLeavePage from '@/pages/employee/leave';
 import EmployeeProjectsPage from '@/pages/employee/projects';
 import EmployeeFundRequestsPage from '@/pages/employee/fund-requests';
-import EmployeeRequisitionsPage from '@/pages/employee/requisitions';
 import EmployeePoliciesPage from '@/pages/employee/policies';
+import EmployeeAnnouncementsPage from '@/pages/employee/announcements';
 import EmployeeKnowledgeBasePage from '@/pages/employee/knowledge-base';
 import EmployeeSettingsPage from '@/pages/employee/settings';
 import ManagementAttendancePage from '@/pages/management/attendance';
 import ManagementLeavePage from '@/pages/management/leave';
 import ManagementProjectsPage from '@/pages/management/projects';
 import ManagementFundRequestsPage from '@/pages/management/fund-requests';
-import ManagementRequisitionsPage from '@/pages/management/requisitions';
-import ManagementContentPage from '@/pages/management/content';
+import ManagementAnnouncementsPage from '@/pages/management/announcements';
 
 // Future imports for Mgmt
 import EmployeesPage from '@/pages/management/employees';
 import EmployeeProfilePage from '@/pages/management/employee-profile';
 import UsersPage from '@/pages/management/users';
 import DepartmentsPage from '@/pages/management/departments';
+import DepartmentDetailPage from '@/pages/management/department-detail';
+import ManagementKnowledgeBasePage from '@/pages/management/knowledge-base';
+import EmployeeDepartmentsPage from '@/pages/employee/departments';
 import SettingsCompanyPage from '@/pages/management/settings-company';
 
 const queryClient = new QueryClient();
@@ -99,8 +102,9 @@ function Router() {
         ["/employee/leave", EmployeeLeavePage],
         ["/employee/projects", EmployeeProjectsPage],
         ["/employee/fund-requests", EmployeeFundRequestsPage],
-        ["/employee/requisitions", EmployeeRequisitionsPage],
         ["/employee/policies", EmployeePoliciesPage],
+        ["/employee/departments", EmployeeDepartmentsPage],
+        ["/employee/announcements", EmployeeAnnouncementsPage],
         ["/employee/knowledge-base", EmployeeKnowledgeBasePage],
         ["/employee/settings", EmployeeSettingsPage],
       ] as const).map(([path, Page]) => (
@@ -154,6 +158,14 @@ function Router() {
         </ManagementGuard>
       </Route>
 
+      <Route path="/departments/:id">
+        <ManagementGuard>
+          <ManagementLayout>
+            <DepartmentDetailPage />
+          </ManagementLayout>
+        </ManagementGuard>
+      </Route>
+
       <Route path="/settings/company">
         <ManagementGuard>
           <ManagementLayout>
@@ -167,8 +179,8 @@ function Router() {
         ["/leave", ManagementLeavePage],
         ["/projects", ManagementProjectsPage],
         ["/fund-requests", ManagementFundRequestsPage],
-        ["/requisitions", ManagementRequisitionsPage],
-        ["/content", ManagementContentPage],
+        ["/announcements", ManagementAnnouncementsPage],
+        ["/knowledge-base", ManagementKnowledgeBasePage],
       ] as const).map(([path, Page]) => (
         <Route key={path} path={path}>
           <ManagementGuard>
@@ -186,6 +198,7 @@ function Router() {
 
 function App() {
   return (
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
@@ -195,6 +208,7 @@ function App() {
         <SonnerToaster position="top-center" richColors />
       </TooltipProvider>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

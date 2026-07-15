@@ -9,4 +9,8 @@
 export interface CheckInInput {
   /** @minLength 1 */
   code: string;
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
 }

@@ -22,13 +22,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -333,41 +326,9 @@ export default function ProjectsPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={form.status}
-                  onValueChange={(v) => setForm((f) => ({ ...f, status: v as ProjectInputStatus }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {STATUS_OPTIONS.map((s) => (
-                      <SelectItem key={s} value={s} className="capitalize">
-                        {s.replace("_", " ")}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Progress (%)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={form.progress}
-                  onChange={(e) =>
-                    setForm((f) => ({
-                      ...f,
-                      progress: Math.max(0, Math.min(100, Number(e.target.value) || 0)),
-                    }))
-                  }
-                />
-              </div>
-            </div>
+            <p className="text-xs text-muted-foreground">
+              Status, progress, and deliverable progress are updated by the assigned employees.
+            </p>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -438,21 +399,6 @@ export default function ProjectsPage() {
                       onChange={(e) => updateDeliverable(i, { dueDate: e.target.value || undefined })}
                       className="w-[150px]"
                     />
-                    <Select
-                      value={d.status || "pending"}
-                      onValueChange={(v) => updateDeliverable(i, { status: v as ProjectDeliverableInputStatus })}
-                    >
-                      <SelectTrigger className="w-[140px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DELIVERABLE_STATUS.map((s) => (
-                          <SelectItem key={s} value={s} className="capitalize">
-                            {s.replace("_", " ")}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
                     <Button
                       type="button"
                       variant="ghost"

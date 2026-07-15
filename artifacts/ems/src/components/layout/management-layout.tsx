@@ -1,15 +1,23 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@/components/ui/sidebar";
-import { useGetCurrentSession, useLogout } from "@workspace/api-client-react";
-import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, PackageOpen, ScrollText } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useGetCurrentSession, useLogout, useGetPendingCounts, getGetPendingCountsQueryKey } from "@workspace/api-client-react";
+import logo from "@/assets/logo.svg";
+import { Badge } from "@/components/ui/badge";
+import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function ManagementLayout({ children }: { children: ReactNode }) {
   const { data: session } = useGetCurrentSession();
   const [location, setLocation] = useLocation();
   const logout = useLogout();
+  const queryClient = useQueryClient();
+  const { data: pendingCounts } = useGetPendingCounts({
+    query: { queryKey: getGetPendingCountsQueryKey(), refetchInterval: 30000 },
+  });
 
   if (!session) return null; // Handled by ManagementGuard
 
@@ -22,6 +30,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
+        queryClient.clear();
         setLocation("/management-login");
       }
     });
@@ -32,13 +41,8 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <Sidebar variant="inset" className="bg-card border-r border-border">
           <SidebarHeader className="border-b border-border p-4 flex flex-row items-center gap-2">
-            <div className="h-8 w-8 bg-primary rounded flex items-center justify-center text-primary-foreground font-bold">
-              5E
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight tracking-tight">5th Element EMS</span>
-              <span className="text-xs text-muted-foreground leading-tight">{session.company.name}</span>
-            </div>
+            <img src={logo} alt="5th Element" className="h-7 w-auto" />
+            <span className="text-xs text-muted-foreground leading-tight">Management Portal</span>
           </SidebarHeader>
 
           <SidebarContent>
@@ -94,6 +98,11 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                         <Link href="/leave">
                           <Palmtree className="h-4 w-4" />
                           <span>Leave</span>
+                          {(pendingCounts?.leave ?? 0) > 0 && (
+                            <Badge variant="secondary" className="ml-auto h-5 min-w-5 justify-center px-1.5 text-xs">
+                              {pendingCounts!.leave}
+                            </Badge>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -116,17 +125,11 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                         <Link href="/fund-requests">
                           <Wallet className="h-4 w-4" />
                           <span>Fund Requests</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {(hasPerm("manage_requisitions") || isSuperAdmin) && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton isActive={location === "/requisitions"} asChild>
-                        <Link href="/requisitions">
-                          <PackageOpen className="h-4 w-4" />
-                          <span>Requisitions</span>
+                          {(pendingCounts?.fundRequests ?? 0) > 0 && (
+                            <Badge variant="secondary" className="ml-auto h-5 min-w-5 justify-center px-1.5 text-xs">
+                              {pendingCounts!.fundRequests}
+                            </Badge>
+                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -134,25 +137,26 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
 
                   {(hasPerm("manage_content") || isSuperAdmin) && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton isActive={location === "/content"} asChild>
-                        <Link href="/content">
-                          <ScrollText className="h-4 w-4" />
-                          <span>Content</span>
+                      <SidebarMenuButton isActive={location === "/announcements"} asChild>
+                        <Link href="/announcements">
+                          <Megaphone className="h-4 w-4" />
+                          <span>Announcements</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
-                  
-                  {(hasPerm("view_reports") || isSuperAdmin) && (
+
+                  {(hasPerm("manage_content") || isSuperAdmin) && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton isActive={location === "/reports"} asChild>
-                        <Link href="/reports">
-                          <FileText className="h-4 w-4" />
-                          <span>Reports (Soon)</span>
+                      <SidebarMenuButton isActive={location === "/knowledge-base"} asChild>
+                        <Link href="/knowledge-base">
+                          <BookOpen className="h-4 w-4" />
+                          <span>Knowledge Base</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
+
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -205,6 +209,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
           <header className="h-14 border-b border-border flex items-center justify-end px-4 gap-4 sticky top-0 bg-background z-10">
+            <ThemeToggle />
             <NotificationsBell />
           </header>
           <div className="flex-1 overflow-auto">

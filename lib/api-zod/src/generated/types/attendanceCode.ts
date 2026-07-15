@@ -8,5 +8,4 @@
 
 export interface AttendanceCode {
   code: string;
-  forDate: string;
 }

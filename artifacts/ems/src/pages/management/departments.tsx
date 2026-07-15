@@ -5,7 +5,8 @@ import { Department } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Trash2, Building2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Building2, ArrowRight } from "lucide-react";
+import { Link } from "wouter";
 import {
   Dialog,
   DialogContent,
@@ -168,7 +169,7 @@ export default function DepartmentsPage() {
             <Card key={dept.id} className="flex flex-col">
               <CardContent className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg">{dept.name}</h3>
+                  <Link href={`/departments/${dept.id}`} className="font-semibold text-lg hover:underline">{dept.name}</Link>
                   <div className="flex items-center gap-1">
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => handleOpenDialog(dept)}>
                       <Pencil className="h-4 w-4" />
@@ -181,8 +182,15 @@ export default function DepartmentsPage() {
                 <p className="text-sm text-muted-foreground mb-4 flex-1">
                   {dept.description || "No description provided."}
                 </p>
-                <div className="text-xs font-medium bg-muted/50 px-3 py-1.5 rounded-md inline-flex self-start">
-                  {dept.employeeCount} {dept.employeeCount === 1 ? 'employee' : 'employees'}
+                <div className="flex items-center justify-between">
+                  <div className="text-xs font-medium bg-muted/50 px-3 py-1.5 rounded-md inline-flex">
+                    {dept.employeeCount} {dept.employeeCount === 1 ? 'employee' : 'employees'}
+                  </div>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href={`/departments/${dept.id}`}>
+                      View <ArrowRight className="h-4 w-4 ml-1" />
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>

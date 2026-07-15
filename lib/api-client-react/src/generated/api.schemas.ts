@@ -368,6 +368,28 @@ export interface ChangePasswordInput {
   confirmPassword: string;
 }
 
+/**
+ * @nullable
+ */
+export type AttendanceRecordCheckInStatus = typeof AttendanceRecordCheckInStatus[keyof typeof AttendanceRecordCheckInStatus] | null;
+
+
+export const AttendanceRecordCheckInStatus = {
+  on_time: 'on_time',
+  late: 'late',
+} as const;
+
+/**
+ * @nullable
+ */
+export type AttendanceRecordCheckOutStatus = typeof AttendanceRecordCheckOutStatus[keyof typeof AttendanceRecordCheckOutStatus] | null;
+
+
+export const AttendanceRecordCheckOutStatus = {
+  on_time: 'on_time',
+  early: 'early',
+} as const;
+
 export interface AttendanceRecord {
   id: number;
   companyId: number;
@@ -376,6 +398,14 @@ export interface AttendanceRecord {
   checkInAt: string;
   /** @nullable */
   checkOutAt: string | null;
+  /** @nullable */
+  checkInStatus: AttendanceRecordCheckInStatus;
+  /** @nullable */
+  checkOutStatus: AttendanceRecordCheckOutStatus;
+  /** @nullable */
+  checkInDistanceM: number | null;
+  /** @nullable */
+  checkOutDistanceM: number | null;
 }
 
 export interface LeaveBalance {
@@ -405,12 +435,77 @@ export interface EmployeeSummary {
 
 export interface AttendanceCode {
   code: string;
-  forDate: string;
+}
+
+export interface PendingCounts {
+  leave: number;
+  fundRequests: number;
+  requisitions: number;
 }
 
 export interface CheckInInput {
   /** @minLength 1 */
   code: string;
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
+}
+
+export type DayScheduleMode = typeof DayScheduleMode[keyof typeof DayScheduleMode];
+
+
+export const DayScheduleMode = {
+  office: 'office',
+  remote: 'remote',
+  off: 'off',
+} as const;
+
+export interface DaySchedule {
+  mode: DayScheduleMode;
+  /** @pattern ^\d{2}:\d{2}$ */
+  start: string;
+  /** @pattern ^\d{2}:\d{2}$ */
+  end: string;
+}
+
+export interface WeeklySchedule {
+  mon: DaySchedule;
+  tue: DaySchedule;
+  wed: DaySchedule;
+  thu: DaySchedule;
+  fri: DaySchedule;
+  sat: DaySchedule;
+  sun: DaySchedule;
+}
+
+export interface AttendanceSettings {
+  /** @nullable */
+  officeLat: number | null;
+  /** @nullable */
+  officeLng: number | null;
+  radiusMeters: number;
+  schedule: WeeklySchedule;
+}
+
+export interface AttendanceSettingsUpdateInput {
+  /** @nullable */
+  officeLat?: number | null;
+  /** @nullable */
+  officeLng?: number | null;
+  /**
+     * @minimum 10
+     * @maximum 100000
+     */
+  radiusMeters?: number;
+  schedule?: WeeklySchedule;
+}
+
+export interface AbsentEmployee {
+  userId: number;
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
 }
 
 export type AttendanceRecordWithUser = AttendanceRecord & ({
@@ -522,6 +617,40 @@ export interface ProjectDeliverableInput {
   status?: ProjectDeliverableInputStatus;
 }
 
+export type ProjectProgressUpdateInputStatus = typeof ProjectProgressUpdateInputStatus[keyof typeof ProjectProgressUpdateInputStatus];
+
+
+export const ProjectProgressUpdateInputStatus = {
+  planning: 'planning',
+  active: 'active',
+  on_hold: 'on_hold',
+  completed: 'completed',
+} as const;
+
+export type ProjectProgressUpdateInputDeliverablesItemStatus = typeof ProjectProgressUpdateInputDeliverablesItemStatus[keyof typeof ProjectProgressUpdateInputDeliverablesItemStatus];
+
+
+export const ProjectProgressUpdateInputDeliverablesItemStatus = {
+  pending: 'pending',
+  in_progress: 'in_progress',
+  done: 'done',
+} as const;
+
+export type ProjectProgressUpdateInputDeliverablesItem = {
+  id: number;
+  status: ProjectProgressUpdateInputDeliverablesItemStatus;
+};
+
+export interface ProjectProgressUpdateInput {
+  status?: ProjectProgressUpdateInputStatus;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  progress?: number;
+  deliverables?: ProjectProgressUpdateInputDeliverablesItem[];
+}
+
 export type ProjectInputStatus = typeof ProjectInputStatus[keyof typeof ProjectInputStatus];
 
 
@@ -604,6 +733,79 @@ export type RequisitionWithUser = Requisition & ({
   employeeCode: string | null;
 });
 
+export type QueryInputCategory = typeof QueryInputCategory[keyof typeof QueryInputCategory];
+
+
+export const QueryInputCategory = {
+  query: 'query',
+  deduction: 'deduction',
+  fine: 'fine',
+} as const;
+
+export interface QueryInput {
+  userId: number;
+  category: QueryInputCategory;
+  /** @nullable */
+  amount?: string | null;
+  /** @minLength 1 */
+  reason: string;
+}
+
+export interface EmployeeQuery {
+  id: number;
+  companyId: number;
+  userId: number;
+  category: string;
+  /** @nullable */
+  amount: string | null;
+  reason: string;
+  createdAt: string;
+  employeeName: string;
+  /** @nullable */
+  issuedByName: string | null;
+}
+
+export type EmployeeOverviewLeave = {
+  allocation: number;
+  used: number;
+  remaining: number;
+};
+
+export type EmployeeOverviewAttendance = {
+  presentDays: number;
+  lateCount: number;
+};
+
+export type EmployeeOverviewProjectsItem = {
+  id: number;
+  name: string;
+  status: string;
+  progress: number;
+};
+
+export type EmployeeOverviewRequestsItemKind = typeof EmployeeOverviewRequestsItemKind[keyof typeof EmployeeOverviewRequestsItemKind];
+
+
+export const EmployeeOverviewRequestsItemKind = {
+  leave: 'leave',
+  fund: 'fund',
+} as const;
+
+export type EmployeeOverviewRequestsItem = {
+  id: number;
+  kind: EmployeeOverviewRequestsItemKind;
+  label: string;
+  status: string;
+  createdAt: string;
+};
+
+export interface EmployeeOverview {
+  leave: EmployeeOverviewLeave;
+  attendance: EmployeeOverviewAttendance;
+  projects: EmployeeOverviewProjectsItem[];
+  requests: EmployeeOverviewRequestsItem[];
+}
+
 export type CompanyPostInputKind = typeof CompanyPostInputKind[keyof typeof CompanyPostInputKind];
 
 
@@ -634,6 +836,11 @@ export type ListAttendanceRecordsParams = {
 date?: string;
 };
 
+export type ListAttendanceRecords200 = {
+  records: AttendanceRecordWithUser[];
+  absent: AbsentEmployee[];
+};
+
 export type ListPostsParams = {
 kind?: ListPostsKind;
 };
@@ -646,4 +853,8 @@ export const ListPostsKind = {
   policy: 'policy',
   knowledge_base: 'knowledge_base',
 } as const;
+
+export type ListQueriesParams = {
+userId?: number;
+};
 

@@ -6,7 +6,8 @@ import {
   useCreateEmployee, 
   useUpdateEmployee, 
   useListDepartments,
-  getListEmployeesQueryKey 
+  getListEmployeesQueryKey,
+  getListDepartmentsQueryKey 
 } from "@workspace/api-client-react";
 import { Employee } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ export default function EmployeesPage() {
     createEmployee.mutate({ data }, {
       onSuccess: (newEmployee) => {
         queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey({ includeArchived }) });
+        queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
         toast.success("Employee created successfully");
         setIsFormOpen(false);
         if (newEmployee.activationLink) {

@@ -5,6 +5,8 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { AttendanceRecordCheckInStatus } from './attendanceRecordCheckInStatus';
+import type { AttendanceRecordCheckOutStatus } from './attendanceRecordCheckOutStatus';
 
 export interface AttendanceRecord {
   id: number;
@@ -14,4 +16,12 @@ export interface AttendanceRecord {
   checkInAt: Date;
   /** @nullable */
   checkOutAt: Date | null;
+  /** @nullable */
+  checkInStatus: AttendanceRecordCheckInStatus;
+  /** @nullable */
+  checkOutStatus: AttendanceRecordCheckOutStatus;
+  /** @nullable */
+  checkInDistanceM: number | null;
+  /** @nullable */
+  checkOutDistanceM: number | null;
 }

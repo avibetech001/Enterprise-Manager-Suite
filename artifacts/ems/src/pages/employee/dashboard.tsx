@@ -66,12 +66,6 @@ export default function EmployeeDashboard() {
       title: "Pending Fund Requests",
       value: String(summary.pendingFundRequests),
     },
-    {
-      href: "/employee/requisitions",
-      icon: PackageOpen,
-      title: "Pending Requisitions",
-      value: String(summary.pendingRequisitions),
-    },
   ];
 
   return (

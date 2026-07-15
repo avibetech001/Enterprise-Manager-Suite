@@ -864,14 +864,27 @@ paths:
     get:
       operationId: getAttendanceCode
       tags: [attendance]
-      summary: Get (or create) today's attendance check-in code (management)
+      summary: Get (or create) the company attendance check-in code (management)
       responses:
         "200":
-          description: Today's code
+          description: The company check-in code
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/AttendanceCode"
+
+  /pending-counts:
+    get:
+      operationId: getPendingCounts
+      tags: [me]
+      summary: Pending request counts for management navigation badges
+      responses:
+        "200":
+          description: Pending counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PendingCounts"
 
   /attendance/check-in:
     post:
@@ -902,7 +915,13 @@ paths:
     post:
       operationId: checkOut
       tags: [attendance]
-      summary: Check out for today
+      summary: Check out for today by scanning the attendance code
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CheckInInput"
       responses:
         "200":
           description: Attendance record
@@ -960,9 +979,53 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/AttendanceRecordWithUser"
+                type: object
+                required: [records, absent]
+                properties:
+                  records:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AttendanceRecordWithUser"
+                  absent:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AbsentEmployee"
+
+  /attendance/settings:
+    get:
+      operationId: getAttendanceSettings
+      tags: [attendance]
+      summary: Get company attendance settings (management)
+      responses:
+        "200":
+          description: Attendance settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceSettings"
+    put:
+      operationId: updateAttendanceSettings
+      tags: [attendance]
+      summary: Update company attendance settings (management)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AttendanceSettingsUpdateInput"
+      responses:
+        "200":
+          description: Updated settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AttendanceSettings"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /leave/balance:
     get:
@@ -1075,6 +1138,43 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProjectDetail"
+
+  /projects/{id}/progress:
+    patch:
+      operationId: updateMyProjectProgress
+      tags: [projects]
+      summary: Update status, progress, and deliverable statuses of an assigned project (employee)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectProgressUpdateInput"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found or not assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /projects:
     get:
@@ -1390,6 +1490,84 @@ paths:
       responses:
         "204":
           description: Deleted
+
+  /queries:
+    get:
+      operationId: listQueries
+      tags: [queries]
+      summary: List employee queries (management)
+      parameters:
+        - name: userId
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Queries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeQuery"
+    post:
+      operationId: createQuery
+      tags: [queries]
+      summary: Issue a query/deduction/fine against an employee (management)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryInput"
+      responses:
+        "201":
+          description: Created query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeQuery"
+
+  /queries/{id}:
+    delete:
+      operationId: deleteQuery
+      tags: [queries]
+      summary: Delete an employee query (management)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /employees/{id}/overview:
+    get:
+      operationId: getEmployeeOverview
+      tags: [employees]
+      summary: Work summary for an employee profile (management)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeOverview"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -2008,12 +2186,21 @@ components:
 
     AttendanceCode:
       type: object
-      required: [code, forDate]
+      required: [code]
       properties:
         code:
           type: string
-        forDate:
-          type: string
+
+    PendingCounts:
+      type: object
+      required: [leave, fundRequests, requisitions]
+      properties:
+        leave:
+          type: integer
+        fundRequests:
+          type: integer
+        requisitions:
+          type: integer
 
     CheckInInput:
       type: object
@@ -2022,10 +2209,26 @@ components:
         code:
           type: string
           minLength: 1
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
 
     AttendanceRecord:
       type: object
-      required: [id, companyId, userId, forDate, checkInAt, checkOutAt]
+      required:
+        [
+          id,
+          companyId,
+          userId,
+          forDate,
+          checkInAt,
+          checkOutAt,
+          checkInStatus,
+          checkOutStatus,
+          checkInDistanceM,
+          checkOutDistanceM,
+        ]
       properties:
         id:
           type: integer
@@ -2041,6 +2244,87 @@ components:
         checkOutAt:
           type: ["string", "null"]
           format: date-time
+        checkInStatus:
+          type: ["string", "null"]
+          enum: [on_time, late, null]
+        checkOutStatus:
+          type: ["string", "null"]
+          enum: [on_time, early, null]
+        checkInDistanceM:
+          type: ["integer", "null"]
+        checkOutDistanceM:
+          type: ["integer", "null"]
+
+    DaySchedule:
+      type: object
+      required: [mode, start, end]
+      properties:
+        mode:
+          type: string
+          enum: [office, remote, off]
+        start:
+          type: string
+          pattern: "^\\d{2}:\\d{2}$"
+        end:
+          type: string
+          pattern: "^\\d{2}:\\d{2}$"
+
+    WeeklySchedule:
+      type: object
+      required: [mon, tue, wed, thu, fri, sat, sun]
+      properties:
+        mon:
+          $ref: "#/components/schemas/DaySchedule"
+        tue:
+          $ref: "#/components/schemas/DaySchedule"
+        wed:
+          $ref: "#/components/schemas/DaySchedule"
+        thu:
+          $ref: "#/components/schemas/DaySchedule"
+        fri:
+          $ref: "#/components/schemas/DaySchedule"
+        sat:
+          $ref: "#/components/schemas/DaySchedule"
+        sun:
+          $ref: "#/components/schemas/DaySchedule"
+
+    AttendanceSettings:
+      type: object
+      required: [officeLat, officeLng, radiusMeters, schedule]
+      properties:
+        officeLat:
+          type: ["number", "null"]
+        officeLng:
+          type: ["number", "null"]
+        radiusMeters:
+          type: integer
+        schedule:
+          $ref: "#/components/schemas/WeeklySchedule"
+
+    AttendanceSettingsUpdateInput:
+      type: object
+      properties:
+        officeLat:
+          type: ["number", "null"]
+        officeLng:
+          type: ["number", "null"]
+        radiusMeters:
+          type: integer
+          minimum: 10
+          maximum: 100000
+        schedule:
+          $ref: "#/components/schemas/WeeklySchedule"
+
+    AbsentEmployee:
+      type: object
+      required: [userId, employeeName, employeeCode]
+      properties:
+        userId:
+          type: integer
+        employeeName:
+          type: string
+        employeeCode:
+          type: ["string", "null"]
 
     AttendanceRecordWithUser:
       allOf:
@@ -2225,6 +2509,28 @@ components:
           type: string
           enum: [pending, in_progress, done]
 
+    ProjectProgressUpdateInput:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [planning, active, on_hold, completed]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        deliverables:
+          type: array
+          items:
+            type: object
+            required: [id, status]
+            properties:
+              id:
+                type: integer
+              status:
+                type: string
+                enum: [pending, in_progress, done]
+
     ProjectInput:
       type: object
       required: [name]
@@ -2372,6 +2678,101 @@ components:
               type: string
             employeeCode:
               type: ["string", "null"]
+
+    QueryInput:
+      type: object
+      required: [userId, category, reason]
+      properties:
+        userId:
+          type: integer
+        category:
+          type: string
+          enum: [query, deduction, fine]
+        amount:
+          type: ["string", "null"]
+        reason:
+          type: string
+          minLength: 1
+
+    EmployeeQuery:
+      type: object
+      required:
+        [id, companyId, userId, category, amount, reason, createdAt, employeeName, issuedByName]
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        userId:
+          type: integer
+        category:
+          type: string
+        amount:
+          type: ["string", "null"]
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        employeeName:
+          type: string
+        issuedByName:
+          type: ["string", "null"]
+
+    EmployeeOverview:
+      type: object
+      required: [leave, attendance, projects, requests]
+      properties:
+        leave:
+          type: object
+          required: [allocation, used, remaining]
+          properties:
+            allocation:
+              type: integer
+            used:
+              type: integer
+            remaining:
+              type: integer
+        attendance:
+          type: object
+          required: [presentDays, lateCount]
+          properties:
+            presentDays:
+              type: integer
+            lateCount:
+              type: integer
+        projects:
+          type: array
+          items:
+            type: object
+            required: [id, name, status, progress]
+            properties:
+              id:
+                type: integer
+              name:
+                type: string
+              status:
+                type: string
+              progress:
+                type: integer
+        requests:
+          type: array
+          items:
+            type: object
+            required: [id, kind, label, status, createdAt]
+            properties:
+              id:
+                type: integer
+              kind:
+                type: string
+                enum: [leave, fund]
+              label:
+                type: string
+              status:
+                type: string
+              createdAt:
+                type: string
+                format: date-time
 
     CompanyPostInput:
       type: object

@@ -10,8 +10,13 @@ import {
   useRestoreEmployee,
   useListDepartments,
   useListEmployees,
+  useGetEmployeeOverview,
+  useListQueries,
+  getGetEmployeeOverviewQueryKey,
+  getListQueriesQueryKey,
   getGetEmployeeQueryKey,
-  getListEmployeesQueryKey
+  getListEmployeesQueryKey,
+  getListDepartmentsQueryKey
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +77,14 @@ export default function EmployeeProfilePage() {
   // Fetch all employees to find the reporting manager
   const { data: employees } = useListEmployees();
 
+  const { data: overview, isLoading: overviewLoading } = useGetEmployeeOverview(id, {
+    query: { enabled: !!id, queryKey: getGetEmployeeOverviewQueryKey(id) },
+  });
+  const { data: employeeQueries } = useListQueries(
+    { userId: id },
+    { query: { enabled: !!id, queryKey: getListQueriesQueryKey({ userId: id }) } },
+  );
+
   const updateEmployee = useUpdateEmployee();
   const resetPassword = useResetEmployeePassword();
   const resendActivation = useResendEmployeeActivation();
@@ -107,6 +120,7 @@ export default function EmployeeProfilePage() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
           toast.success(`Account marked as ${newStatus}`);
         },
         onError: (err) => {
@@ -122,6 +136,7 @@ export default function EmployeeProfilePage() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
           toast.success("Employee restored from archive");
         }
       });
@@ -130,6 +145,7 @@ export default function EmployeeProfilePage() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
           toast.success("Employee archived");
         }
       });
@@ -184,6 +200,7 @@ export default function EmployeeProfilePage() {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getGetEmployeeQueryKey(id) });
           queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
           toast.success("Employee updated successfully");
           setIsEditFormOpen(false);
         },
@@ -387,34 +404,130 @@ export default function EmployeeProfilePage() {
             </CardContent>
           </Card>
 
-          {/* Work Summary (Coming Soon Area) */}
+          {/* Work Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <Card className="bg-muted/30 border-dashed">
+            <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-muted-foreground">Leave Balance</CardTitle>
+                <CardTitle className="text-base">Leave Balance</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-semibold text-muted-foreground">—</div>
-                <p className="text-xs text-muted-foreground mt-1">Module coming soon</p>
+                {overviewLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-semibold">
+                      {overview?.leave.remaining ?? 0}
+                      <span className="text-sm font-normal text-muted-foreground"> / {overview?.leave.allocation ?? 0} days left</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {overview?.leave.used ?? 0} day{(overview?.leave.used ?? 0) === 1 ? "" : "s"} used this year
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
-            <Card className="bg-muted/30 border-dashed">
+            <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-muted-foreground">Attendance</CardTitle>
+                <CardTitle className="text-base">Attendance (this year)</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-semibold text-muted-foreground">—</div>
-                <p className="text-xs text-muted-foreground mt-1">Module coming soon</p>
+                {overviewLoading ? (
+                  <Skeleton className="h-8 w-24" />
+                ) : (
+                  <>
+                    <div className="text-2xl font-semibold">
+                      {overview?.attendance.presentDays ?? 0}
+                      <span className="text-sm font-normal text-muted-foreground"> days present</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {overview?.attendance.lateCount ?? 0} late check-in{(overview?.attendance.lateCount ?? 0) === 1 ? "" : "s"}
+                    </p>
+                  </>
+                )}
               </CardContent>
             </Card>
-            <Card className="bg-muted/30 border-dashed sm:col-span-2">
+            <Card className="sm:col-span-2">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-muted-foreground">Assigned Projects & Requests</CardTitle>
+                <CardTitle className="text-base">Assigned Projects</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="h-12 flex items-center justify-center border border-dashed rounded text-sm text-muted-foreground">
-                  Module coming soon
-                </div>
+                {overviewLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : (overview?.projects.length ?? 0) === 0 ? (
+                  <div className="h-12 flex items-center justify-center border border-dashed rounded text-sm text-muted-foreground">
+                    No assigned projects.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {overview!.projects.map((p) => (
+                      <div key={p.id} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <span className="font-medium text-sm">{p.name}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">{p.progress}%</span>
+                          <Badge variant="secondary" className="capitalize">{p.status.replace('_', ' ')}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="sm:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Recent Requests</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {overviewLoading ? (
+                  <Skeleton className="h-12 w-full" />
+                ) : (overview?.requests.length ?? 0) === 0 ? (
+                  <div className="h-12 flex items-center justify-center border border-dashed rounded text-sm text-muted-foreground">
+                    No leave or fund requests yet.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {overview!.requests.map((r) => (
+                      <div key={`${r.kind}-${r.id}`} className="flex items-center justify-between border rounded-md px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="capitalize">{r.kind}</Badge>
+                          <span className="text-sm capitalize">{r.label}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-xs text-muted-foreground">{new Date(r.createdAt).toLocaleDateString()}</span>
+                          <Badge variant="secondary" className="capitalize">{r.status.replace('_', ' ')}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="sm:col-span-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Queries & Deductions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {(employeeQueries?.length ?? 0) === 0 ? (
+                  <div className="h-12 flex items-center justify-center border border-dashed rounded text-sm text-muted-foreground">
+                    No queries issued. Issue queries from the department page.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {employeeQueries!.map((q) => (
+                      <div key={q.id} className="border rounded-md px-3 py-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Badge variant={q.category === "query" ? "secondary" : "destructive"} className="capitalize">{q.category}</Badge>
+                            {q.amount && <span className="text-sm font-medium">₦{q.amount}</span>}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(q.createdAt).toLocaleDateString()}{q.issuedByName ? ` · by ${q.issuedByName}` : ""}
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-1">{q.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

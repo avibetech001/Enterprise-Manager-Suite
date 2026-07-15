@@ -14,7 +14,9 @@ import {
   SidebarGroupLabel,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { useQueryClient } from "@tanstack/react-query";
 import { useGetCurrentSession, useLogout } from "@workspace/api-client-react";
+import logo from "@/assets/logo.svg";
 import {
   LayoutDashboard,
   User,
@@ -22,7 +24,8 @@ import {
   Palmtree,
   FolderKanban,
   Wallet,
-  PackageOpen,
+  Megaphone,
+  Building2,
   ScrollText,
   BookOpen,
   Settings,
@@ -30,6 +33,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV = [
   {
@@ -46,12 +50,13 @@ const NAV = [
       { href: "/employee/leave", icon: Palmtree, title: "Leave" },
       { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
       { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
-      { href: "/employee/requisitions", icon: PackageOpen, title: "Requisitions" },
     ],
   },
   {
     label: "Company",
     items: [
+      { href: "/employee/departments", icon: Building2, title: "Departments" },
+      { href: "/employee/announcements", icon: Megaphone, title: "Announcements" },
       { href: "/employee/policies", icon: ScrollText, title: "Company Policies" },
       { href: "/employee/knowledge-base", icon: BookOpen, title: "Knowledge Base" },
       { href: "/employee/settings", icon: Settings, title: "Settings" },
@@ -63,6 +68,7 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
   const { data: session } = useGetCurrentSession();
   const [location, setLocation] = useLocation();
   const logout = useLogout();
+  const queryClient = useQueryClient();
 
   if (!session) return null;
 
@@ -71,6 +77,7 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
   const handleLogout = () => {
     logout.mutate(undefined, {
       onSuccess: () => {
+        queryClient.clear();
         setLocation("/employee-login");
       },
     });
@@ -81,17 +88,8 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <Sidebar variant="inset" className="bg-card border-r border-border">
           <SidebarHeader className="border-b border-border p-4 flex flex-row items-center gap-2">
-            <div className="h-8 w-8 bg-primary rounded flex items-center justify-center text-primary-foreground font-bold">
-              5E
-            </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm leading-tight tracking-tight">
-                5th Element
-              </span>
-              <span className="text-xs text-muted-foreground leading-tight">
-                Employee Portal
-              </span>
-            </div>
+            <img src={logo} alt="5th Element" className="h-7 w-auto" />
+            <span className="text-xs text-muted-foreground leading-tight">Employee Portal</span>
           </SidebarHeader>
 
           <SidebarContent>
@@ -140,6 +138,7 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
           <header className="h-14 border-b border-border flex items-center justify-between px-4 gap-4 sticky top-0 bg-background z-10">
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1" />
+            <ThemeToggle />
             <NotificationsBell />
           </header>
           <div className="flex-1 overflow-auto">{children}</div>

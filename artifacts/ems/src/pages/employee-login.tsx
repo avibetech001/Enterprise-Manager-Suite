@@ -1,7 +1,8 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
+import { ArrowLeft } from "lucide-react";
 import { useEmployeeLogin } from "@workspace/api-client-react";
 import { AuthLayout } from "@/components/layout/auth-layout";
 import { Button } from "@/components/ui/button";
@@ -94,6 +95,15 @@ export default function EmployeeLoginPage() {
           </Form>
         </CardContent>
       </Card>
+      <div className="mt-4 text-center">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to portal selection
+        </Link>
+      </div>
     </AuthLayout>
   );
 }

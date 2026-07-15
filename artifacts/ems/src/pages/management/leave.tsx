@@ -5,6 +5,7 @@ import {
   useReviewLeaveRequest,
   getListLeaveRequestsQueryKey,
   LeaveRequestWithUser,
+  getGetPendingCountsQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,6 +68,7 @@ export default function LeavePage() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetPendingCountsQueryKey() });
           toast.success(`Leave request ${reviewTarget.action}`);
           setReviewTarget(null);
         },

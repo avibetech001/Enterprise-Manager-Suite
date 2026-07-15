@@ -5,6 +5,7 @@ import {
   db,
   attendanceCodesTable,
   attendanceRecordsTable,
+  attendanceSettingsTable,
   companiesTable,
   companyPostsTable,
   fundRequestsTable,
@@ -14,12 +15,19 @@ import {
   projectsTable,
   requisitionsTable,
   usersTable,
+  employeeQueriesTable,
 } from "@workspace/db";
 import {
   ChangeMyPasswordBody,
   CheckInBody,
   CheckInResponse,
+  CheckOutBody,
   CheckOutResponse,
+  GetAttendanceSettingsResponse,
+  UpdateAttendanceSettingsBody,
+  UpdateAttendanceSettingsResponse,
+  UpdateMyProjectProgressBody,
+  UpdateMyProjectProgressResponse,
   CreateFundRequestBody,
   CreateFundRequestResponse,
   CreateLeaveRequestBody,
@@ -32,7 +40,12 @@ import {
   CreateRequisitionResponse,
   GetAttendanceCodeResponse,
   GetMyLeaveBalanceResponse,
+  ListQueriesResponse,
+  CreateQueryBody,
+  CreateQueryResponse,
+  GetEmployeeOverviewResponse,
   GetMySummaryResponse,
+  GetPendingCountsResponse,
   ListAttendanceRecordsResponse,
   ListFundRequestsResponse,
   ListLeaveRequestsResponse,
@@ -59,6 +72,7 @@ import {
   hashPassword,
   requireAuth,
   requireManagementPermission,
+  requireRole,
   verifyPassword,
 } from "../lib/auth";
 import { notify } from "../lib/notify";
@@ -81,8 +95,33 @@ function requireEmployee(
   next();
 }
 
+// All attendance day/time decisions use one explicit company timezone so
+// forDate, weekday selection, and late/early checks can never disagree
+// (the server itself runs in UTC).
+const COMPANY_TZ = "Africa/Lagos";
+
+function tzParts(): { date: string; weekday: number; minutes: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: COMPANY_TZ,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    weekday: "short",
+    hour12: false,
+  }).formatToParts(new Date());
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  const weekdayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  return {
+    date: `${get("year")}-${get("month")}-${get("day")}`,
+    weekday: weekdayNames.indexOf(get("weekday")),
+    minutes: (Number(get("hour")) % 24) * 60 + Number(get("minute")),
+  };
+}
+
 function today(): string {
-  return new Date().toISOString().slice(0, 10);
+  return tzParts().date;
 }
 
 function daysBetween(start: string, end: string): number {
@@ -263,24 +302,217 @@ router.get(
   requireManagementPermission("manage_attendance_settings"),
   async (req, res): Promise<void> => {
     const companyId = req.currentUser!.companyId;
-    const forDate = today();
+    // Fixed, permanent company code (printable QR); first row wins.
     let [row] = await db
       .select()
       .from(attendanceCodesTable)
-      .where(
-        and(
-          eq(attendanceCodesTable.companyId, companyId),
-          eq(attendanceCodesTable.forDate, forDate),
-        ),
-      );
+      .where(eq(attendanceCodesTable.companyId, companyId))
+      .orderBy(attendanceCodesTable.id)
+      .limit(1);
     if (!row) {
       const code = crypto.randomBytes(4).toString("hex").toUpperCase();
       [row] = await db
         .insert(attendanceCodesTable)
-        .values({ companyId, code, forDate })
+        .values({ companyId, code, forDate: today() })
         .returning();
     }
-    res.json(GetAttendanceCodeResponse.parse({ code: row.code, forDate }));
+    res.json(GetAttendanceCodeResponse.parse({ code: row.code }));
+  },
+);
+
+// --- Attendance settings & geofencing helpers ------------------------------
+
+type DayMode = "office" | "remote" | "off";
+type DaySchedule = { mode: DayMode; start: string; end: string };
+type WeeklySchedule = Record<
+  "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun",
+  DaySchedule
+>;
+
+const DEFAULT_SCHEDULE: WeeklySchedule = {
+  mon: { mode: "office", start: "08:00", end: "16:00" },
+  tue: { mode: "office", start: "09:00", end: "17:00" },
+  wed: { mode: "office", start: "09:00", end: "17:00" },
+  thu: { mode: "remote", start: "09:00", end: "17:00" },
+  fri: { mode: "office", start: "09:00", end: "17:00" },
+  sat: { mode: "off", start: "09:00", end: "17:00" },
+  sun: { mode: "off", start: "09:00", end: "17:00" },
+};
+
+function parseSchedule(raw: string | null | undefined): WeeklySchedule {
+  if (!raw) return DEFAULT_SCHEDULE;
+  try {
+    const parsed = JSON.parse(raw) as Partial<WeeklySchedule>;
+    return { ...DEFAULT_SCHEDULE, ...parsed };
+  } catch {
+    return DEFAULT_SCHEDULE;
+  }
+}
+
+const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+function todaySchedule(schedule: WeeklySchedule): DaySchedule {
+  return schedule[DAY_KEYS[tzParts().weekday]];
+}
+
+const DEFAULT_ATTENDANCE_SETTINGS = {
+  officeLat: null as string | null,
+  officeLng: null as string | null,
+  radiusMeters: 200,
+  weeklySchedule: null as string | null,
+};
+
+async function getAttendanceSettings(companyId: number) {
+  const [row] = await db
+    .select()
+    .from(attendanceSettingsTable)
+    .where(eq(attendanceSettingsTable.companyId, companyId))
+    .limit(1);
+  return row ?? { companyId, ...DEFAULT_ATTENDANCE_SETTINGS };
+}
+
+function settingsToJson(s: {
+  officeLat: string | null;
+  officeLng: string | null;
+  radiusMeters: number;
+  weeklySchedule: string | null;
+}) {
+  return {
+    officeLat: s.officeLat === null ? null : Number(s.officeLat),
+    officeLng: s.officeLng === null ? null : Number(s.officeLng),
+    radiusMeters: s.radiusMeters,
+    schedule: parseSchedule(s.weeklySchedule),
+  };
+}
+
+function haversineMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)));
+}
+
+// Returns minutes since midnight for "HH:MM"; NaN-safe.
+function minutesOf(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
+
+function nowMinutes(): number {
+  return tzParts().minutes;
+}
+
+// Validates the scanned code and (when an office location is configured)
+// enforces the geofence. Returns the distance in meters, or an error string.
+async function validateScan(
+  companyId: number,
+  code: string,
+  lat: number | null | undefined,
+  lng: number | null | undefined,
+): Promise<{ error: string } | { distanceM: number | null }> {
+  const [codeRow] = await db
+    .select()
+    .from(attendanceCodesTable)
+    .where(eq(attendanceCodesTable.companyId, companyId))
+    .orderBy(attendanceCodesTable.id)
+    .limit(1);
+  if (!codeRow || codeRow.code !== code.trim().toUpperCase()) {
+    return { error: "Invalid attendance code." };
+  }
+  const settings = await getAttendanceSettings(companyId);
+  const day = todaySchedule(parseSchedule(settings.weeklySchedule));
+  if (day.mode === "off") {
+    return { error: "Today is not a working day." };
+  }
+  if (
+    day.mode === "remote" ||
+    settings.officeLat === null ||
+    settings.officeLng === null
+  ) {
+    return { distanceM: null };
+  }
+  if (lat === null || lat === undefined || lng === null || lng === undefined) {
+    return {
+      error:
+        "Location is required. Allow location access in your browser and try again.",
+    };
+  }
+  const distanceM = haversineMeters(
+    Number(settings.officeLat),
+    Number(settings.officeLng),
+    lat,
+    lng,
+  );
+  if (distanceM > settings.radiusMeters) {
+    return {
+      error: `You are too far from the office (${distanceM} m away, allowed within ${settings.radiusMeters} m).`,
+    };
+  }
+  return { distanceM };
+}
+
+router.get(
+  "/attendance/settings",
+  requireAuth,
+  requireManagementPermission("manage_attendance_settings"),
+  async (req, res): Promise<void> => {
+    const settings = await getAttendanceSettings(req.currentUser!.companyId);
+    res.json(GetAttendanceSettingsResponse.parse(settingsToJson(settings)));
+  },
+);
+
+router.put(
+  "/attendance/settings",
+  requireAuth,
+  requireManagementPermission("manage_attendance_settings"),
+  async (req, res): Promise<void> => {
+    const parsed = UpdateAttendanceSettingsBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid attendance settings." });
+      return;
+    }
+    const companyId = req.currentUser!.companyId;
+    const d = parsed.data;
+    if (d.schedule) {
+      for (const day of Object.values(d.schedule)) {
+        if (day.mode !== "off" && minutesOf(day.start) >= minutesOf(day.end)) {
+          res
+            .status(400)
+            .json({ error: "Work start must be before work end." });
+          return;
+        }
+      }
+    }
+    const values = {
+      ...(d.officeLat !== undefined
+        ? { officeLat: d.officeLat === null ? null : String(d.officeLat) }
+        : {}),
+      ...(d.officeLng !== undefined
+        ? { officeLng: d.officeLng === null ? null : String(d.officeLng) }
+        : {}),
+      ...(d.radiusMeters !== undefined ? { radiusMeters: d.radiusMeters } : {}),
+      ...(d.schedule !== undefined
+        ? { weeklySchedule: JSON.stringify(d.schedule) }
+        : {}),
+    };
+    const [row] = await db
+      .insert(attendanceSettingsTable)
+      .values({ companyId, ...values })
+      .onConflictDoUpdate({
+        target: attendanceSettingsTable.companyId,
+        set: values,
+      })
+      .returning();
+    res.json(UpdateAttendanceSettingsResponse.parse(settingsToJson(row)));
   },
 );
 
@@ -296,17 +528,14 @@ router.post(
     }
     const me = req.currentUser!;
     const forDate = today();
-    const [codeRow] = await db
-      .select()
-      .from(attendanceCodesTable)
-      .where(
-        and(
-          eq(attendanceCodesTable.companyId, me.companyId),
-          eq(attendanceCodesTable.forDate, forDate),
-        ),
-      );
-    if (!codeRow || codeRow.code !== parsed.data.code.trim().toUpperCase()) {
-      res.status(400).json({ error: "Invalid or expired attendance code." });
+    const scan = await validateScan(
+      me.companyId,
+      parsed.data.code,
+      parsed.data.lat,
+      parsed.data.lng,
+    );
+    if ("error" in scan) {
+      res.status(400).json({ error: scan.error });
       return;
     }
     const [existing] = await db
@@ -322,9 +551,21 @@ router.post(
       res.status(400).json({ error: "You have already checked in today." });
       return;
     }
+    const settings = await getAttendanceSettings(me.companyId);
+    const day = todaySchedule(parseSchedule(settings.weeklySchedule));
+    const checkInStatus =
+      day.mode !== "off" && nowMinutes() > minutesOf(day.start)
+        ? "late"
+        : "on_time";
     const [record] = await db
       .insert(attendanceRecordsTable)
-      .values({ companyId: me.companyId, userId: me.id, forDate })
+      .values({
+        companyId: me.companyId,
+        userId: me.id,
+        forDate,
+        checkInStatus,
+        checkInDistanceM: scan.distanceM,
+      })
       .returning();
     res.json(CheckInResponse.parse(record));
   },
@@ -335,6 +576,11 @@ router.post(
   requireAuth,
   requireEmployee,
   async (req, res): Promise<void> => {
+    const parsed = CheckOutBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Scan or enter the attendance code." });
+      return;
+    }
     const me = req.currentUser!;
     const [existing] = await db
       .select()
@@ -353,9 +599,29 @@ router.post(
       res.status(400).json({ error: "You have already checked out today." });
       return;
     }
+    const scan = await validateScan(
+      me.companyId,
+      parsed.data.code,
+      parsed.data.lat,
+      parsed.data.lng,
+    );
+    if ("error" in scan) {
+      res.status(400).json({ error: scan.error });
+      return;
+    }
+    const settings = await getAttendanceSettings(me.companyId);
+    const day = todaySchedule(parseSchedule(settings.weeklySchedule));
+    const checkOutStatus =
+      day.mode !== "off" && nowMinutes() < minutesOf(day.end)
+        ? "early"
+        : "on_time";
     const [record] = await db
       .update(attendanceRecordsTable)
-      .set({ checkOutAt: new Date() })
+      .set({
+        checkOutAt: new Date(),
+        checkOutStatus,
+        checkOutDistanceM: scan.distanceM,
+      })
       .where(eq(attendanceRecordsTable.id, existing.id))
       .returning();
     res.json(CheckOutResponse.parse(record));
@@ -403,14 +669,96 @@ router.get(
       .where(and(...conditions))
       .orderBy(desc(attendanceRecordsTable.checkInAt))
       .limit(500);
+
+    // When a specific date is requested, list employees with no record that
+    // day as absent.
+    let absent: Array<{
+      userId: number;
+      employeeName: string;
+      employeeCode: string | null;
+    }> = [];
+    if (date) {
+      const presentIds = new Set(rows.map((r) => r.record.userId));
+      const employees = await db
+        .select({
+          id: usersTable.id,
+          fullName: usersTable.fullName,
+          employeeCode: usersTable.employeeCode,
+        })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.companyId, companyId),
+            eq(usersTable.role, "employee"),
+          ),
+        );
+      absent = employees
+        .filter((e) => !presentIds.has(e.id))
+        .map((e) => ({
+          userId: e.id,
+          employeeName: e.fullName,
+          employeeCode: e.employeeCode,
+        }));
+    }
+
     res.json(
-      ListAttendanceRecordsResponse.parse(
-        rows.map((r) => ({
+      ListAttendanceRecordsResponse.parse({
+        records: rows.map((r) => ({
           ...r.record,
           employeeName: r.employeeName,
           employeeCode: r.employeeCode,
         })),
-      ),
+        absent,
+      }),
+    );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Pending counts (management nav badges)
+// ---------------------------------------------------------------------------
+
+router.get(
+  "/pending-counts",
+  requireAuth,
+  requireRole("super_admin", "hr"),
+  async (req, res): Promise<void> => {
+    const companyId = req.currentUser!.companyId;
+    const [leave, funds, reqs] = await Promise.all([
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(leaveRequestsTable)
+        .where(
+          and(
+            eq(leaveRequestsTable.companyId, companyId),
+            eq(leaveRequestsTable.status, "pending"),
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(fundRequestsTable)
+        .where(
+          and(
+            eq(fundRequestsTable.companyId, companyId),
+            eq(fundRequestsTable.status, "pending"),
+          ),
+        ),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(requisitionsTable)
+        .where(
+          and(
+            eq(requisitionsTable.companyId, companyId),
+            eq(requisitionsTable.status, "pending"),
+          ),
+        ),
+    ]);
+    res.json(
+      GetPendingCountsResponse.parse({
+        leave: leave[0]?.count ?? 0,
+        fundRequests: funds[0]?.count ?? 0,
+        requisitions: reqs[0]?.count ?? 0,
+      }),
     );
   },
 );
@@ -586,6 +934,69 @@ router.get(
     res.json(
       ListMyProjectsResponse.parse(await loadProjects(me.companyId, me.id)),
     );
+  },
+);
+
+router.patch(
+  "/projects/:id/progress",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const parsed = UpdateMyProjectProgressBody.safeParse(req.body);
+    const id = Number(req.params.id);
+    if (!parsed.success || Number.isNaN(id)) {
+      res.status(400).json({ error: "Invalid progress update." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(
+        and(eq(projectsTable.id, id), eq(projectsTable.companyId, me.companyId)),
+      );
+    if (!project) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    const [membership] = await db
+      .select()
+      .from(projectMembersTable)
+      .where(
+        and(
+          eq(projectMembersTable.projectId, id),
+          eq(projectMembersTable.userId, me.id),
+        ),
+      );
+    if (!membership) {
+      res.status(404).json({ error: "You are not assigned to this project." });
+      return;
+    }
+    const d = parsed.data;
+    if (d.status !== undefined || d.progress !== undefined) {
+      await db
+        .update(projectsTable)
+        .set({
+          ...(d.status !== undefined ? { status: d.status } : {}),
+          ...(d.progress !== undefined ? { progress: d.progress } : {}),
+        })
+        .where(eq(projectsTable.id, id));
+    }
+    for (const del of d.deliverables ?? []) {
+      await db
+        .update(projectDeliverablesTable)
+        .set({ status: del.status })
+        .where(
+          and(
+            eq(projectDeliverablesTable.id, del.id),
+            eq(projectDeliverablesTable.projectId, id),
+          ),
+        );
+    }
+    const [full] = await loadProjects(me.companyId, me.id).then((all) =>
+      all.filter((p) => p.id === id),
+    );
+    res.json(UpdateMyProjectProgressResponse.parse(full));
   },
 );
 
@@ -1135,6 +1546,238 @@ router.delete(
         ),
       );
     res.status(204).end();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Employee queries (disciplinary: query / deduction / fine)
+// ---------------------------------------------------------------------------
+
+async function withQueryNames(rows: (typeof employeeQueriesTable.$inferSelect)[]) {
+  const ids = [
+    ...new Set(rows.flatMap((r) => [r.userId, r.issuedBy]).filter((v): v is number => v != null)),
+  ];
+  const users = ids.length
+    ? await db
+        .select({ id: usersTable.id, fullName: usersTable.fullName })
+        .from(usersTable)
+        .where(inArray(usersTable.id, ids))
+    : [];
+  const nameById = new Map(users.map((u) => [u.id, u.fullName]));
+  return rows.map((r) => ({
+    ...r,
+    employeeName: nameById.get(r.userId) ?? "Unknown",
+    issuedByName: r.issuedBy != null ? (nameById.get(r.issuedBy) ?? null) : null,
+  }));
+}
+
+router.get(
+  "/queries",
+  requireAuth,
+  requireManagementPermission("manage_employees"),
+  async (req, res): Promise<void> => {
+    const companyId = req.currentUser!.companyId;
+    const userId = req.query.userId ? Number(req.query.userId) : null;
+    if (userId !== null && !Number.isInteger(userId)) {
+      res.status(400).json({ error: "Invalid userId." });
+      return;
+    }
+    const conditions = [eq(employeeQueriesTable.companyId, companyId)];
+    if (userId) conditions.push(eq(employeeQueriesTable.userId, userId));
+    const rows = await db
+      .select()
+      .from(employeeQueriesTable)
+      .where(and(...conditions))
+      .orderBy(desc(employeeQueriesTable.createdAt));
+    res.json(ListQueriesResponse.parse(await withQueryNames(rows)));
+  },
+);
+
+router.post(
+  "/queries",
+  requireAuth,
+  requireManagementPermission("manage_employees"),
+  async (req, res): Promise<void> => {
+    const parsed = CreateQueryBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.message });
+      return;
+    }
+    const companyId = req.currentUser!.companyId;
+    const [target] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.id, parsed.data.userId),
+          eq(usersTable.companyId, companyId),
+          eq(usersTable.role, "employee"),
+        ),
+      );
+    if (!target) {
+      res.status(404).json({ error: "Employee not found." });
+      return;
+    }
+    if (
+      (parsed.data.category === "deduction" || parsed.data.category === "fine") &&
+      !parsed.data.amount?.trim()
+    ) {
+      res.status(400).json({ error: "An amount is required for deductions and fines." });
+      return;
+    }
+    const [row] = await db
+      .insert(employeeQueriesTable)
+      .values({
+        companyId,
+        userId: parsed.data.userId,
+        issuedBy: req.currentUser!.id,
+        category: parsed.data.category,
+        amount: parsed.data.amount?.trim() || null,
+        reason: parsed.data.reason.trim(),
+      })
+      .returning();
+    const [withNames] = await withQueryNames([row!]);
+    res.status(201).json(CreateQueryResponse.parse(withNames));
+  },
+);
+
+router.delete(
+  "/queries/:id",
+  requireAuth,
+  requireManagementPermission("manage_employees"),
+  async (req, res): Promise<void> => {
+    const queryId = Number(req.params.id);
+    if (!Number.isInteger(queryId)) {
+      res.status(400).json({ error: "Invalid id." });
+      return;
+    }
+    await db
+      .delete(employeeQueriesTable)
+      .where(
+        and(
+          eq(employeeQueriesTable.id, queryId),
+          eq(employeeQueriesTable.companyId, req.currentUser!.companyId),
+        ),
+      );
+    res.status(204).end();
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Employee overview (management profile page)
+// ---------------------------------------------------------------------------
+
+router.get(
+  "/employees/:id/overview",
+  requireAuth,
+  requireManagementPermission("manage_employees"),
+  async (req, res): Promise<void> => {
+    const companyId = req.currentUser!.companyId;
+    const userId = Number(req.params.id);
+    if (!Number.isInteger(userId)) {
+      res.status(400).json({ error: "Invalid id." });
+      return;
+    }
+    const [target] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.id, userId),
+          eq(usersTable.companyId, companyId),
+          eq(usersTable.role, "employee"),
+        ),
+      );
+    if (!target) {
+      res.status(404).json({ error: "Employee not found." });
+      return;
+    }
+
+    const year = new Date().getFullYear();
+    const [leave, attendanceRows, projectRows, leaveReqs, fundReqs] =
+      await Promise.all([
+        leaveBalance(companyId, userId),
+        db
+          .select({
+            checkInStatus: attendanceRecordsTable.checkInStatus,
+          })
+          .from(attendanceRecordsTable)
+          .where(
+            and(
+              eq(attendanceRecordsTable.companyId, companyId),
+              eq(attendanceRecordsTable.userId, userId),
+              gte(attendanceRecordsTable.forDate, `${year}-01-01`),
+            ),
+          ),
+        db
+          .select({
+            id: projectsTable.id,
+            name: projectsTable.name,
+            status: projectsTable.status,
+            progress: projectsTable.progress,
+          })
+          .from(projectMembersTable)
+          .innerJoin(projectsTable, eq(projectMembersTable.projectId, projectsTable.id))
+          .where(
+            and(
+              eq(projectMembersTable.userId, userId),
+              eq(projectsTable.companyId, companyId),
+            ),
+          ),
+        db
+          .select()
+          .from(leaveRequestsTable)
+          .where(
+            and(
+              eq(leaveRequestsTable.companyId, companyId),
+              eq(leaveRequestsTable.userId, userId),
+            ),
+          )
+          .orderBy(desc(leaveRequestsTable.createdAt))
+          .limit(5),
+        db
+          .select()
+          .from(fundRequestsTable)
+          .where(
+            and(
+              eq(fundRequestsTable.companyId, companyId),
+              eq(fundRequestsTable.userId, userId),
+            ),
+          )
+          .orderBy(desc(fundRequestsTable.createdAt))
+          .limit(5),
+      ]);
+
+    const requests = [
+      ...leaveReqs.map((r) => ({
+        id: r.id,
+        kind: "leave" as const,
+        label: `${r.type} leave · ${r.days} day${r.days === 1 ? "" : "s"}`,
+        status: r.status,
+        createdAt: r.createdAt,
+      })),
+      ...fundReqs.map((r) => ({
+        id: r.id,
+        kind: "fund" as const,
+        label: `${r.purpose} · ₦${r.amount}`,
+        status: r.status,
+        createdAt: r.createdAt,
+      })),
+    ]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .slice(0, 8);
+
+    res.json(
+      GetEmployeeOverviewResponse.parse({
+        leave,
+        attendance: {
+          presentDays: attendanceRows.length,
+          lateCount: attendanceRows.filter((r) => r.checkInStatus === "late").length,
+        },
+        projects: projectRows,
+        requests,
+      }),
+    );
   },
 );
 

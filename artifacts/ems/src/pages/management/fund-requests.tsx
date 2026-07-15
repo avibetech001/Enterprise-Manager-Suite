@@ -5,6 +5,7 @@ import {
   useReviewFundRequest,
   getListFundRequestsQueryKey,
   FundRequestWithUser,
+  getGetPendingCountsQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -67,6 +68,7 @@ export default function FundRequestsPage() {
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListFundRequestsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetPendingCountsQueryKey() });
           toast.success(`Fund request ${reviewTarget.action}`);
           setReviewTarget(null);
         },

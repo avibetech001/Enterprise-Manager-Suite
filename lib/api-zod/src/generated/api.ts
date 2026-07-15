@@ -993,7 +993,11 @@ export const GetMySummaryResponse = zod.object({
   "userId": zod.number(),
   "forDate": zod.string(),
   "checkInAt": zod.coerce.date(),
-  "checkOutAt": zod.coerce.date().nullable()
+  "checkOutAt": zod.coerce.date().nullable(),
+  "checkInStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal(null)]).nullable(),
+  "checkOutStatus": zod.union([zod.literal('on_time'),zod.literal('early'),zod.literal(null)]).nullable(),
+  "checkInDistanceM": zod.number().nullable(),
+  "checkOutDistanceM": zod.number().nullable()
 }),zod.null()]),
   "leaveBalance": zod.object({
   "allocation": zod.number(),
@@ -1034,11 +1038,20 @@ export const ChangeMyPasswordResponse = zod.void()
 
 
 /**
- * @summary Get (or create) today's attendance check-in code (management)
+ * @summary Get (or create) the company attendance check-in code (management)
  */
 export const GetAttendanceCodeResponse = zod.object({
-  "code": zod.string(),
-  "forDate": zod.string()
+  "code": zod.string()
+})
+
+
+/**
+ * @summary Pending request counts for management navigation badges
+ */
+export const GetPendingCountsResponse = zod.object({
+  "leave": zod.number(),
+  "fundRequests": zod.number(),
+  "requisitions": zod.number()
 })
 
 
@@ -1049,7 +1062,9 @@ export const GetAttendanceCodeResponse = zod.object({
 
 
 export const CheckInBody = zod.object({
-  "code": zod.string().min(1)
+  "code": zod.string().min(1),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish()
 })
 
 export const CheckInResponse = zod.object({
@@ -1058,20 +1073,37 @@ export const CheckInResponse = zod.object({
   "userId": zod.number(),
   "forDate": zod.string(),
   "checkInAt": zod.coerce.date(),
-  "checkOutAt": zod.coerce.date().nullable()
+  "checkOutAt": zod.coerce.date().nullable(),
+  "checkInStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal(null)]).nullable(),
+  "checkOutStatus": zod.union([zod.literal('on_time'),zod.literal('early'),zod.literal(null)]).nullable(),
+  "checkInDistanceM": zod.number().nullable(),
+  "checkOutDistanceM": zod.number().nullable()
 })
 
 
 /**
- * @summary Check out for today
+ * @summary Check out for today by scanning the attendance code
  */
+
+
+
+export const CheckOutBody = zod.object({
+  "code": zod.string().min(1),
+  "lat": zod.number().nullish(),
+  "lng": zod.number().nullish()
+})
+
 export const CheckOutResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "userId": zod.number(),
   "forDate": zod.string(),
   "checkInAt": zod.coerce.date(),
-  "checkOutAt": zod.coerce.date().nullable()
+  "checkOutAt": zod.coerce.date().nullable(),
+  "checkInStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal(null)]).nullable(),
+  "checkOutStatus": zod.union([zod.literal('on_time'),zod.literal('early'),zod.literal(null)]).nullable(),
+  "checkInDistanceM": zod.number().nullable(),
+  "checkOutDistanceM": zod.number().nullable()
 })
 
 
@@ -1089,7 +1121,11 @@ export const ListMyAttendanceResponseItem = zod.object({
   "userId": zod.number(),
   "forDate": zod.string(),
   "checkInAt": zod.coerce.date(),
-  "checkOutAt": zod.coerce.date().nullable()
+  "checkOutAt": zod.coerce.date().nullable(),
+  "checkInStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal(null)]).nullable(),
+  "checkOutStatus": zod.union([zod.literal('on_time'),zod.literal('early'),zod.literal(null)]).nullable(),
+  "checkInDistanceM": zod.number().nullable(),
+  "checkOutDistanceM": zod.number().nullable()
 })
 export const ListMyAttendanceResponse = zod.array(ListMyAttendanceResponseItem)
 
@@ -1101,18 +1137,216 @@ export const ListAttendanceRecordsQueryParams = zod.object({
   "date": zod.coerce.string().optional()
 })
 
-export const ListAttendanceRecordsResponseItem = zod.object({
+export const ListAttendanceRecordsResponse = zod.object({
+  "records": zod.array(zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "userId": zod.number(),
   "forDate": zod.string(),
   "checkInAt": zod.coerce.date(),
-  "checkOutAt": zod.coerce.date().nullable()
+  "checkOutAt": zod.coerce.date().nullable(),
+  "checkInStatus": zod.union([zod.literal('on_time'),zod.literal('late'),zod.literal(null)]).nullable(),
+  "checkOutStatus": zod.union([zod.literal('on_time'),zod.literal('early'),zod.literal(null)]).nullable(),
+  "checkInDistanceM": zod.number().nullable(),
+  "checkOutDistanceM": zod.number().nullable()
 }).and(zod.object({
   "employeeName": zod.string(),
   "employeeCode": zod.string().nullable()
+}))),
+  "absent": zod.array(zod.object({
+  "userId": zod.number(),
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
 }))
-export const ListAttendanceRecordsResponse = zod.array(ListAttendanceRecordsResponseItem)
+})
+
+
+/**
+ * @summary Get company attendance settings (management)
+ */
+export const getAttendanceSettingsResponseScheduleMonStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleMonEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleTueStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleTueEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleWedStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleWedEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleThuStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleThuEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleFriStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleFriEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleSatStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleSatEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleSunStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const getAttendanceSettingsResponseScheduleSunEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+
+
+export const GetAttendanceSettingsResponse = zod.object({
+  "officeLat": zod.number().nullable(),
+  "officeLng": zod.number().nullable(),
+  "radiusMeters": zod.number(),
+  "schedule": zod.object({
+  "mon": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleMonStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleMonEndRegExp)
+}),
+  "tue": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleTueStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleTueEndRegExp)
+}),
+  "wed": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleWedStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleWedEndRegExp)
+}),
+  "thu": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleThuStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleThuEndRegExp)
+}),
+  "fri": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleFriStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleFriEndRegExp)
+}),
+  "sat": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleSatStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleSatEndRegExp)
+}),
+  "sun": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(getAttendanceSettingsResponseScheduleSunStartRegExp),
+  "end": zod.string().regex(getAttendanceSettingsResponseScheduleSunEndRegExp)
+})
+})
+})
+
+
+/**
+ * @summary Update company attendance settings (management)
+ */
+export const updateAttendanceSettingsBodyRadiusMetersMin = 10;
+export const updateAttendanceSettingsBodyRadiusMetersMax = 100000;
+
+export const updateAttendanceSettingsBodyScheduleMonStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleMonEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleTueStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleTueEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleWedStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleWedEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleThuStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleThuEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleFriStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleFriEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleSatStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleSatEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleSunStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsBodyScheduleSunEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+
+
+export const UpdateAttendanceSettingsBody = zod.object({
+  "officeLat": zod.number().nullish(),
+  "officeLng": zod.number().nullish(),
+  "radiusMeters": zod.number().min(updateAttendanceSettingsBodyRadiusMetersMin).max(updateAttendanceSettingsBodyRadiusMetersMax).optional(),
+  "schedule": zod.object({
+  "mon": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleMonStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleMonEndRegExp)
+}),
+  "tue": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleTueStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleTueEndRegExp)
+}),
+  "wed": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleWedStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleWedEndRegExp)
+}),
+  "thu": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleThuStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleThuEndRegExp)
+}),
+  "fri": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleFriStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleFriEndRegExp)
+}),
+  "sat": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleSatStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleSatEndRegExp)
+}),
+  "sun": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsBodyScheduleSunStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsBodyScheduleSunEndRegExp)
+})
+}).optional()
+})
+
+export const updateAttendanceSettingsResponseScheduleMonStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleMonEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleTueStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleTueEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleWedStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleWedEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleThuStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleThuEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleFriStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleFriEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleSatStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleSatEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleSunStartRegExp = new RegExp('^\\d{2}:\\d{2}$');
+export const updateAttendanceSettingsResponseScheduleSunEndRegExp = new RegExp('^\\d{2}:\\d{2}$');
+
+
+export const UpdateAttendanceSettingsResponse = zod.object({
+  "officeLat": zod.number().nullable(),
+  "officeLng": zod.number().nullable(),
+  "radiusMeters": zod.number(),
+  "schedule": zod.object({
+  "mon": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleMonStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleMonEndRegExp)
+}),
+  "tue": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleTueStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleTueEndRegExp)
+}),
+  "wed": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleWedStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleWedEndRegExp)
+}),
+  "thu": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleThuStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleThuEndRegExp)
+}),
+  "fri": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleFriStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleFriEndRegExp)
+}),
+  "sat": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleSatStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleSatEndRegExp)
+}),
+  "sun": zod.object({
+  "mode": zod.enum(['office', 'remote', 'off']),
+  "start": zod.string().regex(updateAttendanceSettingsResponseScheduleSunStartRegExp),
+  "end": zod.string().regex(updateAttendanceSettingsResponseScheduleSunEndRegExp)
+})
+})
+})
 
 
 /**
@@ -1252,6 +1486,51 @@ export const ListMyProjectsResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const ListMyProjectsResponse = zod.array(ListMyProjectsResponseItem)
+
+
+/**
+ * @summary Update status, progress, and deliverable statuses of an assigned project (employee)
+ */
+export const UpdateMyProjectProgressParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateMyProjectProgressBodyProgressMin = 0;
+export const updateMyProjectProgressBodyProgressMax = 100;
+
+
+
+export const UpdateMyProjectProgressBody = zod.object({
+  "status": zod.enum(['planning', 'active', 'on_hold', 'completed']).optional(),
+  "progress": zod.number().min(updateMyProjectProgressBodyProgressMin).max(updateMyProjectProgressBodyProgressMax).optional(),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "status": zod.enum(['pending', 'in_progress', 'done'])
+})).optional()
+})
+
+export const UpdateMyProjectProgressResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**
@@ -1656,5 +1935,95 @@ export const DeletePostParams = zod.object({
 })
 
 export const DeletePostResponse = zod.void()
+
+
+/**
+ * @summary List employee queries (management)
+ */
+export const ListQueriesQueryParams = zod.object({
+  "userId": zod.coerce.number().optional()
+})
+
+export const ListQueriesResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "category": zod.string(),
+  "amount": zod.string().nullable(),
+  "reason": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "employeeName": zod.string(),
+  "issuedByName": zod.string().nullable()
+})
+export const ListQueriesResponse = zod.array(ListQueriesResponseItem)
+
+
+/**
+ * @summary Issue a query/deduction/fine against an employee (management)
+ */
+
+
+
+export const CreateQueryBody = zod.object({
+  "userId": zod.number(),
+  "category": zod.enum(['query', 'deduction', 'fine']),
+  "amount": zod.string().nullish(),
+  "reason": zod.string().min(1)
+})
+
+export const CreateQueryResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "category": zod.string(),
+  "amount": zod.string().nullable(),
+  "reason": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "employeeName": zod.string(),
+  "issuedByName": zod.string().nullable()
+})
+
+
+/**
+ * @summary Delete an employee query (management)
+ */
+export const DeleteQueryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteQueryResponse = zod.void()
+
+
+/**
+ * @summary Work summary for an employee profile (management)
+ */
+export const GetEmployeeOverviewParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetEmployeeOverviewResponse = zod.object({
+  "leave": zod.object({
+  "allocation": zod.number(),
+  "used": zod.number(),
+  "remaining": zod.number()
+}),
+  "attendance": zod.object({
+  "presentDays": zod.number(),
+  "lateCount": zod.number()
+}),
+  "projects": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "status": zod.string(),
+  "progress": zod.number()
+})),
+  "requests": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['leave', 'fund']),
+  "label": zod.string(),
+  "status": zod.string(),
+  "createdAt": zod.coerce.date()
+}))
+})
 
 
