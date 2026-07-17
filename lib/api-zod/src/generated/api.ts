@@ -271,6 +271,7 @@ export const CreateManagementUserBody = zod.object({
   "email": zod.string(),
   "phone": zod.string().min(1),
   "password": zod.string().min(createManagementUserBodyPasswordMin),
+  "role": zod.enum(['super_admin', 'hr']).optional(),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])).optional()
 })
 
@@ -301,6 +302,7 @@ export const UpdateManagementUserParams = zod.object({
 export const UpdateManagementUserBody = zod.object({
   "fullName": zod.string().min(1).optional(),
   "phone": zod.string().min(1).optional(),
+  "role": zod.enum(['super_admin', 'hr']).optional(),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])).optional(),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']).optional()
 })

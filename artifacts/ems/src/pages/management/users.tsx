@@ -63,6 +63,7 @@ const userSchema = z.object({
   email: z.string().email("Valid email is required"),
   phone: z.string().min(1, "Phone number is required"),
   password: z.string().optional(),
+  role: z.enum(["super_admin", "hr"]),
   permissions: z.array(z.string()).optional(),
   status: z.enum(["active", "pending", "inactive", "suspended"]).optional(),
 });
@@ -88,6 +89,7 @@ export default function UsersPage() {
       fullName: "",
       email: "",
       phone: "",
+      role: "hr",
       permissions: [],
     },
   });
@@ -99,6 +101,7 @@ export default function UsersPage() {
         fullName: user.fullName,
         email: user.email,
         phone: user.phone,
+        role: user.role === "super_admin" ? "super_admin" : "hr",
         permissions: user.permissions || [],
         status: user.status,
       });
@@ -108,6 +111,7 @@ export default function UsersPage() {
         fullName: "",
         email: "",
         phone: "",
+        role: "hr",
         permissions: [],
       });
     }
@@ -150,13 +154,14 @@ export default function UsersPage() {
             email: data.email,
             phone: data.phone,
             password: data.password,
+            role: data.role,
             permissions: data.permissions as PermissionKey[],
           },
         },
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getListManagementUsersQueryKey() });
-            toast.success("HR user created successfully");
+            toast.success("User created successfully");
             setIsDialogOpen(false);
           },
           onError: (error) => {
@@ -199,7 +204,7 @@ export default function UsersPage() {
         </div>
         <Button onClick={() => handleOpenDialog()}>
           <Plus className="h-4 w-4 mr-2" />
-          Add HR User
+          Add User
         </Button>
       </div>
 
@@ -245,7 +250,7 @@ export default function UsersPage() {
                   </TableCell>
                   <TableCell>
                     <Badge variant={user.role === 'super_admin' ? 'default' : 'secondary'} className="capitalize">
-                      {user.role.replace('_', ' ')}
+                      {user.role === 'super_admin' ? 'Admin' : user.role.toUpperCase()}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -284,7 +289,8 @@ export default function UsersPage() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    {user.role !== 'super_admin' && user.id !== currentUserId && (
+                    {user.id !== currentUserId &&
+                      (user.role !== 'super_admin' || session?.user?.role === 'super_admin') && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -314,7 +320,7 @@ export default function UsersPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editingUser ? "Edit HR User" : "Add HR User"}</DialogTitle>
+            <DialogTitle>{editingUser ? "Edit User" : "Add User"}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -348,6 +354,28 @@ export default function UsersPage() {
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Role</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="hr">HR (selected permissions only)</SelectItem>
+                        <SelectItem value="super_admin">Admin (full access)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
@@ -413,7 +441,7 @@ export default function UsersPage() {
                 )}
               </div>
 
-              <div className="space-y-4 pt-4 border-t">
+              <div className={form.watch("role") === "super_admin" ? "hidden" : "space-y-4 pt-4 border-t"}>
                 <div>
                   <h3 className="text-sm font-medium mb-1">Access Permissions</h3>
                   <p className="text-xs text-muted-foreground">Select the modules this user can manage.</p>
@@ -475,7 +503,7 @@ export default function UsersPage() {
                   Cancel
                 </Button>
                 <Button type="submit" disabled={createUser.isPending || updateUser.isPending}>
-                  {editingUser ? "Save Changes" : "Create HR User"}
+                  {editingUser ? "Save Changes" : "Create User"}
                 </Button>
               </DialogFooter>
             </form>

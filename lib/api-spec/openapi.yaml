@@ -1931,6 +1931,9 @@ components:
         password:
           type: string
           minLength: 8
+        role:
+          type: string
+          enum: [super_admin, hr]
         permissions:
           type: array
           items:
@@ -1945,6 +1948,9 @@ components:
         phone:
           type: string
           minLength: 1
+        role:
+          type: string
+          enum: [super_admin, hr]
         permissions:
           type: array
           items:

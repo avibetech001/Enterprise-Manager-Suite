@@ -49,6 +49,12 @@ router.post(
     const input = parsed.data;
     const currentUser = req.currentUser!;
 
+    const role = input.role ?? "hr";
+    if (role === "super_admin" && currentUser.role !== "super_admin") {
+      res.status(403).json({ error: "Only an Admin can create Admin accounts." });
+      return;
+    }
+
     const [existing] = await db
       .select()
       .from(usersTable)
@@ -66,7 +72,7 @@ router.post(
         fullName: input.fullName,
         email: input.email.toLowerCase(),
         phone: input.phone,
-        role: "hr",
+        role,
         permissions: input.permissions ?? [],
         status: "active",
         passwordHash,
@@ -111,9 +117,27 @@ router.patch(
       res.status(404).json({ error: "Not found" });
       return;
     }
-    if (target.role === "super_admin") {
-      res.status(403).json({ error: "The Employer account cannot be modified here." });
+    if (
+      (target.role === "super_admin" || parsed.data.role === "super_admin") &&
+      currentUser.role !== "super_admin"
+    ) {
+      res.status(403).json({ error: "Only an Admin can modify Admin accounts." });
       return;
+    }
+    if (target.role === "super_admin" && parsed.data.role === "hr") {
+      const admins = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.companyId, currentUser.companyId),
+            eq(usersTable.role, "super_admin"),
+          ),
+        );
+      if (admins.length <= 1) {
+        res.status(403).json({ error: "You cannot demote the only Admin account." });
+        return;
+      }
     }
 
     const [user] = await db
@@ -154,8 +178,23 @@ router.delete(
       return;
     }
     if (target.role === "super_admin") {
-      res.status(403).json({ error: "The Employer account cannot be removed." });
-      return;
+      if (currentUser.role !== "super_admin") {
+        res.status(403).json({ error: "Only an Admin can remove Admin accounts." });
+        return;
+      }
+      const admins = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(
+          and(
+            eq(usersTable.companyId, currentUser.companyId),
+            eq(usersTable.role, "super_admin"),
+          ),
+        );
+      if (admins.length <= 1) {
+        res.status(403).json({ error: "You cannot remove the only Admin account." });
+        return;
+      }
     }
     if (target.id === currentUser.id) {
       res.status(403).json({ error: "You cannot remove your own account." });

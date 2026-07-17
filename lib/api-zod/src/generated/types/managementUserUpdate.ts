@@ -5,6 +5,7 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { ManagementUserUpdateRole } from './managementUserUpdateRole';
 import type { PermissionKey } from './permissionKey';
 import type { UserStatus } from './userStatus';
 
@@ -13,6 +14,7 @@ export interface ManagementUserUpdate {
   fullName?: string;
   /** @minLength 1 */
   phone?: string;
+  role?: ManagementUserUpdateRole;
   permissions?: PermissionKey[];
   status?: UserStatus;
 }

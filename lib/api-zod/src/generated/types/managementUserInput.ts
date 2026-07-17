@@ -5,6 +5,7 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { ManagementUserInputRole } from './managementUserInputRole';
 import type { PermissionKey } from './permissionKey';
 
 export interface ManagementUserInput {
@@ -15,5 +16,6 @@ export interface ManagementUserInput {
   phone: string;
   /** @minLength 8 */
   password: string;
+  role?: ManagementUserInputRole;
   permissions?: PermissionKey[];
 }

@@ -157,6 +157,14 @@ export interface ManagementUser {
   createdAt: string;
 }
 
+export type ManagementUserInputRole = typeof ManagementUserInputRole[keyof typeof ManagementUserInputRole];
+
+
+export const ManagementUserInputRole = {
+  super_admin: 'super_admin',
+  hr: 'hr',
+} as const;
+
 export interface ManagementUserInput {
   /** @minLength 1 */
   fullName: string;
@@ -165,14 +173,24 @@ export interface ManagementUserInput {
   phone: string;
   /** @minLength 8 */
   password: string;
+  role?: ManagementUserInputRole;
   permissions?: PermissionKey[];
 }
+
+export type ManagementUserUpdateRole = typeof ManagementUserUpdateRole[keyof typeof ManagementUserUpdateRole];
+
+
+export const ManagementUserUpdateRole = {
+  super_admin: 'super_admin',
+  hr: 'hr',
+} as const;
 
 export interface ManagementUserUpdate {
   /** @minLength 1 */
   fullName?: string;
   /** @minLength 1 */
   phone?: string;
+  role?: ManagementUserUpdateRole;
   permissions?: PermissionKey[];
   status?: UserStatus;
 }
