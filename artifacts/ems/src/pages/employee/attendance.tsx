@@ -236,7 +236,7 @@ export default function EmployeeAttendance() {
     if (!summary.attendanceToday) {
       handleCheckIn(urlCode);
     } else if (!summary.attendanceToday.checkOutAt) {
-      handleCheckOut(urlCode);
+      handleCheckOut();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary]);
@@ -264,12 +264,10 @@ export default function EmployeeAttendance() {
     );
   };
 
-  const handleCheckOut = async (scannedCode: string) => {
-    const useCode = scannedCode.trim();
-    if (!useCode) return;
+  const handleCheckOut = async () => {
     const pos = await getPosition();
     checkOut.mutate(
-      { data: { code: useCode, lat: pos?.lat ?? null, lng: pos?.lng ?? null } },
+      { data: { lat: pos?.lat ?? null, lng: pos?.lng ?? null } },
       {
         onSuccess: () => {
           invalidate();
@@ -335,8 +333,6 @@ export default function EmployeeAttendance() {
         onScan={(scanned) => {
           if (!isCheckedIn) {
             handleCheckIn(scanned);
-          } else if (!isCheckedOut) {
-            handleCheckOut(scanned);
           }
         }}
       />
@@ -395,15 +391,14 @@ export default function EmployeeAttendance() {
               {!isCheckedOut && (
                 <div className="space-y-3 max-w-md">
                   <p className="text-sm text-muted-foreground">
-                    Scan the attendance QR code again to check out.
+                    Leaving for the day? Just tap the button below — no QR scan needed.
                   </p>
                   <Button
                     variant="outline"
-                    onClick={() => setScannerOpen(true)}
+                    onClick={() => handleCheckOut()}
                     disabled={checkOut.isPending}
                   >
-                    <ScanLine className="h-4 w-4 mr-2" />
-                    {checkOut.isPending ? "Checking out..." : "Scan QR to Check Out"}
+                    {checkOut.isPending ? "Checking out..." : "Check Out"}
                   </Button>
                 </div>
               )}

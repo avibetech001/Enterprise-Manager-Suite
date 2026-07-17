@@ -31,6 +31,7 @@ import type {
   ChatMessage,
   ChatMessageInput,
   CheckInInput,
+  CheckOutInput,
   Company,
   CompanyPost,
   CompanyPostInput,
@@ -3143,16 +3144,16 @@ export const getCheckOutUrl = () => {
 }
 
 /**
- * @summary Check out for today by scanning the attendance code
+ * @summary Check out for today (no code required)
  */
-export const checkOut = async (checkInInput: CheckInInput, options?: RequestInit): Promise<AttendanceRecord> => {
+export const checkOut = async (checkOutInput: CheckOutInput, options?: RequestInit): Promise<AttendanceRecord> => {
 
   return customFetch<AttendanceRecord>(getCheckOutUrl(),
   {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(checkInInput)
+    body: JSON.stringify(checkOutInput)
   }
 );}
 
@@ -3161,8 +3162,8 @@ export const checkOut = async (checkInInput: CheckInInput, options?: RequestInit
 
 
 export const getCheckOutMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,{data: BodyType<CheckInInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,{data: BodyType<CheckInInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,{data: BodyType<CheckOutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,{data: BodyType<CheckOutInput>}, TContext> => {
 
 const mutationKey = ['checkOut'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -3174,7 +3175,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkOut>>, {data: BodyType<CheckInInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof checkOut>>, {data: BodyType<CheckOutInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  checkOut(data,requestOptions)
@@ -3188,18 +3189,18 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CheckOutMutationResult = NonNullable<Awaited<ReturnType<typeof checkOut>>>
-    export type CheckOutMutationBody = BodyType<CheckInInput>
+    export type CheckOutMutationBody = BodyType<CheckOutInput>
     export type CheckOutMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Check out for today by scanning the attendance code
+ * @summary Check out for today (no code required)
  */
 export const useCheckOut = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,{data: BodyType<CheckInInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof checkOut>>, TError,{data: BodyType<CheckOutInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof checkOut>>,
         TError,
-        {data: BodyType<CheckInInput>},
+        {data: BodyType<CheckOutInput>},
         TContext
       > => {
       return useMutation(getCheckOutMutationOptions(options));

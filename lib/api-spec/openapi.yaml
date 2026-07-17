@@ -976,13 +976,13 @@ paths:
     post:
       operationId: checkOut
       tags: [attendance]
-      summary: Check out for today by scanning the attendance code
+      summary: Check out for today (no code required)
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CheckInInput"
+              $ref: "#/components/schemas/CheckOutInput"
       responses:
         "200":
           description: Attendance record
@@ -2644,6 +2644,14 @@ components:
         code:
           type: string
           minLength: 1
+        lat:
+          type: ["number", "null"]
+        lng:
+          type: ["number", "null"]
+
+    CheckOutInput:
+      type: object
+      properties:
         lat:
           type: ["number", "null"]
         lng:

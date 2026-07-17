@@ -538,6 +538,13 @@ export interface CheckInInput {
   lng?: number | null;
 }
 
+export interface CheckOutInput {
+  /** @nullable */
+  lat?: number | null;
+  /** @nullable */
+  lng?: number | null;
+}
+
 export type DayScheduleMode = typeof DayScheduleMode[keyof typeof DayScheduleMode];
 
 

@@ -22,6 +22,7 @@ export * from './chatMember';
 export * from './chatMessage';
 export * from './chatMessageInput';
 export * from './checkInInput';
+export * from './checkOutInput';
 export * from './company';
 export * from './companyPost';
 export * from './companyPostInput';

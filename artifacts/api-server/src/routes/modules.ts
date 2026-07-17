@@ -594,9 +594,9 @@ router.post(
   requireAuth,
   requireEmployee,
   async (req, res): Promise<void> => {
-    const parsed = CheckOutBody.safeParse(req.body);
+    const parsed = CheckOutBody.safeParse(req.body ?? {});
     if (!parsed.success) {
-      res.status(400).json({ error: "Scan or enter the attendance code." });
+      res.status(400).json({ error: "Invalid request." });
       return;
     }
     const me = req.currentUser!;
@@ -617,15 +617,27 @@ router.post(
       res.status(400).json({ error: "You have already checked out today." });
       return;
     }
-    const scan = await validateScan(
-      me.companyId,
-      parsed.data.code,
-      parsed.data.lat,
-      parsed.data.lng,
-    );
-    if ("error" in scan) {
-      res.status(400).json({ error: scan.error });
-      return;
+    // No QR code required to check out. Record distance from the office
+    // if the browser shared a location, purely for reporting.
+    let distanceM: number | null = null;
+    {
+      const settings = await getAttendanceSettings(me.companyId);
+      const { lat, lng } = parsed.data;
+      if (
+        settings.officeLat !== null &&
+        settings.officeLng !== null &&
+        lat !== null &&
+        lat !== undefined &&
+        lng !== null &&
+        lng !== undefined
+      ) {
+        distanceM = haversineMeters(
+          Number(settings.officeLat),
+          Number(settings.officeLng),
+          lat,
+          lng,
+        );
+      }
     }
     const settings = await getAttendanceSettings(me.companyId);
     const day = todaySchedule(parseSchedule(settings.weeklySchedule));
@@ -638,7 +650,7 @@ router.post(
       .set({
         checkOutAt: new Date(),
         checkOutStatus,
-        checkOutDistanceM: scan.distanceM,
+        checkOutDistanceM: distanceM,
       })
       .where(eq(attendanceRecordsTable.id, existing.id))
       .returning();

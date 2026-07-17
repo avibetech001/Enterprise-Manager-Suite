@@ -1138,13 +1138,9 @@ export const CheckInResponse = zod.object({
 
 
 /**
- * @summary Check out for today by scanning the attendance code
+ * @summary Check out for today (no code required)
  */
-
-
-
 export const CheckOutBody = zod.object({
-  "code": zod.string().min(1),
   "lat": zod.number().nullish(),
   "lng": zod.number().nullish()
 })
