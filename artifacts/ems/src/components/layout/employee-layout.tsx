@@ -24,6 +24,7 @@ import {
   Palmtree,
   FolderKanban,
   Wallet,
+  FileWarning,
   Megaphone,
   Building2,
   ScrollText,
@@ -50,6 +51,7 @@ const NAV = [
       { href: "/employee/leave", icon: Palmtree, title: "Leave" },
       { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
       { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
+      { href: "/employee/queries", icon: FileWarning, title: "My Queries" },
     ],
   },
   {

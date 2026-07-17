@@ -23,6 +23,7 @@ import EmployeeAttendancePage from '@/pages/employee/attendance';
 import EmployeeLeavePage from '@/pages/employee/leave';
 import EmployeeProjectsPage from '@/pages/employee/projects';
 import EmployeeFundRequestsPage from '@/pages/employee/fund-requests';
+import EmployeeQueriesPage from '@/pages/employee/queries';
 import EmployeePoliciesPage from '@/pages/employee/policies';
 import EmployeeAnnouncementsPage from '@/pages/employee/announcements';
 import EmployeeKnowledgeBasePage from '@/pages/employee/knowledge-base';
@@ -102,6 +103,7 @@ function Router() {
         ["/employee/leave", EmployeeLeavePage],
         ["/employee/projects", EmployeeProjectsPage],
         ["/employee/fund-requests", EmployeeFundRequestsPage],
+        ["/employee/queries", EmployeeQueriesPage],
         ["/employee/policies", EmployeePoliciesPage],
         ["/employee/departments", EmployeeDepartmentsPage],
         ["/employee/announcements", EmployeeAnnouncementsPage],

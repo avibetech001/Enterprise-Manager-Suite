@@ -4998,6 +4998,83 @@ export const useDeletePost = <TError = ErrorType<unknown>,
       return useMutation(getDeletePostMutationOptions(options));
     }
 
+export const getListMyQueriesUrl = () => {
+
+
+
+
+  return `/api/queries/me`
+}
+
+/**
+ * @summary List queries issued against the current employee
+ */
+export const listMyQueries = async ( options?: RequestInit): Promise<EmployeeQuery[]> => {
+
+  return customFetch<EmployeeQuery[]>(getListMyQueriesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyQueriesQueryKey = () => {
+    return [
+    `/api/queries/me`
+    ] as const;
+    }
+
+
+export const getListMyQueriesQueryOptions = <TData = Awaited<ReturnType<typeof listMyQueries>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyQueries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyQueriesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyQueries>>> = ({ signal }) => listMyQueries({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyQueries>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyQueriesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyQueries>>>
+export type ListMyQueriesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List queries issued against the current employee
+ */
+
+export function useListMyQueries<TData = Awaited<ReturnType<typeof listMyQueries>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyQueries>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyQueriesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
 export const getListQueriesUrl = (params?: ListQueriesParams,) => {
   const normalizedParams = new URLSearchParams();
 

@@ -1491,6 +1491,21 @@ paths:
         "204":
           description: Deleted
 
+  /queries/me:
+    get:
+      operationId: listMyQueries
+      tags: [queries]
+      summary: List queries issued against the current employee
+      responses:
+        "200":
+          description: Queries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmployeeQuery"
+
   /queries:
     get:
       operationId: listQueries

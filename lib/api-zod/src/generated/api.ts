@@ -1950,6 +1950,23 @@ export const DeletePostResponse = zod.void()
 
 
 /**
+ * @summary List queries issued against the current employee
+ */
+export const ListMyQueriesResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "category": zod.string(),
+  "amount": zod.string().nullable(),
+  "reason": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "employeeName": zod.string(),
+  "issuedByName": zod.string().nullable()
+})
+export const ListMyQueriesResponse = zod.array(ListMyQueriesResponseItem)
+
+
+/**
  * @summary List employee queries (management)
  */
 export const ListQueriesQueryParams = zod.object({

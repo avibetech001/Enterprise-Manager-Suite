@@ -41,6 +41,7 @@ import {
   GetAttendanceCodeResponse,
   GetMyLeaveBalanceResponse,
   ListQueriesResponse,
+  ListMyQueriesResponse,
   CreateQueryBody,
   CreateQueryResponse,
   GetEmployeeOverviewResponse,
@@ -1604,6 +1605,25 @@ async function withQueryNames(rows: (typeof employeeQueriesTable.$inferSelect)[]
 }
 
 router.get(
+  "/queries/me",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const rows = await db
+      .select()
+      .from(employeeQueriesTable)
+      .where(
+        and(
+          eq(employeeQueriesTable.userId, req.currentUser!.id),
+          eq(employeeQueriesTable.companyId, req.currentUser!.companyId),
+        ),
+      )
+      .orderBy(desc(employeeQueriesTable.createdAt));
+    res.json(ListMyQueriesResponse.parse(await withQueryNames(rows)));
+  },
+);
+
+router.get(
   "/queries",
   requireAuth,
   requireManagementPermission("manage_employees"),
@@ -1669,6 +1689,18 @@ router.post(
       })
       .returning();
     const [withNames] = await withQueryNames([row!]);
+    const label =
+      parsed.data.category === "deduction"
+        ? "A deduction"
+        : parsed.data.category === "fine"
+          ? "A fine"
+          : "A query";
+    await notify(
+      companyId,
+      "query_issued",
+      `${label} has been issued against you: ${parsed.data.reason.trim()}`,
+      parsed.data.userId,
+    );
     res.status(201).json(CreateQueryResponse.parse(withNames));
   },
 );
