@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Link, useLocation } from "wouter";
-import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@/components/ui/sidebar";
+import { Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarProvider, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarTrigger } from "@/components/ui/sidebar";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGetCurrentSession, useLogout, useGetPendingCounts, getGetPendingCountsQueryKey } from "@workspace/api-client-react";
 import logo from "@/assets/logo.svg";
@@ -208,7 +208,9 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
         </Sidebar>
 
         <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-          <header className="h-14 border-b border-border flex items-center justify-end px-4 gap-4 sticky top-0 bg-background z-10">
+          <header className="h-14 border-b border-border flex items-center justify-between px-4 gap-4 sticky top-0 bg-background z-10">
+            <SidebarTrigger className="md:hidden" />
+            <div className="flex-1" />
             <ThemeToggle />
             <NotificationsBell />
           </header>
