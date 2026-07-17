@@ -1654,6 +1654,45 @@ export const SubmitMyProjectResponse = zod.object({
 
 
 /**
+ * @summary Remove my submitted work from an assigned project (employee)
+ */
+export const DeleteMyProjectSubmissionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteMyProjectSubmissionResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Update status, progress, and deliverable statuses of an assigned project (employee)
  */
 export const UpdateMyProjectProgressParams = zod.object({

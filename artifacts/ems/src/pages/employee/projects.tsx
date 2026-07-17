@@ -4,6 +4,7 @@ import {
   useListMyProjects,
   useUpdateMyProjectProgress,
   useSubmitMyProject,
+  useDeleteMyProjectSubmission,
   getListMyProjectsQueryKey,
   type ProjectDetail,
 } from "@workspace/api-client-react";
@@ -60,6 +61,24 @@ function initials(name: string): string {
 function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
   const queryClient = useQueryClient();
   const submitProject = useSubmitMyProject();
+  const deleteSubmission = useDeleteMyProjectSubmission();
+
+  const handleDelete = () => {
+    if (!window.confirm("Remove your submitted work from this project?")) return;
+    deleteSubmission.mutate(
+      { id: p.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListMyProjectsQueryKey() });
+          toast.success("Submission removed");
+          setShowForm(false);
+        },
+        onError: (err: any) => {
+          toast.error("Failed to remove submission", { description: err?.data?.error || "Unknown error" });
+        },
+      },
+    );
+  };
   const [showForm, setShowForm] = useState(false);
   const [uploaded, setUploaded] = useState<{ objectPath: string; fileName: string } | null>(null);
   const [link, setLink] = useState("");
@@ -137,10 +156,22 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
             <p className="text-xs text-muted-foreground whitespace-pre-wrap">{p.submissionNote}</p>
           )}
           {!showForm && (
-            <Button variant="outline" size="sm" className="mt-1" onClick={() => setShowForm(true)}>
-              <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Replace submission
-            </Button>
+            <div className="flex flex-wrap gap-2 mt-1">
+              <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
+                Replace submission
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={handleDelete}
+                disabled={deleteSubmission.isPending}
+              >
+                <X className="h-3.5 w-3.5 mr-1.5" />
+                Remove submission
+              </Button>
+            </div>
           )}
         </div>
       ) : (

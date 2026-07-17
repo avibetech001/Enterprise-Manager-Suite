@@ -4265,6 +4265,77 @@ export const useSubmitMyProject = <TError = ErrorType<ErrorResponse>,
       return useMutation(getSubmitMyProjectMutationOptions(options));
     }
 
+export const getDeleteMyProjectSubmissionUrl = (id: number,) => {
+
+
+
+
+  return `/api/projects/${id}/submission`
+}
+
+/**
+ * @summary Remove my submitted work from an assigned project (employee)
+ */
+export const deleteMyProjectSubmission = async (id: number, options?: RequestInit): Promise<ProjectDetail> => {
+
+  return customFetch<ProjectDetail>(getDeleteMyProjectSubmissionUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteMyProjectSubmissionMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMyProjectSubmission>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMyProjectSubmission>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteMyProjectSubmission'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMyProjectSubmission>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteMyProjectSubmission(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMyProjectSubmissionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMyProjectSubmission>>>
+
+    export type DeleteMyProjectSubmissionMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Remove my submitted work from an assigned project (employee)
+ */
+export const useDeleteMyProjectSubmission = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMyProjectSubmission>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMyProjectSubmission>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMyProjectSubmissionMutationOptions(options));
+    }
+
 export const getUpdateMyProjectProgressUrl = (id: number,) => {
 
 

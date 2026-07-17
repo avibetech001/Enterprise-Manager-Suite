@@ -44,6 +44,7 @@ import {
   ListMyQueriesResponse,
   SubmitMyProjectBody,
   SubmitMyProjectResponse,
+  DeleteMyProjectSubmissionResponse,
   CreateQueryBody,
   CreateQueryResponse,
   GetEmployeeOverviewResponse,
@@ -79,6 +80,7 @@ import {
   verifyPassword,
 } from "../lib/auth";
 import { notify } from "../lib/notify";
+import { ObjectStorageService } from "../lib/objectStorage";
 
 const router: IRouter = Router();
 
@@ -1005,6 +1007,11 @@ router.post(
       res.status(404).json({ error: "You are not assigned to this project." });
       return;
     }
+    const replacedFilePath =
+      project.submissionFilePath &&
+      project.submissionFilePath !== (parsed.data.objectPath || null)
+        ? project.submissionFilePath
+        : null;
     await db
       .update(projectsTable)
       .set({
@@ -1016,6 +1023,13 @@ router.post(
         submittedBy: me.id,
       })
       .where(eq(projectsTable.id, id));
+    if (replacedFilePath) {
+      new ObjectStorageService()
+        .deleteObjectEntity(replacedFilePath)
+        .catch((err) =>
+          req.log.warn({ err }, "Failed to delete replaced submission file"),
+        );
+    }
     await notify(
       me.companyId,
       "project_submitted",
@@ -1025,6 +1039,66 @@ router.post(
       all.filter((p) => p.id === id),
     );
     res.json(SubmitMyProjectResponse.parse(full));
+  },
+);
+
+router.delete(
+  "/projects/:id/submission",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(
+        and(eq(projectsTable.id, id), eq(projectsTable.companyId, me.companyId)),
+      );
+    if (!project) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    const [membership] = await db
+      .select()
+      .from(projectMembersTable)
+      .where(
+        and(
+          eq(projectMembersTable.projectId, id),
+          eq(projectMembersTable.userId, me.id),
+        ),
+      );
+    if (!membership) {
+      res.status(404).json({ error: "You are not assigned to this project." });
+      return;
+    }
+    const oldFilePath = project.submissionFilePath;
+    await db
+      .update(projectsTable)
+      .set({
+        submissionFilePath: null,
+        submissionFileName: null,
+        submissionLink: null,
+        submissionNote: null,
+        submittedAt: null,
+        submittedBy: null,
+      })
+      .where(eq(projectsTable.id, id));
+    if (oldFilePath) {
+      new ObjectStorageService()
+        .deleteObjectEntity(oldFilePath)
+        .catch((err) =>
+          req.log.warn({ err }, "Failed to delete submission file from storage"),
+        );
+    }
+    const [full] = await loadProjects(me.companyId, me.id).then((all) =>
+      all.filter((p) => p.id === id),
+    );
+    res.json(DeleteMyProjectSubmissionResponse.parse(full));
   },
 );
 

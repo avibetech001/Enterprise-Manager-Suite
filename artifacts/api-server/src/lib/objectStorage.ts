@@ -159,6 +159,17 @@ export class ObjectStorageService {
     return objectFile;
   }
 
+  /** Best-effort deletion of a private object; no-op if it does not exist. */
+  async deleteObjectEntity(objectPath: string): Promise<void> {
+    try {
+      const file = await this.getObjectEntityFile(objectPath);
+      await file.delete();
+    } catch (err) {
+      if (err instanceof ObjectNotFoundError) return;
+      throw err;
+    }
+  }
+
   normalizeObjectEntityPath(rawPath: string): string {
     if (!rawPath.startsWith('https://storage.googleapis.com/')) {
       return rawPath;
