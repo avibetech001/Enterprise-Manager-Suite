@@ -8,8 +8,10 @@
 
 export interface ProjectSubmissionInput {
   /** @minLength 1 */
-  objectPath: string;
+  objectPath?: string;
   /** @minLength 1 */
-  fileName: string;
+  fileName?: string;
+  /** @minLength 1 */
+  link?: string;
   note?: string;
 }

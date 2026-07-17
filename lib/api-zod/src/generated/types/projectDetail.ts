@@ -32,6 +32,8 @@ export interface ProjectDetail {
   /** @nullable */
   submissionFileName: string | null;
   /** @nullable */
+  submissionLink: string | null;
+  /** @nullable */
   submissionNote: string | null;
   /** @nullable */
   submittedAt: Date | null;

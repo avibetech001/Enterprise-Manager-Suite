@@ -311,6 +311,16 @@ export default function ProjectsPage() {
                           {p.submissionFileName || "Download file"}
                         </a>
                       )}
+                      {p.submissionLink && (
+                        <a
+                          href={p.submissionLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-700 dark:text-emerald-400 underline break-all block"
+                        >
+                          {p.submissionLink}
+                        </a>
+                      )}
                       {p.submissionNote && (
                         <p className="text-muted-foreground whitespace-pre-wrap">{p.submissionNote}</p>
                       )}

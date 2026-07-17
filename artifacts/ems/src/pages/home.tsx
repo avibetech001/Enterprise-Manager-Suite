@@ -1,14 +1,16 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Building2, Users } from "lucide-react";
-import logo from "@/assets/logo.svg";
+import logoWhite from "@/assets/logo-white.svg";
 
 export default function Home() {
   return (
     <div className="min-h-screen w-full bg-background flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-3xl">
         <div className="flex flex-col items-center text-center mb-12">
-          <img src={logo} alt="5th Element" className="h-12 w-auto mb-8" />
+          <div className="bg-[#1e1e1e] rounded-2xl px-8 py-6 mb-8 shadow-md">
+            <img src={logoWhite} alt="5th Element" className="h-12 w-auto" />
+          </div>
           <h1 className="text-4xl font-semibold tracking-tight text-foreground mb-4">
             Enterprise Management System
           </h1>

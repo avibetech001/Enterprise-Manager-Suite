@@ -964,8 +964,21 @@ router.post(
       res.status(400).json({ error: "Invalid project submission." });
       return;
     }
-    if (!parsed.data.objectPath.startsWith("/objects/")) {
+    const link = parsed.data.link?.trim() || null;
+    if (!parsed.data.objectPath && !link) {
+      res
+        .status(400)
+        .json({ error: "Please upload a file or provide a link." });
+      return;
+    }
+    if (parsed.data.objectPath && !parsed.data.objectPath.startsWith("/objects/")) {
       res.status(400).json({ error: "Invalid uploaded file path." });
+      return;
+    }
+    if (link && !/^https?:\/\//i.test(link)) {
+      res
+        .status(400)
+        .json({ error: "Link must start with http:// or https://." });
       return;
     }
     const me = req.currentUser!;
@@ -995,8 +1008,9 @@ router.post(
     await db
       .update(projectsTable)
       .set({
-        submissionFilePath: parsed.data.objectPath,
-        submissionFileName: parsed.data.fileName,
+        submissionFilePath: parsed.data.objectPath || null,
+        submissionFileName: parsed.data.fileName || null,
+        submissionLink: link,
         submissionNote: parsed.data.note?.trim() || null,
         submittedAt: new Date(),
         submittedBy: me.id,

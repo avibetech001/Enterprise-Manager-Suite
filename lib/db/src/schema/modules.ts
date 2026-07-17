@@ -124,6 +124,7 @@ export const projectsTable = pgTable("projects", {
   urgent: boolean("urgent").notNull().default(false),
   submissionFilePath: text("submission_file_path"),
   submissionFileName: text("submission_file_name"),
+  submissionLink: text("submission_link"),
   submissionNote: text("submission_note"),
   submittedAt: timestamp("submitted_at", { withTimezone: true }),
   submittedBy: integer("submitted_by").references(() => usersTable.id, {

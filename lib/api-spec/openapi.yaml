@@ -2710,6 +2710,7 @@ components:
           deliverables,
           submissionFilePath,
           submissionFileName,
+          submissionLink,
           submissionNote,
           submittedAt,
           createdAt,
@@ -2749,6 +2750,8 @@ components:
           type: ["string", "null"]
         submissionFileName:
           type: ["string", "null"]
+        submissionLink:
+          type: ["string", "null"]
         submissionNote:
           type: ["string", "null"]
         submittedAt:
@@ -2785,12 +2788,14 @@ components:
 
     ProjectSubmissionInput:
       type: object
-      required: [objectPath, fileName]
       properties:
         objectPath:
           type: string
           minLength: 1
         fileName:
+          type: string
+          minLength: 1
+        link:
           type: string
           minLength: 1
         note:

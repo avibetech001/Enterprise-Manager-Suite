@@ -1544,6 +1544,7 @@ export const ListMyProjectsResponseItem = zod.object({
   "urgent": zod.boolean(),
   "submissionFilePath": zod.string().nullable(),
   "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
@@ -1612,9 +1613,11 @@ export const SubmitMyProjectParams = zod.object({
 
 
 
+
 export const SubmitMyProjectBody = zod.object({
-  "objectPath": zod.string().min(1),
-  "fileName": zod.string().min(1),
+  "objectPath": zod.string().min(1).optional(),
+  "fileName": zod.string().min(1).optional(),
+  "link": zod.string().min(1).optional(),
   "note": zod.string().optional()
 })
 
@@ -1643,6 +1646,7 @@ export const SubmitMyProjectResponse = zod.object({
   "urgent": zod.boolean(),
   "submissionFilePath": zod.string().nullable(),
   "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
@@ -1695,6 +1699,7 @@ export const UpdateMyProjectProgressResponse = zod.object({
   "urgent": zod.boolean(),
   "submissionFilePath": zod.string().nullable(),
   "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
@@ -1729,6 +1734,7 @@ export const ListProjectsResponseItem = zod.object({
   "urgent": zod.boolean(),
   "submissionFilePath": zod.string().nullable(),
   "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
@@ -1788,6 +1794,7 @@ export const CreateProjectResponse = zod.object({
   "urgent": zod.boolean(),
   "submissionFilePath": zod.string().nullable(),
   "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
@@ -1850,6 +1857,7 @@ export const UpdateProjectResponse = zod.object({
   "urgent": zod.boolean(),
   "submissionFilePath": zod.string().nullable(),
   "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()

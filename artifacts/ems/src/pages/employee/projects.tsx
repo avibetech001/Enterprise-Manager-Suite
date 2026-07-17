@@ -62,6 +62,7 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
   const submitProject = useSubmitMyProject();
   const [showForm, setShowForm] = useState(false);
   const [uploaded, setUploaded] = useState<{ objectPath: string; fileName: string } | null>(null);
+  const [link, setLink] = useState("");
   const [note, setNote] = useState("");
   const { uploadFile, isUploading } = useUpload({
     onError: (err) => toast.error("Upload failed", { description: err.message }),
@@ -75,18 +76,32 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
   };
 
   const handleSubmit = () => {
-    if (!uploaded) {
-      toast.error("Please upload your project file first.");
+    const trimmedLink = link.trim();
+    if (!uploaded && !trimmedLink) {
+      toast.error("Please upload a file or paste a link first.");
+      return;
+    }
+    if (trimmedLink && !/^https?:\/\//i.test(trimmedLink)) {
+      toast.error("Link must start with http:// or https://");
       return;
     }
     submitProject.mutate(
-      { id: p.id, data: { objectPath: uploaded.objectPath, fileName: uploaded.fileName, note: note.trim() || undefined } },
+      {
+        id: p.id,
+        data: {
+          objectPath: uploaded?.objectPath,
+          fileName: uploaded?.fileName,
+          link: trimmedLink || undefined,
+          note: note.trim() || undefined,
+        },
+      },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListMyProjectsQueryKey() });
           toast.success("Project work submitted");
           setShowForm(false);
           setUploaded(null);
+          setLink("");
           setNote("");
         },
         onError: (err: any) => {
@@ -107,6 +122,16 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
           </p>
           {p.submissionFileName && (
             <p className="text-xs text-muted-foreground">File: {p.submissionFileName}</p>
+          )}
+          {p.submissionLink && (
+            <a
+              href={p.submissionLink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-xs text-emerald-700 dark:text-emerald-400 underline break-all block"
+            >
+              {p.submissionLink}
+            </a>
           )}
           {p.submissionNote && (
             <p className="text-xs text-muted-foreground whitespace-pre-wrap">{p.submissionNote}</p>
@@ -139,6 +164,17 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
             )}
           </div>
           <div className="space-y-1.5">
+            <Label htmlFor={`link-${p.id}`} className="text-xs">Website link (optional)</Label>
+            <Input
+              id={`link-${p.id}`}
+              type="url"
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
+              placeholder="https://example.com/your-work"
+              className="h-9"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor={`note-${p.id}`} className="text-xs">Note (optional)</Label>
             <Textarea
               id={`note-${p.id}`}
@@ -149,7 +185,11 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
             />
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSubmit} disabled={submitProject.isPending || isUploading || !uploaded}>
+            <Button
+              size="sm"
+              onClick={handleSubmit}
+              disabled={submitProject.isPending || isUploading || (!uploaded && !link.trim())}
+            >
               Submit Work
             </Button>
             <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>

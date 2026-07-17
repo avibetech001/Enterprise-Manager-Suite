@@ -654,6 +654,8 @@ export interface ProjectDetail {
   /** @nullable */
   submissionFileName: string | null;
   /** @nullable */
+  submissionLink: string | null;
+  /** @nullable */
   submissionNote: string | null;
   /** @nullable */
   submittedAt: string | null;
@@ -677,9 +679,11 @@ export interface UploadUrlResponse {
 
 export interface ProjectSubmissionInput {
   /** @minLength 1 */
-  objectPath: string;
+  objectPath?: string;
   /** @minLength 1 */
-  fileName: string;
+  fileName?: string;
+  /** @minLength 1 */
+  link?: string;
   note?: string;
 }
 
