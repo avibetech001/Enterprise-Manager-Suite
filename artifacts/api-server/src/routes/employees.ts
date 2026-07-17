@@ -41,13 +41,16 @@ import {
   requireAuth,
   requireManagementPermission,
 } from "../lib/auth";
+import { sendActivationEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
 const ACTIVATION_TOKEN_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 function activationLinkFor(token: string): string {
-  const host = process.env["REPLIT_DEV_DOMAIN"];
+  const host =
+    process.env["REPLIT_DOMAINS"]?.split(",")[0] ??
+    process.env["REPLIT_DEV_DOMAIN"];
   const base = host ? `https://${host}` : "";
   return `${base}/activate/${token}`;
 }
@@ -362,6 +365,19 @@ router.post(
       `Employee account created for ${fullName} (${created.employeeCode}).`,
     );
 
+    const emailSent = await sendActivationEmail({
+      to: companyEmail,
+      employeeName: fullName,
+      activationLink: activationLinkFor(activationToken),
+    });
+    await notifyCompany(
+      currentUser.companyId,
+      "employee_created",
+      emailSent
+        ? `Activation email sent to ${companyEmail}.`
+        : `Could not send activation email to ${companyEmail}. Share the activation link manually or use Resend Activation.`,
+    );
+
     res
       .status(201)
       .json(CreateEmployeeResponse.parse(await loadFullEmployee(created.user)));
@@ -657,6 +673,20 @@ router.post(
       })
       .where(eq(usersTable.id, user.id))
       .returning();
+
+    const emailSent = await sendActivationEmail({
+      to: user.email,
+      employeeName: user.fullName,
+      activationLink: activationLinkFor(activationToken),
+    });
+    await notifyCompany(
+      req.currentUser!.companyId,
+      "employee_created",
+      emailSent
+        ? `Activation email re-sent to ${user.email}.`
+        : `Could not send activation email to ${user.email}. Share the activation link manually.`,
+    );
+
     res.json(
       ResendEmployeeActivationResponse.parse(await loadFullEmployee(updated!)),
     );
