@@ -4,10 +4,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListDepartments,
   useListEmployees,
+  useUpdateEmployee,
   useListQueries,
   useCreateQuery,
   useDeleteQuery,
   getListQueriesQueryKey,
+  getListEmployeesQueryKey,
   type Employee,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -39,7 +41,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Building2, Gavel, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Building2, Gavel, Trash2, Users, UserPlus, UserMinus } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -67,6 +69,56 @@ export default function DepartmentDetailPage() {
     [employees, id],
   );
   const memberUserIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
+
+  const updateEmployee = useUpdateEmployee();
+  const [addUserId, setAddUserId] = useState<string>("");
+  const nonMembers = useMemo(
+    () =>
+      (employees || []).filter(
+        (e) =>
+          e.employment.departmentId !== id && !e.archived,
+      ),
+    [employees, id],
+  );
+
+  const invalidateEmployees = () =>
+    queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+
+  const handleAddMember = () => {
+    const userId = Number(addUserId);
+    if (!userId) return;
+    updateEmployee.mutate(
+      { id: userId, data: { departmentId: id } },
+      {
+        onSuccess: () => {
+          invalidateEmployees();
+          setAddUserId("");
+          toast.success("Member added to department");
+        },
+        onError: (err) =>
+          toast.error("Failed to add member", {
+            description: err.data?.error || "Unknown error",
+          }),
+      },
+    );
+  };
+
+  const handleRemoveMember = (emp: Employee) => {
+    if (!window.confirm(`Remove ${emp.fullName} from this department?`)) return;
+    updateEmployee.mutate(
+      { id: emp.id, data: { departmentId: null } },
+      {
+        onSuccess: () => {
+          invalidateEmployees();
+          toast.success("Member removed from department");
+        },
+        onError: (err) =>
+          toast.error("Failed to remove member", {
+            description: err.data?.error || "Unknown error",
+          }),
+      },
+    );
+  };
 
   const queriesKey = getListQueriesQueryKey();
   const { data: allQueries, isLoading: queriesLoading } = useListQueries(undefined, {
@@ -178,10 +230,37 @@ export default function DepartmentDetailPage() {
             <Users className="h-5 w-5" /> Members ({members.length})
           </CardTitle>
           <CardDescription>
-            Employees assigned to this department. Assign employees from the Employees page.
+            Employees assigned to this department. Members are automatically part of this department's group chat.
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col sm:flex-row gap-2 mb-4">
+            <Select value={addUserId} onValueChange={setAddUserId}>
+              <SelectTrigger className="sm:max-w-xs">
+                <SelectValue placeholder="Select an employee to add" />
+              </SelectTrigger>
+              <SelectContent>
+                {nonMembers.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    No employees available to add
+                  </div>
+                ) : (
+                  nonMembers.map((e) => (
+                    <SelectItem key={e.id} value={String(e.id)}>
+                      {e.fullName}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+            <Button
+              onClick={handleAddMember}
+              disabled={!addUserId || updateEmployee.isPending}
+            >
+              <UserPlus className="h-4 w-4 mr-1.5" />
+              Add Member
+            </Button>
+          </div>
           {empLoading ? (
             <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
@@ -223,9 +302,19 @@ export default function DepartmentDetailPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="outline" size="sm" onClick={() => openQueryDialog(emp)}>
-                        <Gavel className="h-4 w-4 mr-1.5" /> Issue Query
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" size="sm" onClick={() => openQueryDialog(emp)}>
+                          <Gavel className="h-4 w-4 mr-1.5" /> Issue Query
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={updateEmployee.isPending}
+                          onClick={() => handleRemoveMember(emp)}
+                        >
+                          <UserMinus className="h-4 w-4 mr-1.5" /> Remove
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

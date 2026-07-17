@@ -5,7 +5,7 @@ description: How team chat group membership and file auth work in the EMS
 
 Group chat has NO membership table. Groups are derived at request time:
 - `company` group id = every user in the company (satisfies "new employees are automatically in the group").
-- `dept-<id>` group id = users whose departmentId matches, plus all management users (role != employee). Creating a department implicitly creates its group (satisfies auto-group-per-department).
+- `dept-<id>` group id = users whose department matches, plus all management users (role != employee). An employee's department lives in `employment_info.department_id` — the `users.department_id` column exists but is NEVER written; do not read it for authorization. Creating a department implicitly creates its group (satisfies auto-group-per-department).
 
 **Why:** derived membership means no sync hooks on employee creation/department assignment — it can never drift.
 

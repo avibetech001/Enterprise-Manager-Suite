@@ -5,7 +5,7 @@ import {
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import { and, eq } from 'drizzle-orm';
-import { db, projectsTable, chatMessagesTable } from '@workspace/db';
+import { db, projectsTable, chatMessagesTable, employmentInfoTable } from '@workspace/db';
 
 import {
   ObjectNotFoundError,
@@ -151,10 +151,15 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
         );
       if (chatMsg) {
         const isManagement = me.role !== 'employee';
-        allowed =
-          chatMsg.departmentId == null ||
-          isManagement ||
-          me.departmentId === chatMsg.departmentId;
+        if (chatMsg.departmentId == null || isManagement) {
+          allowed = true;
+        } else {
+          const [emp] = await db
+            .select({ departmentId: employmentInfoTable.departmentId })
+            .from(employmentInfoTable)
+            .where(eq(employmentInfoTable.userId, me.id));
+          allowed = emp?.departmentId === chatMsg.departmentId;
+        }
       }
     }
     if (!allowed) {

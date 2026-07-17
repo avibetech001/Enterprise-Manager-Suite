@@ -4,6 +4,7 @@ import {
   db,
   chatMessagesTable,
   departmentsTable,
+  employmentInfoTable,
   usersTable,
 } from "@workspace/db";
 import {
@@ -18,6 +19,17 @@ import { notify } from "../lib/notify";
 const router: IRouter = Router();
 
 type CurrentUser = NonNullable<Request["currentUser"]>;
+
+// An employee's department lives in employment_info (managed from the
+// Employees/Departments pages) — that is the source of truth for which
+// department chat they belong to.
+async function departmentIdOf(userId: number): Promise<number | null> {
+  const [row] = await db
+    .select({ departmentId: employmentInfoTable.departmentId })
+    .from(employmentInfoTable)
+    .where(eq(employmentInfoTable.userId, userId));
+  return row?.departmentId ?? null;
+}
 
 interface ResolvedGroup {
   id: string;
@@ -50,7 +62,7 @@ async function resolveGroup(
     );
   if (!dept) return null;
   const isManagement = me.role !== "employee";
-  if (!isManagement && me.departmentId !== dept.id) return null;
+  if (!isManagement && (await departmentIdOf(me.id)) !== dept.id) return null;
   return { id: groupId, name: dept.name, departmentId: dept.id };
 }
 
@@ -65,13 +77,14 @@ router.get(
       kind: "company" | "department";
     }> = [{ id: "company", name: "General", kind: "company" }];
     const isManagement = me.role !== "employee";
+    const myDeptId = isManagement ? null : await departmentIdOf(me.id);
     const departments = await db
       .select()
       .from(departmentsTable)
       .where(eq(departmentsTable.companyId, me.companyId))
       .orderBy(asc(departmentsTable.name));
     for (const d of departments) {
-      if (isManagement || me.departmentId === d.id) {
+      if (isManagement || myDeptId === d.id) {
         groups.push({ id: `dept-${d.id}`, name: d.name, kind: "department" });
       }
     }
@@ -94,9 +107,13 @@ router.get(
         id: usersTable.id,
         fullName: usersTable.fullName,
         role: usersTable.role,
-        departmentId: usersTable.departmentId,
+        departmentId: employmentInfoTable.departmentId,
       })
       .from(usersTable)
+      .leftJoin(
+        employmentInfoTable,
+        eq(employmentInfoTable.userId, usersTable.id),
+      )
       .where(eq(usersTable.companyId, me.companyId))
       .orderBy(asc(usersTable.fullName));
     const members = rows.filter(
@@ -196,9 +213,13 @@ router.post(
         .select({
           id: usersTable.id,
           role: usersTable.role,
-          departmentId: usersTable.departmentId,
+          departmentId: employmentInfoTable.departmentId,
         })
         .from(usersTable)
+        .leftJoin(
+          employmentInfoTable,
+          eq(employmentInfoTable.userId, usersTable.id),
+        )
         .where(
           and(
             eq(usersTable.companyId, me.companyId),
