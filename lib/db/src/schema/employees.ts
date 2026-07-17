@@ -96,6 +96,31 @@ export const notificationsTable = pgTable("notifications", {
     .defaultNow(),
 });
 
+// Web push subscriptions — one row per browser/device a user enabled
+// notifications on.
+export const pushSubscriptionsTable = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Server-generated VAPID key pair for web push (single row).
+export const pushVapidConfigTable = pgTable("push_vapid_config", {
+  id: serial("id").primaryKey(),
+  publicKey: text("public_key").notNull(),
+  privateKey: text("private_key").notNull(),
+});
+
 export type EmployeeProfile = typeof employeeProfilesTable.$inferSelect;
 export type EmergencyContactRow = typeof emergencyContactsTable.$inferSelect;
 export type EmploymentInfo = typeof employmentInfoTable.$inferSelect;

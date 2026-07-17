@@ -157,6 +157,24 @@ export interface ManagementUser {
   createdAt: string;
 }
 
+export interface PushPublicKey {
+  publicKey: string;
+}
+
+export interface PushSubscriptionInput {
+  /** @minLength 1 */
+  endpoint: string;
+  /** @minLength 1 */
+  p256dh: string;
+  /** @minLength 1 */
+  auth: string;
+}
+
+export interface PushUnsubscribeInput {
+  /** @minLength 1 */
+  endpoint: string;
+}
+
 export type ManagementUserInputRole = typeof ManagementUserInputRole[keyof typeof ManagementUserInputRole];
 
 

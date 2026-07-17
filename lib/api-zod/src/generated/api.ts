@@ -899,6 +899,44 @@ export const MarkAllNotificationsReadResponse = zod.void()
 
 
 /**
+ * @summary Get the server's web push public key
+ */
+export const GetPushPublicKeyResponse = zod.object({
+  "publicKey": zod.string()
+})
+
+
+/**
+ * @summary Register this device for push notifications
+ */
+
+
+
+
+
+export const SubscribeToPushBody = zod.object({
+  "endpoint": zod.string().min(1),
+  "p256dh": zod.string().min(1),
+  "auth": zod.string().min(1)
+})
+
+export const SubscribeToPushResponse = zod.void()
+
+
+/**
+ * @summary Remove this device's push subscription
+ */
+
+
+
+export const UnsubscribeFromPushBody = zod.object({
+  "endpoint": zod.string().min(1)
+})
+
+export const UnsubscribeFromPushResponse = zod.void()
+
+
+/**
  * @summary Regenerate an employee's activation link
  */
 export const ResendEmployeeActivationParams = zod.object({

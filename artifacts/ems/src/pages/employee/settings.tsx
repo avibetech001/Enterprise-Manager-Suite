@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Settings } from "lucide-react";
+import { PushNotificationsCard } from "@/components/push-notifications-card";
 
 const passwordSchema = z
   .object({
@@ -111,6 +112,8 @@ export default function EmployeeSettings() {
         </h1>
         <p className="text-muted-foreground mt-1">Manage your account and profile photo.</p>
       </div>
+
+      <PushNotificationsCard />
 
       <Card>
         <CardHeader className="pb-3">

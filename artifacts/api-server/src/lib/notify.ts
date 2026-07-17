@@ -1,4 +1,5 @@
 import { db, notificationsTable } from "@workspace/db";
+import { sendPush } from "./push";
 
 // Insert a notification. userId = null targets the management feed;
 // a concrete userId targets that employee's feed.
@@ -14,4 +15,6 @@ export async function notify(
     type,
     message,
   });
+  // Fire-and-forget web push to the same audience.
+  void sendPush(companyId, message, userId);
 }

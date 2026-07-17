@@ -23,6 +23,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PushNotificationsCard } from "@/components/push-notifications-card";
 
 const companySchema = z.object({
   name: z.string().min(1, "Company name is required"),
@@ -116,6 +117,8 @@ export default function SettingsCompanyPage() {
         <h1 className="text-3xl font-bold tracking-tight">Company Settings</h1>
         <p className="text-muted-foreground mt-1">Manage your organization's core details.</p>
       </div>
+
+      <PushNotificationsCard />
 
       <Card>
         <Form {...form}>

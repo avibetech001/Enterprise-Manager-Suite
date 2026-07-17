@@ -739,6 +739,67 @@ paths:
         "204":
           description: All marked read
 
+  /push/public-key:
+    get:
+      operationId: getPushPublicKey
+      tags: [notifications]
+      summary: Get the server's web push public key
+      responses:
+        "200":
+          description: Public key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushPublicKey"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /push/subscriptions:
+    post:
+      operationId: subscribeToPush
+      tags: [notifications]
+      summary: Register this device for push notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushSubscriptionInput"
+      responses:
+        "204":
+          description: Subscribed
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /push/unsubscribe:
+    post:
+      operationId: unsubscribeFromPush
+      tags: [notifications]
+      summary: Remove this device's push subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushUnsubscribeInput"
+      responses:
+        "204":
+          description: Unsubscribed
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /employees/{id}/resend-activation:
     post:
       operationId: resendEmployeeActivation
@@ -1915,6 +1976,35 @@ components:
         createdAt:
           type: string
           format: date-time
+
+    PushPublicKey:
+      type: object
+      required: [publicKey]
+      properties:
+        publicKey:
+          type: string
+
+    PushSubscriptionInput:
+      type: object
+      required: [endpoint, p256dh, auth]
+      properties:
+        endpoint:
+          type: string
+          minLength: 1
+        p256dh:
+          type: string
+          minLength: 1
+        auth:
+          type: string
+          minLength: 1
+
+    PushUnsubscribeInput:
+      type: object
+      required: [endpoint]
+      properties:
+        endpoint:
+          type: string
+          minLength: 1
 
     ManagementUserInput:
       type: object
