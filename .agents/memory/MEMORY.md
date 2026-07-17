@@ -3,4 +3,5 @@
 - [OpenAPI zod timestamps & enums](openapi-zod-timestamps.md) — nullable timestamps need `format: date-time`; new permission keys must also go into the openapi PermissionKey enum, or responses 500 at zod parse.
 - [Attendance timezone & geolocation](attendance-timezone.md) — all attendance day/time math must use the COMPANY_TZ helper; geolocation needs a hard timeout race or check-in hangs.
 - [SendGrid activation emails](sendgrid-activation-email.md) — only verified sender is info@contentafrica.com; sends are non-fatal; 401 "Maximum credits exceeded" means the SendGrid plan is out of credits.
+- [Trust proxy for secure cookies](session-cookie-trust-proxy.md) — production login 200 then 401s = secure cookie dropped; Express needs `trust proxy` behind Replit's proxy.
 - [shadcn form.tsx pitfall](shadcn-form-pitfall.md) — bare FormItem/FormLabel outside a FormField render prop crashes the page; use plain div + Label for read-only rows.

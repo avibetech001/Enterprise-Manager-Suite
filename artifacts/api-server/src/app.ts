@@ -10,6 +10,10 @@ import { attachCurrentUser } from "./lib/auth";
 
 const app: Express = express();
 
+// Behind Replit's deployment proxy: trust X-Forwarded-* so express-session
+// treats the connection as HTTPS and sets the secure cookie in production.
+app.set("trust proxy", 1);
+
 const PgSession = connectPgSimple(session);
 
 const sessionSecret = process.env["SESSION_SECRET"];
