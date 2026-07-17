@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PushNotificationsCard } from "@/components/push-notifications-card";
+import { ChangePasswordCard } from "@/components/change-password-card";
 
 const companySchema = z.object({
   name: z.string().min(1, "Company name is required"),
@@ -119,6 +120,8 @@ export default function SettingsCompanyPage() {
       </div>
 
       <PushNotificationsCard />
+
+      <ChangePasswordCard />
 
       <Card>
         <Form {...form}>
