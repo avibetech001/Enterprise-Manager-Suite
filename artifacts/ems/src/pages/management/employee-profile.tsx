@@ -578,6 +578,15 @@ export default function EmployeeProfilePage() {
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
+            <Button asChild variant="outline" className="w-full bg-[#25D366]/10 border-[#25D366]/40 text-[#128C7E] hover:bg-[#25D366]/20 hover:text-[#128C7E]">
+              <a
+                href={`https://wa.me/${(employee?.phone || "").replace(/\D/g, "")}?text=${encodeURIComponent(`Welcome to 5th Element! Here is your activation link: ${activationLink || ""}`)}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Share on WhatsApp
+              </a>
+            </Button>
           </div>
           <DialogFooter>
             <Button onClick={() => setActivationLink(null)}>Done</Button>
