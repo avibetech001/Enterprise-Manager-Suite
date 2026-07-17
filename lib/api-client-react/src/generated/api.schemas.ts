@@ -5,6 +5,46 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+export type ChatGroupKind = typeof ChatGroupKind[keyof typeof ChatGroupKind];
+
+
+export const ChatGroupKind = {
+  company: 'company',
+  department: 'department',
+} as const;
+
+export interface ChatGroup {
+  id: string;
+  name: string;
+  kind: ChatGroupKind;
+}
+
+export interface ChatMember {
+  id: number;
+  fullName: string;
+}
+
+export interface ChatMessage {
+  id: number;
+  groupId: string;
+  userId: number;
+  userName: string;
+  body: string;
+  filePath: string | null;
+  fileName: string | null;
+  mentionUserIds: number[];
+  createdAt: string;
+}
+
+export interface ChatMessageInput {
+  body?: string;
+  /** @minLength 1 */
+  objectPath?: string;
+  /** @minLength 1 */
+  fileName?: string;
+  mentionUserIds?: number[];
+}
+
 export interface HealthStatus {
   status: string;
 }

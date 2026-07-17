@@ -1784,8 +1784,178 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /chat/groups:
+    get:
+      operationId: listChatGroups
+      tags: [chat]
+      summary: List chat groups available to the current user
+      responses:
+        "200":
+          description: Groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatGroup"
+
+  /chat/groups/{groupId}/members:
+    get:
+      operationId: listChatGroupMembers
+      tags: [chat]
+      summary: List members of a chat group (for tagging)
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMember"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/groups/{groupId}/messages:
+    get:
+      operationId: listChatMessages
+      tags: [chat]
+      summary: List recent messages in a chat group
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: sendChatMessage
+      tags: [chat]
+      summary: Send a message (text, file, and/or mentions) to a chat group
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageInput"
+      responses:
+        "200":
+          description: Created message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   schemas:
+    ChatGroup:
+      type: object
+      required: [id, name, kind]
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [company, department]
+
+    ChatMember:
+      type: object
+      required: [id, fullName]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+
+    ChatMessage:
+      type: object
+      required:
+        [id, groupId, userId, userName, body, filePath, fileName, mentionUserIds, createdAt]
+      properties:
+        id:
+          type: integer
+        groupId:
+          type: string
+        userId:
+          type: integer
+        userName:
+          type: string
+        body:
+          type: string
+        filePath:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        mentionUserIds:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ChatMessageInput:
+      type: object
+      properties:
+        body:
+          type: string
+        objectPath:
+          type: string
+          minLength: 1
+        fileName:
+          type: string
+          minLength: 1
+        mentionUserIds:
+          type: array
+          items:
+            type: integer
+
     HealthStatus:
       type: object
       properties:

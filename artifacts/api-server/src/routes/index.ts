@@ -10,6 +10,7 @@ import notificationsRouter from "./notifications";
 import modulesRouter from "./modules";
 import storageRouter from "./storage";
 import pushRouter from "./push";
+import chatRouter from "./chat";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(notificationsRouter);
 router.use(modulesRouter);
 router.use(storageRouter);
 router.use(pushRouter);
+router.use(chatRouter);
 
 export default router;

@@ -26,6 +26,10 @@ import type {
   AttendanceSettingsUpdateInput,
   AuthSession,
   ChangePasswordInput,
+  ChatGroup,
+  ChatMember,
+  ChatMessage,
+  ChatMessageInput,
   CheckInInput,
   Company,
   CompanyPost,
@@ -5970,4 +5974,307 @@ export function useGetEmployeeOverview<TData = Awaited<ReturnType<typeof getEmpl
 
 
 
+
+export const getListChatGroupsUrl = () => {
+
+
+
+
+  return `/api/chat/groups`
+}
+
+/**
+ * @summary List chat groups available to the current user
+ */
+export const listChatGroups = async ( options?: RequestInit): Promise<ChatGroup[]> => {
+
+  return customFetch<ChatGroup[]>(getListChatGroupsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatGroupsQueryKey = () => {
+    return [
+    `/api/chat/groups`
+    ] as const;
+    }
+
+
+export const getListChatGroupsQueryOptions = <TData = Awaited<ReturnType<typeof listChatGroups>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatGroupsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatGroups>>> = ({ signal }) => listChatGroups({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatGroups>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatGroupsQueryResult = NonNullable<Awaited<ReturnType<typeof listChatGroups>>>
+export type ListChatGroupsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List chat groups available to the current user
+ */
+
+export function useListChatGroups<TData = Awaited<ReturnType<typeof listChatGroups>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGroups>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatGroupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListChatGroupMembersUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/chat/groups/${groupId}/members`
+}
+
+/**
+ * @summary List members of a chat group (for tagging)
+ */
+export const listChatGroupMembers = async (groupId: string, options?: RequestInit): Promise<ChatMember[]> => {
+
+  return customFetch<ChatMember[]>(getListChatGroupMembersUrl(groupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatGroupMembersQueryKey = (groupId: string,) => {
+    return [
+    `/api/chat/groups/${groupId}/members`
+    ] as const;
+    }
+
+
+export const getListChatGroupMembersQueryOptions = <TData = Awaited<ReturnType<typeof listChatGroupMembers>>, TError = ErrorType<ErrorResponse>>(groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGroupMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatGroupMembersQueryKey(groupId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatGroupMembers>>> = ({ signal }) => listChatGroupMembers(groupId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: groupId !== null && groupId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatGroupMembers>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatGroupMembersQueryResult = NonNullable<Awaited<ReturnType<typeof listChatGroupMembers>>>
+export type ListChatGroupMembersQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List members of a chat group (for tagging)
+ */
+
+export function useListChatGroupMembers<TData = Awaited<ReturnType<typeof listChatGroupMembers>>, TError = ErrorType<ErrorResponse>>(
+ groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatGroupMembers>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatGroupMembersQueryOptions(groupId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListChatMessagesUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/chat/groups/${groupId}/messages`
+}
+
+/**
+ * @summary List recent messages in a chat group
+ */
+export const listChatMessages = async (groupId: string, options?: RequestInit): Promise<ChatMessage[]> => {
+
+  return customFetch<ChatMessage[]>(getListChatMessagesUrl(groupId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatMessagesQueryKey = (groupId: string,) => {
+    return [
+    `/api/chat/groups/${groupId}/messages`
+    ] as const;
+    }
+
+
+export const getListChatMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listChatMessages>>, TError = ErrorType<ErrorResponse>>(groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatMessagesQueryKey(groupId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatMessages>>> = ({ signal }) => listChatMessages(groupId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: groupId !== null && groupId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listChatMessages>>>
+export type ListChatMessagesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List recent messages in a chat group
+ */
+
+export function useListChatMessages<TData = Awaited<ReturnType<typeof listChatMessages>>, TError = ErrorType<ErrorResponse>>(
+ groupId: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatMessagesQueryOptions(groupId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSendChatMessageUrl = (groupId: string,) => {
+
+
+
+
+  return `/api/chat/groups/${groupId}/messages`
+}
+
+/**
+ * @summary Send a message (text, file, and/or mentions) to a chat group
+ */
+export const sendChatMessage = async (groupId: string,
+    chatMessageInput: ChatMessageInput, options?: RequestInit): Promise<ChatMessage> => {
+
+  return customFetch<ChatMessage>(getSendChatMessageUrl(groupId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(chatMessageInput)
+  }
+);}
+
+
+
+
+
+export const getSendChatMessageMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendChatMessage>>, TError,{groupId: string;data: BodyType<ChatMessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendChatMessage>>, TError,{groupId: string;data: BodyType<ChatMessageInput>}, TContext> => {
+
+const mutationKey = ['sendChatMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendChatMessage>>, {groupId: string;data: BodyType<ChatMessageInput>}> = (props) => {
+          const {groupId,data} = props ?? {};
+
+          return  sendChatMessage(groupId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendChatMessage>>>
+    export type SendChatMessageMutationBody = BodyType<ChatMessageInput>
+    export type SendChatMessageMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Send a message (text, file, and/or mentions) to a chat group
+ */
+export const useSendChatMessage = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendChatMessage>>, TError,{groupId: string;data: BodyType<ChatMessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendChatMessage>>,
+        TError,
+        {groupId: string;data: BodyType<ChatMessageInput>},
+        TContext
+      > => {
+      return useMutation(getSendChatMessageMutationOptions(options));
+    }
 

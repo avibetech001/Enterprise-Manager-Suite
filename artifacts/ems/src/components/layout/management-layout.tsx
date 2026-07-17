@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetCurrentSession, useLogout, useGetPendingCounts, getGetPendingCountsQueryKey } from "@workspace/api-client-react";
 import logo from "@/assets/logo.svg";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen } from "lucide-react";
+import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -55,6 +55,15 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                       <Link href="/dashboard">
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Dashboard</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive={location === "/chat"} asChild>
+                      <Link href="/chat">
+                        <MessagesSquare className="h-4 w-4" />
+                        <span>Team Chat</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

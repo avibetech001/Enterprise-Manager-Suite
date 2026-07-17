@@ -43,6 +43,7 @@ import DepartmentDetailPage from '@/pages/management/department-detail';
 import ManagementKnowledgeBasePage from '@/pages/management/knowledge-base';
 import EmployeeDepartmentsPage from '@/pages/employee/departments';
 import SettingsCompanyPage from '@/pages/management/settings-company';
+import TeamChatPage from '@/pages/chat';
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,7 @@ function Router() {
         ["/employee/announcements", EmployeeAnnouncementsPage],
         ["/employee/knowledge-base", EmployeeKnowledgeBasePage],
         ["/employee/settings", EmployeeSettingsPage],
+        ["/employee/chat", TeamChatPage],
       ] as const).map(([path, Page]) => (
         <Route key={path} path={path}>
           <EmployeeGuard>
@@ -183,6 +185,7 @@ function Router() {
         ["/fund-requests", ManagementFundRequestsPage],
         ["/announcements", ManagementAnnouncementsPage],
         ["/knowledge-base", ManagementKnowledgeBasePage],
+        ["/chat", TeamChatPage],
       ] as const).map(([path, Page]) => (
         <Route key={path} path={path}>
           <ManagementGuard>

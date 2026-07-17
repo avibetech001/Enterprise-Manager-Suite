@@ -5,7 +5,7 @@ import {
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import { and, eq } from 'drizzle-orm';
-import { db, projectsTable } from '@workspace/db';
+import { db, projectsTable, chatMessagesTable } from '@workspace/db';
 
 import {
   ObjectNotFoundError,
@@ -123,8 +123,9 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
     const objectPath = `/objects/${wildcardPath}`;
 
-    // Object entities are project submissions: only serve files that belong
-    // to a project in the requester's company.
+    // Object entities are project submissions or chat attachments: only
+    // serve files that belong to the requester's company (and, for
+    // department chats, that the requester is allowed to see).
     const [owningProject] = await db
       .select({ id: projectsTable.id })
       .from(projectsTable)
@@ -134,7 +135,29 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           eq(projectsTable.companyId, me.companyId),
         ),
       );
-    if (!owningProject) {
+    let allowed = Boolean(owningProject);
+    if (!allowed) {
+      const [chatMsg] = await db
+        .select({
+          id: chatMessagesTable.id,
+          departmentId: chatMessagesTable.departmentId,
+        })
+        .from(chatMessagesTable)
+        .where(
+          and(
+            eq(chatMessagesTable.filePath, objectPath),
+            eq(chatMessagesTable.companyId, me.companyId),
+          ),
+        );
+      if (chatMsg) {
+        const isManagement = me.role !== 'employee';
+        allowed =
+          chatMsg.departmentId == null ||
+          isManagement ||
+          me.departmentId === chatMsg.departmentId;
+      }
+    }
+    if (!allowed) {
       res.status(404).json({ error: 'Object not found' });
       return;
     }

@@ -6,6 +6,7 @@ import {
   useUpdateProject,
   useDeleteProject,
   useListEmployees,
+  useListDepartments,
   getListProjectsQueryKey,
   ProjectDetail,
   ProjectInput,
@@ -87,6 +88,7 @@ export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const { data: projects, isLoading } = useListProjects();
   const { data: employees } = useListEmployees();
+  const { data: departments } = useListDepartments();
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
@@ -125,6 +127,21 @@ export default function ProjectsPage() {
       setForm(emptyForm);
     }
     setIsDialogOpen(true);
+  };
+
+  const assignGroup = (deptIdStr: string) => {
+    const deptId = Number(deptIdStr);
+    const groupMemberIds = activeEmployees
+      .filter((e) => e.employment.departmentId === deptId)
+      .map((e) => e.id);
+    if (groupMemberIds.length === 0) {
+      toast.info("That group has no active employees yet.");
+      return;
+    }
+    setForm((f) => ({
+      ...f,
+      memberIds: [...new Set([...f.memberIds, ...groupMemberIds])],
+    }));
   };
 
   const toggleMember = (userId: number, checked: boolean) => {
@@ -433,6 +450,22 @@ export default function ProjectsPage() {
                   {activeEmployees.map((emp) => (
                     <SelectItem key={emp.id} value={String(emp.id)}>
                       {emp.fullName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Assign to a group (optional)</Label>
+              <Select value="" onValueChange={assignGroup}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Pick a department group to add all its members" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(departments || []).map((d) => (
+                    <SelectItem key={d.id} value={String(d.id)}>
+                      {d.name}
                     </SelectItem>
                   ))}
                 </SelectContent>

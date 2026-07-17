@@ -2289,3 +2289,80 @@ export const GetEmployeeOverviewResponse = zod.object({
 })
 
 
+/**
+ * @summary List chat groups available to the current user
+ */
+export const ListChatGroupsResponseItem = zod.object({
+  "id": zod.string(),
+  "name": zod.string(),
+  "kind": zod.enum(['company', 'department'])
+})
+export const ListChatGroupsResponse = zod.array(ListChatGroupsResponseItem)
+
+
+/**
+ * @summary List members of a chat group (for tagging)
+ */
+export const ListChatGroupMembersParams = zod.object({
+  "groupId": zod.coerce.string()
+})
+
+export const ListChatGroupMembersResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string()
+})
+export const ListChatGroupMembersResponse = zod.array(ListChatGroupMembersResponseItem)
+
+
+/**
+ * @summary List recent messages in a chat group
+ */
+export const ListChatMessagesParams = zod.object({
+  "groupId": zod.coerce.string()
+})
+
+export const ListChatMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "groupId": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "body": zod.string(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "mentionUserIds": zod.array(zod.number()),
+  "createdAt": zod.coerce.date()
+})
+export const ListChatMessagesResponse = zod.array(ListChatMessagesResponseItem)
+
+
+/**
+ * @summary Send a message (text, file, and/or mentions) to a chat group
+ */
+export const SendChatMessageParams = zod.object({
+  "groupId": zod.coerce.string()
+})
+
+
+
+
+
+export const SendChatMessageBody = zod.object({
+  "body": zod.string().optional(),
+  "objectPath": zod.string().min(1).optional(),
+  "fileName": zod.string().min(1).optional(),
+  "mentionUserIds": zod.array(zod.number()).optional()
+})
+
+export const SendChatMessageResponse = zod.object({
+  "id": zod.number(),
+  "groupId": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "body": zod.string(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "mentionUserIds": zod.array(zod.number()),
+  "createdAt": zod.coerce.date()
+})
+
+
