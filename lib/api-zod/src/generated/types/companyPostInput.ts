@@ -5,10 +5,13 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { CompanyPostInputCategory } from './companyPostInputCategory';
 import type { CompanyPostInputKind } from './companyPostInputKind';
 
 export interface CompanyPostInput {
   kind: CompanyPostInputKind;
+  /** @nullable */
+  category?: CompanyPostInputCategory;
   /** @minLength 1 */
   title: string;
   /** @minLength 1 */

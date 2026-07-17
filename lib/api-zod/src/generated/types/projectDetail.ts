@@ -26,5 +26,14 @@ export interface ProjectDetail {
   leadName: string | null;
   members: ProjectMember[];
   deliverables: ProjectDeliverable[];
+  urgent: boolean;
+  /** @nullable */
+  submissionFilePath: string | null;
+  /** @nullable */
+  submissionFileName: string | null;
+  /** @nullable */
+  submissionNote: string | null;
+  /** @nullable */
+  submittedAt: Date | null;
   createdAt: Date;
 }

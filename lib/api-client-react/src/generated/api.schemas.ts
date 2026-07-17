@@ -177,12 +177,20 @@ export interface ManagementUserUpdate {
   status?: UserStatus;
 }
 
+export interface DepartmentMember {
+  id: number;
+  fullName: string;
+  /** @nullable */
+  jobTitle: string | null;
+}
+
 export interface Department {
   id: number;
   companyId: number;
   name: string;
   description: string;
   employeeCount: number;
+  members: DepartmentMember[];
 }
 
 export interface DepartmentInput {
@@ -418,6 +426,8 @@ export interface CompanyPost {
   id: number;
   companyId: number;
   kind: string;
+  /** @nullable */
+  category: string | null;
   title: string;
   body: string;
   createdAt: string;
@@ -602,7 +612,39 @@ export interface ProjectDetail {
   leadName: string | null;
   members: ProjectMember[];
   deliverables: ProjectDeliverable[];
+  urgent: boolean;
+  /** @nullable */
+  submissionFilePath: string | null;
+  /** @nullable */
+  submissionFileName: string | null;
+  /** @nullable */
+  submissionNote: string | null;
+  /** @nullable */
+  submittedAt: string | null;
   createdAt: string;
+}
+
+export interface UploadUrlRequest {
+  /** @minLength 1 */
+  name: string;
+  /** @minimum 1 */
+  size: number;
+  /** @minLength 1 */
+  contentType: string;
+}
+
+export interface UploadUrlResponse {
+  uploadURL: string;
+  objectPath: string;
+  metadata?: UploadUrlRequest;
+}
+
+export interface ProjectSubmissionInput {
+  /** @minLength 1 */
+  objectPath: string;
+  /** @minLength 1 */
+  fileName: string;
+  note?: string;
 }
 
 export type ProjectDeliverableInputStatus = typeof ProjectDeliverableInputStatus[keyof typeof ProjectDeliverableInputStatus];
@@ -677,6 +719,7 @@ export interface ProjectInput {
      * @maximum 100
      */
   progress?: number;
+  urgent?: boolean;
   /** @nullable */
   leadUserId?: number | null;
   memberIds?: number[];
@@ -821,8 +864,22 @@ export const CompanyPostInputKind = {
   knowledge_base: 'knowledge_base',
 } as const;
 
+/**
+ * @nullable
+ */
+export type CompanyPostInputCategory = typeof CompanyPostInputCategory[keyof typeof CompanyPostInputCategory] | null;
+
+
+export const CompanyPostInputCategory = {
+  idea_dump: 'idea_dump',
+  samples: 'samples',
+  strategy: 'strategy',
+} as const;
+
 export interface CompanyPostInput {
   kind: CompanyPostInputKind;
+  /** @nullable */
+  category?: CompanyPostInputCategory;
   /** @minLength 1 */
   title: string;
   /** @minLength 1 */

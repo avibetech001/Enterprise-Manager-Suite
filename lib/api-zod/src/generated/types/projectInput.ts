@@ -20,6 +20,7 @@ export interface ProjectInput {
      * @maximum 100
      */
   progress?: number;
+  urgent?: boolean;
   /** @nullable */
   leadUserId?: number | null;
   memberIds?: number[];

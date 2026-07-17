@@ -5,6 +5,7 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { DepartmentMember } from './departmentMember';
 
 export interface Department {
   id: number;
@@ -12,4 +13,5 @@ export interface Department {
   name: string;
   description: string;
   employeeCount: number;
+  members: DepartmentMember[];
 }

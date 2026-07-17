@@ -1,4 +1,5 @@
 import {
+  boolean,
   date,
   integer,
   pgTable,
@@ -120,6 +121,14 @@ export const projectsTable = pgTable("projects", {
   startDate: date("start_date"),
   deadline: date("deadline"),
   progress: integer("progress").notNull().default(0),
+  urgent: boolean("urgent").notNull().default(false),
+  submissionFilePath: text("submission_file_path"),
+  submissionFileName: text("submission_file_name"),
+  submissionNote: text("submission_note"),
+  submittedAt: timestamp("submitted_at", { withTimezone: true }),
+  submittedBy: integer("submitted_by").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -217,6 +226,7 @@ export const companyPostsTable = pgTable("company_posts", {
     .notNull()
     .references(() => companiesTable.id, { onDelete: "cascade" }),
   kind: text("kind").notNull(),
+  category: text("category"),
   title: text("title").notNull(),
   body: text("body").notNull(),
   createdBy: integer("created_by").references(() => usersTable.id, {

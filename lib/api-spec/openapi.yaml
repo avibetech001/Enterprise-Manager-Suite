@@ -1139,6 +1139,120 @@ paths:
                 items:
                   $ref: "#/components/schemas/ProjectDetail"
 
+  /storage/uploads/request-url:
+    post:
+      tags: [storage]
+      operationId: requestUploadUrl
+      summary: Request a presigned URL for file upload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UploadUrlRequest"
+      responses:
+        "200":
+          description: Presigned upload URL generated.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadUrlResponse"
+        "400":
+          description: Missing or invalid required fields.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /storage/public-objects/{filePath}:
+    get:
+      tags: [storage]
+      operationId: getPublicObject
+      summary: Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+      parameters:
+        - name: filePath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: File not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /storage/objects/{objectPath}:
+    get:
+      tags: [storage]
+      operationId: getStorageObject
+      summary: Serve an object entity from PRIVATE_OBJECT_DIR
+      parameters:
+        - name: objectPath
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Object content streamed with correct Content-Type.
+          content:
+            "*/*":
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Object not found.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /projects/{id}/submit:
+    post:
+      operationId: submitMyProject
+      tags: [projects]
+      summary: Submit finished project work with an uploaded file (employee)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectSubmissionInput"
+      responses:
+        "200":
+          description: Updated project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found or not assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /projects/{id}/progress:
     patch:
       operationId: updateMyProjectProgress
@@ -1840,7 +1954,7 @@ components:
 
     Department:
       type: object
-      required: [id, companyId, name, description, employeeCount]
+      required: [id, companyId, name, description, employeeCount, members]
       properties:
         id:
           type: integer
@@ -1852,6 +1966,21 @@ components:
           type: string
         employeeCount:
           type: integer
+        members:
+          type: array
+          items:
+            $ref: "#/components/schemas/DepartmentMember"
+
+    DepartmentMember:
+      type: object
+      required: [id, fullName, jobTitle]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        jobTitle:
+          type: ["string", "null"]
 
     DepartmentInput:
       type: object
@@ -2478,10 +2607,15 @@ components:
           startDate,
           deadline,
           progress,
+          urgent,
           leadUserId,
           leadName,
           members,
           deliverables,
+          submissionFilePath,
+          submissionFileName,
+          submissionNote,
+          submittedAt,
           createdAt,
         ]
       properties:
@@ -2513,9 +2647,58 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ProjectDeliverable"
+        urgent:
+          type: boolean
+        submissionFilePath:
+          type: ["string", "null"]
+        submissionFileName:
+          type: ["string", "null"]
+        submissionNote:
+          type: ["string", "null"]
+        submittedAt:
+          type: ["string", "null"]
+          format: date-time
         createdAt:
           type: string
           format: date-time
+
+    UploadUrlRequest:
+      type: object
+      required: [name, size, contentType]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        size:
+          type: integer
+          minimum: 1
+        contentType:
+          type: string
+          minLength: 1
+
+    UploadUrlResponse:
+      type: object
+      required: [uploadURL, objectPath]
+      properties:
+        uploadURL:
+          type: string
+        objectPath:
+          type: string
+        metadata:
+          $ref: "#/components/schemas/UploadUrlRequest"
+
+    ProjectSubmissionInput:
+      type: object
+      required: [objectPath, fileName]
+      properties:
+        objectPath:
+          type: string
+          minLength: 1
+        fileName:
+          type: string
+          minLength: 1
+        note:
+          type: string
 
     ProjectDeliverableInput:
       type: object
@@ -2572,6 +2755,8 @@ components:
           type: integer
           minimum: 0
           maximum: 100
+        urgent:
+          type: boolean
         leadUserId:
           type: ["integer", "null"]
         memberIds:
@@ -2804,6 +2989,9 @@ components:
         kind:
           type: string
           enum: [announcement, policy, knowledge_base]
+        category:
+          type: ["string", "null"]
+          enum: [idea_dump, samples, strategy, null]
         title:
           type: string
           minLength: 1
@@ -2813,7 +3001,7 @@ components:
 
     CompanyPost:
       type: object
-      required: [id, companyId, kind, title, body, createdAt, updatedAt]
+      required: [id, companyId, kind, category, title, body, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -2821,6 +3009,8 @@ components:
           type: integer
         kind:
           type: string
+        category:
+          type: ["string", "null"]
         title:
           type: string
         body:

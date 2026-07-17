@@ -8,6 +8,7 @@ import departmentsRouter from "./departments";
 import employeesRouter from "./employees";
 import notificationsRouter from "./notifications";
 import modulesRouter from "./modules";
+import storageRouter from "./storage";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(departmentsRouter);
 router.use(employeesRouter);
 router.use(notificationsRouter);
 router.use(modulesRouter);
+router.use(storageRouter);
 
 export default router;

@@ -97,7 +97,7 @@ router.post("/auth/management-login", async (req, res): Promise<void> => {
   const { email, password } = parsed.data;
 
   const [company] = await db.select().from(companiesTable).limit(1);
-  if (!company || emailDomain(email) !== company.domain) {
+  if (!company) {
     res.status(401).json({ error: "Invalid credentials." });
     return;
   }

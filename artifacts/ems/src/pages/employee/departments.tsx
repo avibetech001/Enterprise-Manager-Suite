@@ -47,9 +47,21 @@ export default function EmployeeDepartmentsPage() {
                 <p className="text-sm text-muted-foreground mb-4 flex-1">
                   {dept.description || "No description provided."}
                 </p>
-                <div className="text-xs font-medium bg-muted/50 px-3 py-1.5 rounded-md inline-flex self-start">
+                <div className="text-xs font-medium bg-muted/50 px-3 py-1.5 rounded-md inline-flex self-start mb-3">
                   {dept.employeeCount} {dept.employeeCount === 1 ? "member" : "members"}
                 </div>
+                {dept.members.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {dept.members.map((m) => (
+                      <li key={m.id} className="text-sm flex items-baseline justify-between gap-2">
+                        <span className="font-medium">{m.fullName}</span>
+                        {m.jobTitle && (
+                          <span className="text-xs text-muted-foreground text-right">{m.jobTitle}</span>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
             </Card>
           ))}

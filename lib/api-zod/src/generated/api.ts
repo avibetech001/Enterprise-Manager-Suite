@@ -336,7 +336,12 @@ export const ListDepartmentsResponseItem = zod.object({
   "companyId": zod.number(),
   "name": zod.string(),
   "description": zod.string(),
-  "employeeCount": zod.number()
+  "employeeCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "jobTitle": zod.string().nullable()
+}))
 })
 export const ListDepartmentsResponse = zod.array(ListDepartmentsResponseItem)
 
@@ -357,7 +362,12 @@ export const CreateDepartmentResponse = zod.object({
   "companyId": zod.number(),
   "name": zod.string(),
   "description": zod.string(),
-  "employeeCount": zod.number()
+  "employeeCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "jobTitle": zod.string().nullable()
+}))
 })
 
 
@@ -381,7 +391,12 @@ export const UpdateDepartmentResponse = zod.object({
   "companyId": zod.number(),
   "name": zod.string(),
   "description": zod.string(),
-  "employeeCount": zod.number()
+  "employeeCount": zod.number(),
+  "members": zod.array(zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "jobTitle": zod.string().nullable()
+}))
 })
 
 
@@ -1011,6 +1026,7 @@ export const GetMySummaryResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "kind": zod.string(),
+  "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
   "createdAt": zod.coerce.date(),
@@ -1485,9 +1501,112 @@ export const ListMyProjectsResponseItem = zod.object({
   "dueDate": zod.string().nullable(),
   "status": zod.string()
 })),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListMyProjectsResponse = zod.array(ListMyProjectsResponseItem)
+
+
+/**
+ * @summary Request a presigned URL for file upload
+ */
+
+
+
+
+
+export const RequestUploadUrlBody = zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+})
+
+
+
+
+
+
+export const RequestUploadUrlResponse = zod.object({
+  "uploadURL": zod.string(),
+  "objectPath": zod.string(),
+  "metadata": zod.object({
+  "name": zod.string().min(1),
+  "size": zod.number().min(1),
+  "contentType": zod.string().min(1)
+}).optional()
+})
+
+
+/**
+ * @summary Serve a public asset from PUBLIC_OBJECT_SEARCH_PATHS
+ */
+export const GetPublicObjectParams = zod.object({
+  "filePath": zod.coerce.string()
+})
+
+export const GetPublicObjectResponse = zod.unknown()
+
+
+/**
+ * @summary Serve an object entity from PRIVATE_OBJECT_DIR
+ */
+export const GetStorageObjectParams = zod.object({
+  "objectPath": zod.coerce.string()
+})
+
+export const GetStorageObjectResponse = zod.unknown()
+
+
+/**
+ * @summary Submit finished project work with an uploaded file (employee)
+ */
+export const SubmitMyProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+
+export const SubmitMyProjectBody = zod.object({
+  "objectPath": zod.string().min(1),
+  "fileName": zod.string().min(1),
+  "note": zod.string().optional()
+})
+
+export const SubmitMyProjectResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**
@@ -1533,6 +1652,11 @@ export const UpdateMyProjectProgressResponse = zod.object({
   "dueDate": zod.string().nullable(),
   "status": zod.string()
 })),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1562,6 +1686,11 @@ export const ListProjectsResponseItem = zod.object({
   "dueDate": zod.string().nullable(),
   "status": zod.string()
 })),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListProjectsResponse = zod.array(ListProjectsResponseItem)
@@ -1584,6 +1713,7 @@ export const CreateProjectBody = zod.object({
   "startDate": zod.string().optional(),
   "deadline": zod.string().optional(),
   "progress": zod.number().min(createProjectBodyProgressMin).max(createProjectBodyProgressMax).optional(),
+  "urgent": zod.boolean().optional(),
   "leadUserId": zod.number().nullish(),
   "memberIds": zod.array(zod.number()).optional(),
   "deliverables": zod.array(zod.object({
@@ -1615,6 +1745,11 @@ export const CreateProjectResponse = zod.object({
   "dueDate": zod.string().nullable(),
   "status": zod.string()
 })),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1640,6 +1775,7 @@ export const UpdateProjectBody = zod.object({
   "startDate": zod.string().optional(),
   "deadline": zod.string().optional(),
   "progress": zod.number().min(updateProjectBodyProgressMin).max(updateProjectBodyProgressMax).optional(),
+  "urgent": zod.boolean().optional(),
   "leadUserId": zod.number().nullish(),
   "memberIds": zod.array(zod.number()).optional(),
   "deliverables": zod.array(zod.object({
@@ -1671,6 +1807,11 @@ export const UpdateProjectResponse = zod.object({
   "dueDate": zod.string().nullable(),
   "status": zod.string()
 })),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -1879,6 +2020,7 @@ export const ListPostsResponseItem = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "kind": zod.string(),
+  "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
   "createdAt": zod.coerce.date(),
@@ -1896,6 +2038,7 @@ export const ListPostsResponse = zod.array(ListPostsResponseItem)
 
 export const CreatePostBody = zod.object({
   "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
+  "category": zod.union([zod.literal('idea_dump'),zod.literal('samples'),zod.literal('strategy'),zod.literal(null)]).nullish(),
   "title": zod.string().min(1),
   "body": zod.string().min(1)
 })
@@ -1904,6 +2047,7 @@ export const CreatePostResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "kind": zod.string(),
+  "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
   "createdAt": zod.coerce.date(),
@@ -1924,6 +2068,7 @@ export const UpdatePostParams = zod.object({
 
 export const UpdatePostBody = zod.object({
   "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
+  "category": zod.union([zod.literal('idea_dump'),zod.literal('samples'),zod.literal('strategy'),zod.literal(null)]).nullish(),
   "title": zod.string().min(1),
   "body": zod.string().min(1)
 })
@@ -1932,6 +2077,7 @@ export const UpdatePostResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "kind": zod.string(),
+  "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
   "createdAt": zod.coerce.date(),

@@ -64,6 +64,7 @@ interface FormState {
   startDate: string;
   deadline: string;
   progress: number;
+  urgent: boolean;
   leadUserId: number | null;
   memberIds: number[];
   deliverables: ProjectDeliverableInput[];
@@ -76,6 +77,7 @@ const emptyForm: FormState = {
   startDate: "",
   deadline: "",
   progress: 0,
+  urgent: false,
   leadUserId: null,
   memberIds: [],
   deliverables: [],
@@ -107,6 +109,7 @@ export default function ProjectsPage() {
         startDate: project.startDate || "",
         deadline: project.deadline || "",
         progress: project.progress,
+        urgent: project.urgent,
         leadUserId: project.leadUserId ?? null,
         memberIds: project.members.map((m) => m.userId),
         deliverables: project.deliverables.map((d) => ({
@@ -163,6 +166,7 @@ export default function ProjectsPage() {
       startDate: form.startDate || undefined,
       deadline: form.deadline || undefined,
       progress: form.progress,
+      urgent: form.urgent,
       leadUserId: form.leadUserId,
       memberIds: form.memberIds,
       deliverables: form.deliverables
@@ -248,7 +252,13 @@ export default function ProjectsPage() {
             <Card key={p.id} className="flex flex-col">
               <CardContent className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-semibold text-lg">{p.name}</h3>
+                  <h3 className="font-semibold text-lg flex items-center gap-2">
+                    <span
+                      className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${p.urgent ? "bg-red-500" : "bg-yellow-400"}`}
+                      title={p.urgent ? "Urgent" : "Not urgent"}
+                    />
+                    {p.name}
+                  </h3>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
@@ -284,6 +294,26 @@ export default function ProjectsPage() {
                     <div className="flex items-center gap-1 text-xs text-muted-foreground">
                       <Crown className="h-3.5 w-3.5" />
                       Lead: <span className="font-medium text-foreground">{p.leadName}</span>
+                    </div>
+                  )}
+                  {p.submittedAt && (
+                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs space-y-0.5 dark:bg-emerald-950/30 dark:border-emerald-900">
+                      <p className="font-medium text-emerald-700 dark:text-emerald-400">
+                        Work submitted {new Date(p.submittedAt).toLocaleDateString()}
+                      </p>
+                      {p.submissionFilePath && (
+                        <a
+                          href={`${import.meta.env.BASE_URL}api/storage${p.submissionFilePath}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-emerald-700 dark:text-emerald-400 underline break-all"
+                        >
+                          {p.submissionFileName || "Download file"}
+                        </a>
+                      )}
+                      {p.submissionNote && (
+                        <p className="text-muted-foreground whitespace-pre-wrap">{p.submissionNote}</p>
+                      )}
                     </div>
                   )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -346,6 +376,17 @@ export default function ProjectsPage() {
             <p className="text-xs text-muted-foreground">
               Status, progress, and deliverable progress are updated by the assigned employees.
             </p>
+
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={form.urgent}
+                onCheckedChange={(c) => setForm((f) => ({ ...f, urgent: c === true }))}
+              />
+              <span className="flex items-center gap-1.5">
+                Mark as urgent
+                <span className="inline-block h-2 w-2 rounded-full bg-red-500" />
+              </span>
+            </label>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

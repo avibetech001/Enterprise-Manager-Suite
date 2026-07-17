@@ -42,6 +42,8 @@ import {
   GetMyLeaveBalanceResponse,
   ListQueriesResponse,
   ListMyQueriesResponse,
+  SubmitMyProjectBody,
+  SubmitMyProjectResponse,
   CreateQueryBody,
   CreateQueryResponse,
   GetEmployeeOverviewResponse,
@@ -951,6 +953,67 @@ router.get(
   },
 );
 
+router.post(
+  "/projects/:id/submit",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const parsed = SubmitMyProjectBody.safeParse(req.body);
+    const id = Number(req.params.id);
+    if (!parsed.success || Number.isNaN(id)) {
+      res.status(400).json({ error: "Invalid project submission." });
+      return;
+    }
+    if (!parsed.data.objectPath.startsWith("/objects/")) {
+      res.status(400).json({ error: "Invalid uploaded file path." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(
+        and(eq(projectsTable.id, id), eq(projectsTable.companyId, me.companyId)),
+      );
+    if (!project) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    const [membership] = await db
+      .select()
+      .from(projectMembersTable)
+      .where(
+        and(
+          eq(projectMembersTable.projectId, id),
+          eq(projectMembersTable.userId, me.id),
+        ),
+      );
+    if (!membership) {
+      res.status(404).json({ error: "You are not assigned to this project." });
+      return;
+    }
+    await db
+      .update(projectsTable)
+      .set({
+        submissionFilePath: parsed.data.objectPath,
+        submissionFileName: parsed.data.fileName,
+        submissionNote: parsed.data.note?.trim() || null,
+        submittedAt: new Date(),
+        submittedBy: me.id,
+      })
+      .where(eq(projectsTable.id, id));
+    await notify(
+      me.companyId,
+      "project_submitted",
+      `${me.fullName} submitted work for the project "${project.name}".`,
+    );
+    const [full] = await loadProjects(me.companyId, me.id).then((all) =>
+      all.filter((p) => p.id === id),
+    );
+    res.json(SubmitMyProjectResponse.parse(full));
+  },
+);
+
 router.patch(
   "/projects/:id/progress",
   requireAuth,
@@ -1120,6 +1183,7 @@ router.post(
         startDate: fields.startDate || null,
         deadline: fields.deadline || null,
         progress: fields.progress ?? 0,
+        urgent: fields.urgent ?? false,
         leadUserId,
       })
       .returning();
@@ -1167,6 +1231,7 @@ router.patch(
         startDate: fields.startDate || null,
         deadline: fields.deadline || null,
         progress: fields.progress ?? 0,
+        urgent: fields.urgent ?? false,
         leadUserId,
       })
       .where(
@@ -1502,6 +1567,7 @@ router.post(
       .values({
         companyId: me.companyId,
         kind: parsed.data.kind,
+        category: parsed.data.category ?? null,
         title: parsed.data.title,
         body: parsed.data.body,
         createdBy: me.id,
@@ -1546,6 +1612,7 @@ router.patch(
       .update(companyPostsTable)
       .set({
         kind: parsed.data.kind,
+        category: parsed.data.category ?? null,
         title: parsed.data.title,
         body: parsed.data.body,
       })

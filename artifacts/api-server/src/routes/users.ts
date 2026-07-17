@@ -11,7 +11,6 @@ import {
   DeleteManagementUserParams,
 } from "@workspace/api-zod";
 import {
-  emailDomain,
   hashPassword,
   requireAuth,
   requireManagementPermission,
@@ -49,13 +48,6 @@ router.post(
     }
     const input = parsed.data;
     const currentUser = req.currentUser!;
-
-    if (emailDomain(input.email) !== emailDomain(currentUser.email)) {
-      res.status(400).json({
-        error: "HR accounts must use the company's email domain.",
-      });
-      return;
-    }
 
     const [existing] = await db
       .select()

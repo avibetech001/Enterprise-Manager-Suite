@@ -10,6 +10,8 @@ export interface CompanyPost {
   id: number;
   companyId: number;
   kind: string;
+  /** @nullable */
+  category: string | null;
   title: string;
   body: string;
   createdAt: Date;

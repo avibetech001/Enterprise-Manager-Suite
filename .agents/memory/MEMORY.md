@@ -4,4 +4,5 @@
 - [Attendance timezone & geolocation](attendance-timezone.md) — all attendance day/time math must use the COMPANY_TZ helper; geolocation needs a hard timeout race or check-in hangs.
 - [SendGrid activation emails](sendgrid-activation-email.md) — only verified sender is info@contentafrica.com; sends are non-fatal; 401 "Maximum credits exceeded" means the SendGrid plan is out of credits.
 - [Trust proxy for secure cookies](session-cookie-trust-proxy.md) — production login 200 then 401s = secure cookie dropped; Express needs `trust proxy` behind Replit's proxy.
+- [Object storage session auth](object-storage-session-auth.md) — storage routes use req.currentUser (no Replit Auth); downloads must be company-scoped via projects.submission_file_path; no `format: uri` in openapi.
 - [shadcn form.tsx pitfall](shadcn-form-pitfall.md) — bare FormItem/FormLabel outside a FormField render prop crashes the page; use plain div + Label for read-only rows.

@@ -9,6 +9,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { BookOpen, Search } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { KB_CATEGORIES, categoryLabel } from "@/pages/management/knowledge-base";
 
 export default function EmployeeKnowledgeBase() {
   const { data: posts, isLoading } = useListPosts(
@@ -16,8 +19,10 @@ export default function EmployeeKnowledgeBase() {
     { query: { queryKey: ["/api/posts", { kind: "knowledge_base" }] } }
   );
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState<string | null>(null);
 
   const filtered = (posts || []).filter((p) => {
+    if (category && p.category !== category) return false;
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q);
@@ -43,6 +48,26 @@ export default function EmployeeKnowledgeBase() {
         />
       </div>
 
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={category === null ? "default" : "outline"}
+          size="sm"
+          onClick={() => setCategory(null)}
+        >
+          All
+        </Button>
+        {KB_CATEGORIES.map((c) => (
+          <Button
+            key={c.value}
+            variant={category === c.value ? "default" : "outline"}
+            size="sm"
+            onClick={() => setCategory(category === c.value ? null : c.value)}
+          >
+            {c.label}
+          </Button>
+        ))}
+      </div>
+
       {isLoading ? (
         <div className="flex items-center justify-center p-8">
           <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
@@ -65,7 +90,16 @@ export default function EmployeeKnowledgeBase() {
             <Accordion type="single" collapsible className="w-full">
               {filtered.map((p) => (
                 <AccordionItem key={p.id} value={String(p.id)}>
-                  <AccordionTrigger className="text-left">{p.title}</AccordionTrigger>
+                  <AccordionTrigger className="text-left">
+                    <span className="flex items-center gap-2 flex-wrap">
+                      {p.title}
+                      {categoryLabel(p.category) && (
+                        <Badge variant="outline" className="font-normal">
+                          {categoryLabel(p.category)}
+                        </Badge>
+                      )}
+                    </span>
+                  </AccordionTrigger>
                   <AccordionContent>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.body}</p>
                   </AccordionContent>

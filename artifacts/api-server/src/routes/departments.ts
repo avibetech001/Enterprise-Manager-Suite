@@ -46,11 +46,31 @@ router.get("/departments", requireAuth, async (req, res): Promise<void> => {
     counts.map((c) => [c.departmentId, c.employeeCount]),
   );
 
+  const memberRows = await db
+    .select({
+      departmentId: employmentInfoTable.departmentId,
+      id: usersTable.id,
+      fullName: usersTable.fullName,
+      jobTitle: usersTable.jobTitle,
+    })
+    .from(employmentInfoTable)
+    .innerJoin(usersTable, eq(employmentInfoTable.userId, usersTable.id))
+    .where(
+      and(
+        eq(usersTable.companyId, companyId),
+        eq(usersTable.role, "employee"),
+        eq(usersTable.archived, false),
+      ),
+    );
+
   res.json(
     ListDepartmentsResponse.parse(
       departments.map((d) => ({
         ...d,
         employeeCount: countByDepartment.get(d.id) ?? 0,
+        members: memberRows
+          .filter((m) => m.departmentId === d.id)
+          .map(({ id, fullName, jobTitle }) => ({ id, fullName, jobTitle })),
       })),
     ),
   );
@@ -81,7 +101,11 @@ router.post(
     res
       .status(201)
       .json(
-        CreateDepartmentResponse.parse({ ...department, employeeCount: 0 }),
+        CreateDepartmentResponse.parse({
+          ...department,
+          employeeCount: 0,
+          members: [],
+        }),
       );
   },
 );
@@ -129,7 +153,25 @@ router.patch(
         ),
       );
 
-    res.json(UpdateDepartmentResponse.parse({ ...department, employeeCount }));
+    const members = await db
+      .select({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        jobTitle: usersTable.jobTitle,
+      })
+      .from(employmentInfoTable)
+      .innerJoin(usersTable, eq(employmentInfoTable.userId, usersTable.id))
+      .where(
+        and(
+          eq(employmentInfoTable.departmentId, department.id),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.archived, false),
+        ),
+      );
+
+    res.json(
+      UpdateDepartmentResponse.parse({ ...department, employeeCount, members }),
+    );
   },
 );
 

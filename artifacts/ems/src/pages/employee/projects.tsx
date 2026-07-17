@@ -3,9 +3,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListMyProjects,
   useUpdateMyProjectProgress,
+  useSubmitMyProject,
   getListMyProjectsQueryKey,
   type ProjectDetail,
 } from "@workspace/api-client-react";
+import { useUpload } from "@workspace/object-storage-web";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,7 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { FolderKanban, CalendarDays, Pencil, X } from "lucide-react";
+import { FolderKanban, CalendarDays, Pencil, X, Upload, FileCheck2 } from "lucide-react";
 
 const PROJECT_STATUSES = ["planning", "active", "on_hold", "completed"] as const;
 const DELIVERABLE_STATUSES = ["pending", "in_progress", "done"] as const;
@@ -52,6 +55,111 @@ function deliverableBadgeClass(status: string): string {
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
   return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || "?";
+}
+
+function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
+  const queryClient = useQueryClient();
+  const submitProject = useSubmitMyProject();
+  const [showForm, setShowForm] = useState(false);
+  const [uploaded, setUploaded] = useState<{ objectPath: string; fileName: string } | null>(null);
+  const [note, setNote] = useState("");
+  const { uploadFile, isUploading } = useUpload({
+    onError: (err) => toast.error("Upload failed", { description: err.message }),
+  });
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const res = await uploadFile(file);
+    if (res) setUploaded({ objectPath: res.objectPath, fileName: file.name });
+  };
+
+  const handleSubmit = () => {
+    if (!uploaded) {
+      toast.error("Please upload your project file first.");
+      return;
+    }
+    submitProject.mutate(
+      { id: p.id, data: { objectPath: uploaded.objectPath, fileName: uploaded.fileName, note: note.trim() || undefined } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListMyProjectsQueryKey() });
+          toast.success("Project work submitted");
+          setShowForm(false);
+          setUploaded(null);
+          setNote("");
+        },
+        onError: (err: any) => {
+          toast.error("Failed to submit project", { description: err?.data?.error || "Unknown error" });
+        },
+      },
+    );
+  };
+
+  return (
+    <>
+      <Separator />
+      {p.submittedAt ? (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-1 dark:bg-emerald-950/30 dark:border-emerald-900">
+          <p className="text-sm font-medium flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
+            <FileCheck2 className="h-4 w-4" />
+            Work submitted {new Date(p.submittedAt).toLocaleDateString()}
+          </p>
+          {p.submissionFileName && (
+            <p className="text-xs text-muted-foreground">File: {p.submissionFileName}</p>
+          )}
+          {p.submissionNote && (
+            <p className="text-xs text-muted-foreground whitespace-pre-wrap">{p.submissionNote}</p>
+          )}
+          {!showForm && (
+            <Button variant="outline" size="sm" className="mt-1" onClick={() => setShowForm(true)}>
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
+              Replace submission
+            </Button>
+          )}
+        </div>
+      ) : (
+        !showForm && (
+          <Button variant="outline" size="sm" onClick={() => setShowForm(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Upload & Submit Work
+          </Button>
+        )
+      )}
+      {showForm && (
+        <div className="space-y-3 rounded-lg border p-3 bg-muted/30">
+          <div className="space-y-1.5">
+            <Label htmlFor={`file-${p.id}`} className="text-xs">Project file</Label>
+            <Input id={`file-${p.id}`} type="file" onChange={handleFileChange} disabled={isUploading} className="h-9" />
+            {isUploading && <p className="text-xs text-muted-foreground">Uploading…</p>}
+            {uploaded && !isUploading && (
+              <p className="text-xs text-emerald-600 flex items-center gap-1">
+                <FileCheck2 className="h-3.5 w-3.5" /> {uploaded.fileName} ready
+              </p>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`note-${p.id}`} className="text-xs">Note (optional)</Label>
+            <Textarea
+              id={`note-${p.id}`}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Anything management should know about this submission"
+              className="resize-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleSubmit} disabled={submitProject.isPending || isUploading || !uploaded}>
+              Submit Work
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+    </>
+  );
 }
 
 function ProjectCard({ project: p }: { project: ProjectDetail }) {
@@ -104,7 +212,14 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
     <Card className="flex flex-col">
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg">{p.name}</CardTitle>
+          <CardTitle className="text-lg flex items-center gap-2">
+            <span
+              className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${p.urgent ? "bg-red-500" : "bg-yellow-400"}`}
+              title={p.urgent ? "Urgent" : "Not urgent"}
+              aria-label={p.urgent ? "Urgent project" : "Not urgent"}
+            />
+            {p.name}
+          </CardTitle>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={statusBadgeClass(p.status)}>
               <span className="capitalize">{p.status.replace("_", " ")}</span>
@@ -257,6 +372,8 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
             </div>
           </>
         )}
+
+        <SubmitWorkSection project={p} />
       </CardContent>
     </Card>
   );

@@ -20,8 +20,26 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 
 const PARAMS = { kind: "knowledge_base" as const };
+
+export const KB_CATEGORIES = [
+  { value: "idea_dump", label: "Idea Dump" },
+  { value: "samples", label: "Samples" },
+  { value: "strategy", label: "Strategy" },
+] as const;
+
+export function categoryLabel(value: string | null | undefined): string | null {
+  return KB_CATEGORIES.find((c) => c.value === value)?.label ?? null;
+}
 
 export default function ManagementKnowledgeBase() {
   const queryClient = useQueryClient();
@@ -33,6 +51,7 @@ export default function ManagementKnowledgeBase() {
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
+  const [category, setCategory] = useState<string>("none");
 
   const submit = () => {
     if (!title.trim() || !body.trim()) {
@@ -40,12 +59,23 @@ export default function ManagementKnowledgeBase() {
       return;
     }
     createPost.mutate(
-      { data: { kind: "knowledge_base", title: title.trim(), body: body.trim() } },
+      {
+        data: {
+          kind: "knowledge_base",
+          category:
+            category === "none"
+              ? null
+              : (category as "idea_dump" | "samples" | "strategy"),
+          title: title.trim(),
+          body: body.trim(),
+        },
+      },
       {
         onSuccess: () => {
           toast.success("Article published.");
           setTitle("");
           setBody("");
+          setCategory("none");
           setShowForm(false);
           queryClient.invalidateQueries({ queryKey });
         },
@@ -101,6 +131,22 @@ export default function ManagementKnowledgeBase() {
               />
             </div>
             <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No category</SelectItem>
+                  {KB_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="kb-body">Content</Label>
               <Textarea
                 id="kb-body"
@@ -140,7 +186,16 @@ export default function ManagementKnowledgeBase() {
             <Accordion type="single" collapsible className="w-full">
               {(posts || []).map((p) => (
                 <AccordionItem key={p.id} value={String(p.id)}>
-                  <AccordionTrigger className="text-left">{p.title}</AccordionTrigger>
+                  <AccordionTrigger className="text-left">
+                    <span className="flex items-center gap-2 flex-wrap">
+                      {p.title}
+                      {categoryLabel(p.category) && (
+                        <Badge variant="outline" className="font-normal">
+                          {categoryLabel(p.category)}
+                        </Badge>
+                      )}
+                    </span>
+                  </AccordionTrigger>
                   <AccordionContent>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.body}</p>
                     <div className="flex items-center justify-between mt-4">
