@@ -150,8 +150,7 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           ),
         );
       if (chatMsg) {
-        const isManagement = me.role !== 'employee';
-        if (chatMsg.departmentId == null || isManagement) {
+        if (chatMsg.departmentId == null) {
           allowed = true;
         } else {
           const [emp] = await db

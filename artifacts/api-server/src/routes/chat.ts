@@ -39,8 +39,7 @@ interface ResolvedGroup {
 
 // Resolve a group id ("company" or "dept-<id>") and enforce access:
 // - the company group is open to every user in the company
-// - a department group is open to that department's employees and to
-//   management users (super_admin / hr)
+// - a department group is open only to users assigned to that department
 async function resolveGroup(
   me: CurrentUser,
   groupId: string,
@@ -61,8 +60,7 @@ async function resolveGroup(
       ),
     );
   if (!dept) return null;
-  const isManagement = me.role !== "employee";
-  if (!isManagement && (await departmentIdOf(me.id)) !== dept.id) return null;
+  if ((await departmentIdOf(me.id)) !== dept.id) return null;
   return { id: groupId, name: dept.name, departmentId: dept.id };
 }
 
@@ -76,15 +74,14 @@ router.get(
       name: string;
       kind: "company" | "department";
     }> = [{ id: "company", name: "General", kind: "company" }];
-    const isManagement = me.role !== "employee";
-    const myDeptId = isManagement ? null : await departmentIdOf(me.id);
+    const myDeptId = await departmentIdOf(me.id);
     const departments = await db
       .select()
       .from(departmentsTable)
       .where(eq(departmentsTable.companyId, me.companyId))
       .orderBy(asc(departmentsTable.name));
     for (const d of departments) {
-      if (isManagement || myDeptId === d.id) {
+      if (myDeptId === d.id) {
         groups.push({ id: `dept-${d.id}`, name: d.name, kind: "department" });
       }
     }
@@ -118,9 +115,7 @@ router.get(
       .orderBy(asc(usersTable.fullName));
     const members = rows.filter(
       (u) =>
-        group.departmentId === null ||
-        u.departmentId === group.departmentId ||
-        u.role !== "employee",
+        group.departmentId === null || u.departmentId === group.departmentId,
     );
     res.json(
       members.map((m) => ChatMember.parse({ id: m.id, fullName: m.fullName })),
@@ -204,8 +199,8 @@ router.post(
     }
 
     // Only allow tagging users who are actually members of this group:
-    // company group = everyone in the company; department group = that
-    // department's employees plus management users.
+    // company group = everyone in the company; department group = only
+    // users assigned to that department.
     let mentionIds: number[] = [];
     const requested = [...new Set(parsed.data.mentionUserIds || [])];
     if (requested.length) {
@@ -230,8 +225,7 @@ router.post(
         .filter(
           (u) =>
             group.departmentId === null ||
-            u.departmentId === group.departmentId ||
-            u.role !== "employee",
+            u.departmentId === group.departmentId,
         )
         .map((v) => v.id);
     }

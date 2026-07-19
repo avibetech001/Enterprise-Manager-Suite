@@ -28,6 +28,7 @@ import {
   Send,
   X,
   AtSign,
+  ArrowLeft,
   Building2,
   Users,
   FileText,
@@ -36,56 +37,76 @@ import {
 export default function TeamChatPage() {
   const { data: session } = useGetCurrentSession();
   const { data: groups } = useListChatGroups();
-  const [activeGroupId, setActiveGroupId] = useState<string>("company");
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
 
-  const activeGroup = groups?.find((g) => g.id === activeGroupId) || groups?.[0];
+  const activeGroup = groups?.find((g) => g.id === activeGroupId) || null;
 
+  // Chat view: full-width conversation with a back button.
+  if (activeGroup) {
+    return (
+      <div className="space-y-4">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2"
+          onClick={() => setActiveGroupId(null)}
+        >
+          <ArrowLeft className="h-4 w-4 mr-1.5" />
+          All chats
+        </Button>
+        <GroupChat
+          key={activeGroup.id}
+          groupId={activeGroup.id}
+          groupName={activeGroup.name}
+          myUserId={session?.user?.id}
+        />
+      </div>
+    );
+  }
+
+  // Group list view: click a group to open its chat.
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Team Chat</h1>
         <p className="text-muted-foreground mt-1">
-          Message your company and department groups, share files, and tag people.
+          Tap a group to open its chat.
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-[220px_1fr]">
-        <div className="space-y-1">
-          {(groups || []).map((g) => (
-            <button
-              key={g.id}
-              onClick={() => setActiveGroupId(g.id)}
-              className={`w-full flex items-center gap-2 rounded-md px-3 py-2 text-sm text-left transition-colors ${
-                activeGroup?.id === g.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-muted"
-              }`}
-            >
-              {g.kind === "company" ? (
-                <Users className="h-4 w-4 shrink-0" />
-              ) : (
-                <Building2 className="h-4 w-4 shrink-0" />
-              )}
-              <span className="truncate">{g.name}</span>
-            </button>
-          ))}
-        </div>
+      {groups && groups.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <MessagesSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            No chat groups yet.
+          </CardContent>
+        </Card>
+      )}
 
-        {activeGroup ? (
-          <GroupChat
-            key={activeGroup.id}
-            groupId={activeGroup.id}
-            groupName={activeGroup.name}
-            myUserId={session?.user?.id}
-          />
-        ) : (
-          <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              <MessagesSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              No chat groups yet.
-            </CardContent>
-          </Card>
-        )}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {(groups || []).map((g) => (
+          <button
+            key={g.id}
+            onClick={() => setActiveGroupId(g.id)}
+            className="text-left rounded-lg border bg-card p-4 hover:border-primary hover:shadow-sm transition-all"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                {g.kind === "company" ? (
+                  <Users className="h-5 w-5 text-primary" />
+                ) : (
+                  <Building2 className="h-5 w-5 text-primary" />
+                )}
+              </div>
+              <div className="min-w-0">
+                <p className="font-medium truncate">{g.name}</p>
+                <p className="text-xs text-muted-foreground">
+                  {g.kind === "company" ? "Everyone in the company" : "Department group"}
+                </p>
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
     </div>
   );
