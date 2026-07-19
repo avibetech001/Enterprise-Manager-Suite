@@ -44,6 +44,8 @@ import ManagementKnowledgeBasePage from '@/pages/management/knowledge-base';
 import EmployeeDepartmentsPage from '@/pages/employee/departments';
 import SettingsCompanyPage from '@/pages/management/settings-company';
 import TeamChatPage from '@/pages/chat';
+import ManagementAppraisalsPage from '@/pages/management/appraisals';
+import MyAppraisalsPage from '@/pages/employee/appraisals';
 
 const queryClient = new QueryClient();
 
@@ -111,6 +113,7 @@ function Router() {
         ["/employee/knowledge-base", EmployeeKnowledgeBasePage],
         ["/employee/settings", EmployeeSettingsPage],
         ["/employee/chat", TeamChatPage],
+        ["/employee/appraisals", MyAppraisalsPage],
       ] as const).map(([path, Page]) => (
         <Route key={path} path={path}>
           <EmployeeGuard>
@@ -186,6 +189,7 @@ function Router() {
         ["/announcements", ManagementAnnouncementsPage],
         ["/knowledge-base", ManagementKnowledgeBasePage],
         ["/chat", TeamChatPage],
+        ["/appraisals", ManagementAppraisalsPage],
       ] as const).map(([path, Page]) => (
         <Route key={path} path={path}>
           <ManagementGuard>

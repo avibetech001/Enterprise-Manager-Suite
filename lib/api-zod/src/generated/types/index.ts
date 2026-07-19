@@ -7,6 +7,10 @@
  */
 
 export * from './absentEmployee';
+export * from './appraisal';
+export * from './appraisalDeleteResult';
+export * from './appraisalInput';
+export * from './appraisalRating';
 export * from './attendanceCode';
 export * from './attendanceRecord';
 export * from './attendanceRecordCheckInStatus';

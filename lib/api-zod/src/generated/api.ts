@@ -2362,3 +2362,105 @@ export const SendChatMessageResponse = zod.object({
 })
 
 
+/**
+ * @summary List all appraisals for the company (management)
+ */
+
+export const listAppraisalsResponseRatingsItemScoreMax = 5;
+
+
+
+export const ListAppraisalsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "createdBy": zod.number(),
+  "createdByName": zod.string(),
+  "periodLabel": zod.string(),
+  "ratings": zod.array(zod.object({
+  "criterion": zod.string().min(1),
+  "score": zod.number().min(1).max(listAppraisalsResponseRatingsItemScoreMax)
+})),
+  "overallComment": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListAppraisalsResponse = zod.array(ListAppraisalsResponseItem)
+
+
+/**
+ * @summary Create an appraisal for an employee (management)
+ */
+
+export const createAppraisalBodyRatingsItemScoreMax = 5;
+
+
+
+
+export const CreateAppraisalBody = zod.object({
+  "userId": zod.number(),
+  "periodLabel": zod.string().optional(),
+  "ratings": zod.array(zod.object({
+  "criterion": zod.string().min(1),
+  "score": zod.number().min(1).max(createAppraisalBodyRatingsItemScoreMax)
+})).min(1),
+  "overallComment": zod.string().optional()
+})
+
+
+export const createAppraisalResponseRatingsItemScoreMax = 5;
+
+
+
+export const CreateAppraisalResponse = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "createdBy": zod.number(),
+  "createdByName": zod.string(),
+  "periodLabel": zod.string(),
+  "ratings": zod.array(zod.object({
+  "criterion": zod.string().min(1),
+  "score": zod.number().min(1).max(createAppraisalResponseRatingsItemScoreMax)
+})),
+  "overallComment": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List the current employee's appraisals
+ */
+
+export const listMyAppraisalsResponseRatingsItemScoreMax = 5;
+
+
+
+export const ListMyAppraisalsResponseItem = zod.object({
+  "id": zod.number(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "createdBy": zod.number(),
+  "createdByName": zod.string(),
+  "periodLabel": zod.string(),
+  "ratings": zod.array(zod.object({
+  "criterion": zod.string().min(1),
+  "score": zod.number().min(1).max(listMyAppraisalsResponseRatingsItemScoreMax)
+})),
+  "overallComment": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyAppraisalsResponse = zod.array(ListMyAppraisalsResponseItem)
+
+
+/**
+ * @summary Delete an appraisal (management)
+ */
+export const DeleteAppraisalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteAppraisalResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+

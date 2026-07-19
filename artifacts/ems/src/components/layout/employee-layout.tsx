@@ -32,6 +32,7 @@ import {
   Settings,
   LogOut,
   MessagesSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
@@ -54,6 +55,7 @@ const NAV = [
       { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
       { href: "/employee/queries", icon: FileWarning, title: "My Queries" },
       { href: "/employee/chat", icon: MessagesSquare, title: "Team Chat" },
+      { href: "/employee/appraisals", icon: ClipboardCheck, title: "My Appraisals" },
     ],
   },
   {

@@ -5,6 +5,40 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+export interface AppraisalRating {
+  /** @minLength 1 */
+  criterion: string;
+  /**
+     * @minimum 1
+     * @maximum 5
+     */
+  score: number;
+}
+
+export interface Appraisal {
+  id: number;
+  userId: number;
+  userName: string;
+  createdBy: number;
+  createdByName: string;
+  periodLabel: string;
+  ratings: AppraisalRating[];
+  overallComment: string;
+  createdAt: string;
+}
+
+export interface AppraisalInput {
+  userId: number;
+  periodLabel?: string;
+  /** @minItems 1 */
+  ratings: AppraisalRating[];
+  overallComment?: string;
+}
+
+export interface AppraisalDeleteResult {
+  ok: boolean;
+}
+
 export type ChatGroupKind = typeof ChatGroupKind[keyof typeof ChatGroupKind];
 
 

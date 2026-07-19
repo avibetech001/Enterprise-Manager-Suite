@@ -11,6 +11,7 @@ import modulesRouter from "./modules";
 import storageRouter from "./storage";
 import pushRouter from "./push";
 import chatRouter from "./chat";
+import appraisalsRouter from "./appraisals";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(modulesRouter);
 router.use(storageRouter);
 router.use(pushRouter);
 router.use(chatRouter);
+router.use(appraisalsRouter);
 
 export default router;

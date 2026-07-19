@@ -20,6 +20,9 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Appraisal,
+  AppraisalDeleteResult,
+  AppraisalInput,
   AttendanceCode,
   AttendanceRecord,
   AttendanceSettings,
@@ -6277,5 +6280,301 @@ export const useSendChatMessage = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getSendChatMessageMutationOptions(options));
+    }
+
+export const getListAppraisalsUrl = () => {
+
+
+
+
+  return `/api/appraisals`
+}
+
+/**
+ * @summary List all appraisals for the company (management)
+ */
+export const listAppraisals = async ( options?: RequestInit): Promise<Appraisal[]> => {
+
+  return customFetch<Appraisal[]>(getListAppraisalsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListAppraisalsQueryKey = () => {
+    return [
+    `/api/appraisals`
+    ] as const;
+    }
+
+
+export const getListAppraisalsQueryOptions = <TData = Awaited<ReturnType<typeof listAppraisals>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAppraisals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListAppraisalsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listAppraisals>>> = ({ signal }) => listAppraisals({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listAppraisals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListAppraisalsQueryResult = NonNullable<Awaited<ReturnType<typeof listAppraisals>>>
+export type ListAppraisalsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all appraisals for the company (management)
+ */
+
+export function useListAppraisals<TData = Awaited<ReturnType<typeof listAppraisals>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listAppraisals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListAppraisalsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateAppraisalUrl = () => {
+
+
+
+
+  return `/api/appraisals`
+}
+
+/**
+ * @summary Create an appraisal for an employee (management)
+ */
+export const createAppraisal = async (appraisalInput: AppraisalInput, options?: RequestInit): Promise<Appraisal> => {
+
+  return customFetch<Appraisal>(getCreateAppraisalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(appraisalInput)
+  }
+);}
+
+
+
+
+
+export const getCreateAppraisalMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppraisal>>, TError,{data: BodyType<AppraisalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createAppraisal>>, TError,{data: BodyType<AppraisalInput>}, TContext> => {
+
+const mutationKey = ['createAppraisal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createAppraisal>>, {data: BodyType<AppraisalInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createAppraisal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateAppraisalMutationResult = NonNullable<Awaited<ReturnType<typeof createAppraisal>>>
+    export type CreateAppraisalMutationBody = BodyType<AppraisalInput>
+    export type CreateAppraisalMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create an appraisal for an employee (management)
+ */
+export const useCreateAppraisal = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createAppraisal>>, TError,{data: BodyType<AppraisalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createAppraisal>>,
+        TError,
+        {data: BodyType<AppraisalInput>},
+        TContext
+      > => {
+      return useMutation(getCreateAppraisalMutationOptions(options));
+    }
+
+export const getListMyAppraisalsUrl = () => {
+
+
+
+
+  return `/api/appraisals/me`
+}
+
+/**
+ * @summary List the current employee's appraisals
+ */
+export const listMyAppraisals = async ( options?: RequestInit): Promise<Appraisal[]> => {
+
+  return customFetch<Appraisal[]>(getListMyAppraisalsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyAppraisalsQueryKey = () => {
+    return [
+    `/api/appraisals/me`
+    ] as const;
+    }
+
+
+export const getListMyAppraisalsQueryOptions = <TData = Awaited<ReturnType<typeof listMyAppraisals>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyAppraisals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyAppraisalsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyAppraisals>>> = ({ signal }) => listMyAppraisals({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyAppraisals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyAppraisalsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyAppraisals>>>
+export type ListMyAppraisalsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the current employee's appraisals
+ */
+
+export function useListMyAppraisals<TData = Awaited<ReturnType<typeof listMyAppraisals>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyAppraisals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyAppraisalsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getDeleteAppraisalUrl = (id: number,) => {
+
+
+
+
+  return `/api/appraisals/${id}`
+}
+
+/**
+ * @summary Delete an appraisal (management)
+ */
+export const deleteAppraisal = async (id: number, options?: RequestInit): Promise<AppraisalDeleteResult> => {
+
+  return customFetch<AppraisalDeleteResult>(getDeleteAppraisalUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteAppraisalMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAppraisal>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteAppraisal>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteAppraisal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteAppraisal>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteAppraisal(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteAppraisalMutationResult = NonNullable<Awaited<ReturnType<typeof deleteAppraisal>>>
+
+    export type DeleteAppraisalMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete an appraisal (management)
+ */
+export const useDeleteAppraisal = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteAppraisal>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteAppraisal>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteAppraisalMutationOptions(options));
     }
 
