@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   useListNotifications,
   getListNotificationsQueryKey,
@@ -14,6 +15,13 @@ export function UnreadNavBadge() {
     },
   });
   const unread = notifications?.filter((n) => !n.readAt).length || 0;
+
+  // Mirror the unread count onto the app icon badge (home-screen apps).
+  useEffect(() => {
+    if (!notifications || !("setAppBadge" in navigator)) return;
+    if (unread > 0) void navigator.setAppBadge(unread).catch(() => {});
+    else void navigator.clearAppBadge?.().catch(() => {});
+  }, [notifications, unread]);
   if (unread === 0) return null;
   return (
     <Badge

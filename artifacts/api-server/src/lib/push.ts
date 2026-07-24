@@ -1,7 +1,8 @@
 import webpush from "web-push";
-import { and, eq, inArray, or } from "drizzle-orm";
+import { and, count, eq, inArray, isNull, or } from "drizzle-orm";
 import {
   db,
+  notificationsTable,
   pushSubscriptionsTable,
   pushVapidConfigTable,
   usersTable,
@@ -89,7 +90,25 @@ export async function sendPush(
   userId: number | null,
 ): Promise<void> {
   try {
-    const payload = JSON.stringify({ title: "5th Element", body: message });
+    // Unread count for the recipient feed, so the app icon badge can show it.
+    // Employees see their own feed; management shares the company-wide feed.
+    const [row] = await db
+      .select({ n: count() })
+      .from(notificationsTable)
+      .where(
+        and(
+          eq(notificationsTable.companyId, companyId),
+          userId != null
+            ? eq(notificationsTable.userId, userId)
+            : isNull(notificationsTable.userId),
+          isNull(notificationsTable.readAt),
+        ),
+      );
+    const payload = JSON.stringify({
+      title: "5th Element",
+      body: message,
+      badge: row?.n ?? 0,
+    });
     if (userId != null) {
       const subs = await db
         .select()
