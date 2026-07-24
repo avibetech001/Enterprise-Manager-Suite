@@ -573,8 +573,12 @@ router.post(
     }
     const settings = await getAttendanceSettings(me.companyId);
     const day = todaySchedule(parseSchedule(settings.weeklySchedule));
+    // Employees are marked late only after a 15-minute grace period
+    // past the scheduled start time.
+    const LATE_GRACE_MINUTES = 15;
     const checkInStatus =
-      day.mode !== "off" && nowMinutes() > minutesOf(day.start)
+      day.mode !== "off" &&
+      nowMinutes() > minutesOf(day.start) + LATE_GRACE_MINUTES
         ? "late"
         : "on_time";
     const [record] = await db

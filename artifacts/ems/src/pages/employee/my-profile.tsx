@@ -57,15 +57,51 @@ export default function MyProfile() {
     onError: (err) => toast.error("Upload failed", { description: err.message }),
   });
 
+  // Convert the picked image to a small JPEG before uploading. iPhone photos
+  // are often HEIC, which most browsers can't display — converting to JPEG
+  // guarantees the avatar renders everywhere and keeps uploads small.
+  const toJpeg = async (file: File): Promise<File> => {
+    try {
+      // "from-image" applies EXIF orientation so portrait phone photos
+      // aren't rotated after conversion.
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      });
+      if (!bitmap.width || !bitmap.height) return file;
+      const MAX = 512;
+      const scale = Math.min(1, MAX / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+      canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      bitmap.close();
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.85),
+      );
+      if (!blob) return file;
+      return new File([blob], "profile-photo.jpg", { type: "image/jpeg" });
+    } catch {
+      // Browser couldn't decode this format; upload the original as-is.
+      return file;
+    }
+  };
+
   const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
+    if (!file.type.startsWith("image/") && !/\.(heic|heif)$/i.test(file.name)) {
       toast.error("Please choose an image file.");
       return;
     }
-    const res = await uploadFile(file);
+    const converted = await toJpeg(file);
+    if (converted === file && !/^image\/(jpeg|png|webp|gif)$/.test(file.type)) {
+      toast.error(
+        "This photo format isn't supported by your browser. Please choose a JPG or PNG image.",
+      );
+      return;
+    }
+    const res = await uploadFile(converted);
     if (!res) return;
     updateProfile.mutate(
       { data: { profilePhotoUrl: res.objectPath } },
