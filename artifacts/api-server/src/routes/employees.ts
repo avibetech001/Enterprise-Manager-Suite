@@ -215,8 +215,11 @@ async function notifyCompany(
   companyId: number,
   type: string,
   message: string,
+  link?: string,
 ): Promise<void> {
-  await db.insert(notificationsTable).values({ companyId, type, message });
+  await db
+    .insert(notificationsTable)
+    .values({ companyId, type, message, link: link ?? null });
 }
 
 // ---------------------------------------------------------------------------
@@ -456,6 +459,7 @@ router.patch("/me/profile", requireAuth, async (req, res): Promise<void> => {
     currentUser.companyId,
     "employee_profile_updated",
     `${user!.fullName} updated their profile.`,
+    `employees/${currentUser.id}`,
   );
   res.json(UpdateMyProfileResponse.parse(await loadFullEmployee(user!)));
 });
@@ -631,6 +635,7 @@ router.patch(
       user.companyId,
       "employee_profile_updated",
       `${updated!.fullName}'s employee record was updated.`,
+      `employees/${user.id}`,
     );
 
     res.json(UpdateEmployeeResponse.parse(await loadFullEmployee(updated!)));
