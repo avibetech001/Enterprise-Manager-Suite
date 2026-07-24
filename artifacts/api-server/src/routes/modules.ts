@@ -894,6 +894,8 @@ router.post(
       me.companyId,
       "leave_request",
       `${me.fullName} submitted a ${type} leave request (${days} day${days === 1 ? "" : "s"}).`,
+      null,
+      `leave?id=${request.id}`,
     );
     res.status(201).json(CreateLeaveRequestResponse.parse(request));
   },
@@ -942,6 +944,7 @@ router.post(
       `leave_${parsed.data.status}`,
       `Your ${updated.type} leave request (${updated.startDate} to ${updated.endDate}) was ${parsed.data.status}.`,
       updated.userId,
+      `leave?id=${updated.id}`,
     );
     res.json(
       ReviewLeaveRequestResponse.parse({
@@ -1048,6 +1051,8 @@ router.post(
       me.companyId,
       "project_submitted",
       `${me.fullName} submitted work for the project "${project.name}".`,
+      null,
+      `projects?id=${id}`,
     );
     const [full] = await loadProjects(me.companyId, me.id).then((all) =>
       all.filter((p) => p.id === id),
@@ -1296,6 +1301,7 @@ router.post(
         "project_assigned",
         `You have been assigned to the project "${project.name}".`,
         userId,
+        `projects?id=${project.id}`,
       );
     }
     const [full] = await loadProjects(me.companyId).then((all) =>
@@ -1353,6 +1359,7 @@ router.patch(
           "project_assigned",
           `You have been assigned to the project "${project.name}".`,
           userId,
+          `projects?id=${project.id}`,
         );
       }
     }
@@ -1451,6 +1458,8 @@ router.post(
       me.companyId,
       "fund_request",
       `${me.fullName} submitted a fund request (${parsed.data.amount}).`,
+      null,
+      `fund-requests?id=${request.id}`,
     );
     res.status(201).json(CreateFundRequestResponse.parse(request));
   },
@@ -1499,6 +1508,7 @@ router.post(
       `fund_request_${parsed.data.status}`,
       `Your fund request for "${updated.purpose}" was ${parsed.data.status}.`,
       updated.userId,
+      `fund-requests?id=${updated.id}`,
     );
     res.json(
       ReviewFundRequestResponse.parse({
@@ -1692,6 +1702,7 @@ router.post(
           "announcement",
           `New announcement: ${parsed.data.title}`,
           employee.id,
+          `announcements?id=${post.id}`,
         );
       }
     }
@@ -1869,6 +1880,7 @@ router.post(
       "query_issued",
       `${label} has been issued against you: ${parsed.data.reason.trim()}`,
       parsed.data.userId,
+      `queries?id=${row!.id}`,
     );
     res.status(201).json(CreateQueryResponse.parse(withNames));
   },

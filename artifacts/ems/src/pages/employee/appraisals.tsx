@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useListMyAppraisals } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,6 +7,7 @@ import { AppraisalCard } from "@/pages/management/appraisals";
 
 export default function MyAppraisalsPage() {
   const { data: appraisals, isLoading } = useListMyAppraisals();
+  useNotificationFocus(!!appraisals);
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -34,7 +36,9 @@ export default function MyAppraisalsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {(appraisals || []).map((a) => (
-            <AppraisalCard key={a.id} appraisal={a} />
+            <div key={a.id} id={`focus-${a.id}`}>
+              <AppraisalCard appraisal={a} />
+            </div>
           ))}
         </div>
       )}

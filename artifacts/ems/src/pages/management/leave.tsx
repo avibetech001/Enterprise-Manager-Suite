@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -48,6 +49,7 @@ function statusBadge(status: string) {
 export default function LeavePage() {
   const queryClient = useQueryClient();
   const { data: requests, isLoading } = useListLeaveRequests();
+  useNotificationFocus(!!requests);
   const reviewLeave = useReviewLeaveRequest();
 
   const [filter, setFilter] = useState<Filter>("all");
@@ -127,7 +129,7 @@ export default function LeavePage() {
               <TableBody>
                 {filtered.length > 0 ? (
                   filtered.map((r) => (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} id={`focus-${r.id}`}>
                       <TableCell className="font-medium">{r.employeeName}</TableCell>
                       <TableCell className="capitalize">{r.type}</TableCell>
                       <TableCell className="text-sm">

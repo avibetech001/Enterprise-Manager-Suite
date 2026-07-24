@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -21,6 +22,7 @@ export default function ManagementAnnouncements() {
   const queryClient = useQueryClient();
   const queryKey = getListPostsQueryKey(PARAMS);
   const { data: posts, isLoading } = useListPosts(PARAMS, { query: { queryKey } });
+  useNotificationFocus(!!posts);
   const createPost = useCreatePost();
   const deletePost = useDeletePost();
 
@@ -129,7 +131,7 @@ export default function ManagementAnnouncements() {
       ) : (
         <div className="space-y-4">
           {posts.map((p) => (
-            <Card key={p.id}>
+            <Card key={p.id} id={`focus-${p.id}`}>
               <CardContent className="pt-6">
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0">

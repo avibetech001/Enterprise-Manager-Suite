@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useListPosts, getListPostsQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Megaphone } from "lucide-react";
@@ -9,6 +10,7 @@ export default function EmployeeAnnouncements() {
   const { data: posts, isLoading } = useListPosts(PARAMS, {
     query: { queryKey: getListPostsQueryKey(PARAMS) },
   });
+  useNotificationFocus(!!posts);
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
@@ -35,7 +37,7 @@ export default function EmployeeAnnouncements() {
       ) : (
         <div className="space-y-4">
           {posts.map((p) => (
-            <Card key={p.id}>
+            <Card key={p.id} id={`focus-${p.id}`}>
               <CardContent className="pt-6">
                 <h3 className="font-semibold">{p.title}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">

@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useListMyQueries } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,6 +25,7 @@ function categoryBadgeClass(category: string): string {
 
 export default function EmployeeQueries() {
   const { data: queries, isLoading } = useListMyQueries();
+  useNotificationFocus(!!queries);
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -63,7 +65,7 @@ export default function EmployeeQueries() {
               </TableHeader>
               <TableBody>
                 {queries.map((q) => (
-                  <TableRow key={q.id}>
+                  <TableRow key={q.id} id={`focus-${q.id}`}>
                     <TableCell>
                       <Badge variant="outline" className={categoryBadgeClass(q.category)}>
                         {q.category}

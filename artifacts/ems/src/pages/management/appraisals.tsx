@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -113,6 +114,7 @@ export function AppraisalCard({
 export default function ManagementAppraisalsPage() {
   const queryClient = useQueryClient();
   const { data: appraisals, isLoading } = useListAppraisals();
+  useNotificationFocus(!!appraisals);
   const { data: employees } = useListEmployees();
   const createAppraisal = useCreateAppraisal();
   const deleteAppraisal = useDeleteAppraisal();
@@ -217,7 +219,9 @@ export default function ManagementAppraisalsPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {(appraisals || []).map((a) => (
-            <AppraisalCard key={a.id} appraisal={a} onDelete={() => handleDelete(a)} />
+            <div key={a.id} id={`focus-${a.id}`}>
+              <AppraisalCard appraisal={a} onDelete={() => handleDelete(a)} />
+            </div>
           ))}
         </div>
       )}

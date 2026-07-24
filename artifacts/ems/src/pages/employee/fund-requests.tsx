@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -64,6 +65,7 @@ function statusBadgeClass(status: string): string {
 export default function EmployeeFundRequests() {
   const queryClient = useQueryClient();
   const { data: requests, isLoading } = useListMyFundRequests();
+  useNotificationFocus(!!requests);
   const createFund = useCreateFundRequest();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -135,7 +137,7 @@ export default function EmployeeFundRequests() {
               </TableHeader>
               <TableBody>
                 {requests.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} id={`focus-${r.id}`}>
                     <TableCell className="font-medium">{r.amount}</TableCell>
                     <TableCell>{r.purpose}</TableCell>
                     <TableCell>

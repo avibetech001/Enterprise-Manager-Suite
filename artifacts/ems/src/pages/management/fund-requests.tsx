@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -48,6 +49,7 @@ function statusBadge(status: string) {
 export default function FundRequestsPage() {
   const queryClient = useQueryClient();
   const { data: requests, isLoading } = useListFundRequests();
+  useNotificationFocus(!!requests);
   const reviewFund = useReviewFundRequest();
 
   const [filter, setFilter] = useState<Filter>("all");
@@ -127,7 +129,7 @@ export default function FundRequestsPage() {
               <TableBody>
                 {filtered.length > 0 ? (
                   filtered.map((r) => (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} id={`focus-${r.id}`}>
                       <TableCell className="font-medium">{r.employeeName}</TableCell>
                       <TableCell>{r.amount}</TableCell>
                       <TableCell>{r.purpose}</TableCell>

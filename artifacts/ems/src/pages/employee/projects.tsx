@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -452,6 +453,7 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
 
 export default function EmployeeProjects() {
   const { data: projects, isLoading } = useListMyProjects();
+  useNotificationFocus(!!projects);
 
   if (isLoading) {
     return (
@@ -484,7 +486,9 @@ export default function EmployeeProjects() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {projects.map((p) => (
-            <ProjectCard key={p.id} project={p} />
+            <div key={p.id} id={`focus-${p.id}`}>
+              <ProjectCard project={p} />
+            </div>
           ))}
         </div>
       )}

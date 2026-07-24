@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -74,6 +75,7 @@ export default function EmployeeLeave() {
   const queryClient = useQueryClient();
   const { data: balance } = useGetMyLeaveBalance();
   const { data: requests, isLoading } = useListMyLeaveRequests();
+  useNotificationFocus(!!requests);
   const createLeave = useCreateLeaveRequest();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
@@ -171,7 +173,7 @@ export default function EmployeeLeave() {
               </TableHeader>
               <TableBody>
                 {requests.map((r) => (
-                  <TableRow key={r.id}>
+                  <TableRow key={r.id} id={`focus-${r.id}`}>
                     <TableCell className="capitalize">{r.type}</TableCell>
                     <TableCell>
                       {new Date(r.startDate).toLocaleDateString()} – {new Date(r.endDate).toLocaleDateString()}

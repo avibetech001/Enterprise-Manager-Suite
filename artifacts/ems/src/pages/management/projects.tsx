@@ -1,3 +1,4 @@
+import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -87,6 +88,7 @@ const emptyForm: FormState = {
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
   const { data: projects, isLoading } = useListProjects();
+  useNotificationFocus(!!projects);
   const { data: employees } = useListEmployees();
   const { data: departments } = useListDepartments();
   const createProject = useCreateProject();
@@ -266,7 +268,7 @@ export default function ProjectsPage() {
       ) : projects && projects.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <Card key={p.id} className="flex flex-col">
+            <Card key={p.id} id={`focus-${p.id}`} className="flex flex-col">
               <CardContent className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
