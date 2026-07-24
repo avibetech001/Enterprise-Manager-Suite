@@ -5,7 +5,14 @@ import {
 } from '@workspace/api-zod';
 import { Router, type IRouter, type Request, type Response } from 'express';
 import { and, eq } from 'drizzle-orm';
-import { db, projectsTable, chatMessagesTable, employmentInfoTable } from '@workspace/db';
+import {
+  db,
+  projectsTable,
+  chatMessagesTable,
+  employmentInfoTable,
+  employeeProfilesTable,
+  usersTable,
+} from '@workspace/db';
 
 import {
   ObjectNotFoundError,
@@ -160,6 +167,20 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           allowed = emp?.departmentId === chatMsg.departmentId;
         }
       }
+    }
+    if (!allowed) {
+      // Profile photos: any signed-in user in the same company may view them.
+      const [photoOwner] = await db
+        .select({ id: employeeProfilesTable.userId })
+        .from(employeeProfilesTable)
+        .innerJoin(usersTable, eq(usersTable.id, employeeProfilesTable.userId))
+        .where(
+          and(
+            eq(employeeProfilesTable.profilePhotoUrl, objectPath),
+            eq(usersTable.companyId, me.companyId),
+          ),
+        );
+      allowed = Boolean(photoOwner);
     }
     if (!allowed) {
       res.status(404).json({ error: 'Object not found' });

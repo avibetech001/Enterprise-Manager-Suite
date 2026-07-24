@@ -1,3 +1,4 @@
+import { photoSrc } from "@/lib/photo";
 import { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
@@ -326,7 +327,7 @@ export default function EmployeesPage() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border border-border bg-muted">
-                          <AvatarImage src={emp.profilePhotoUrl || undefined} />
+                          <AvatarImage src={photoSrc(emp.profilePhotoUrl)} />
                           <AvatarFallback>{emp.firstName[0]}{emp.lastName[0]}</AvatarFallback>
                         </Avatar>
                         <div>

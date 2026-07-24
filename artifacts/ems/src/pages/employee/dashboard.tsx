@@ -1,5 +1,11 @@
+import { photoSrc } from "@/lib/photo";
 import { Link } from "wouter";
-import { useGetMyProfile, useGetMySummary } from "@workspace/api-client-react";
+import {
+  useGetMyProfile,
+  useGetMySummary,
+  useListMyAppraisals,
+} from "@workspace/api-client-react";
+import { ScoreStars } from "@/pages/management/appraisals";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -16,6 +22,13 @@ import {
 export default function EmployeeDashboard() {
   const { data: profile, isLoading: profileLoading } = useGetMyProfile();
   const { data: summary, isLoading: summaryLoading } = useGetMySummary();
+  const { data: appraisals } = useListMyAppraisals();
+
+  const allScores = (appraisals ?? []).flatMap((a) => a.ratings.map((r) => r.score));
+  const avgRating =
+    allScores.length > 0
+      ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
+      : null;
 
   if (profileLoading || summaryLoading) {
     return (
@@ -72,14 +85,24 @@ export default function EmployeeDashboard() {
     <div className="p-6 max-w-6xl mx-auto space-y-6">
       <div className="flex items-center gap-4">
         <Avatar className="h-16 w-16 border-2 border-border">
-          <AvatarImage src={profile.profilePhotoUrl || undefined} />
+          <AvatarImage src={photoSrc(profile.profilePhotoUrl)} />
           <AvatarFallback className="text-xl">
             {profile.firstName[0]}
             {profile.lastName[0]}
           </AvatarFallback>
         </Avatar>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.firstName}</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.firstName}</h1>
+            {avgRating !== null && (
+              <span className="inline-flex items-center gap-1.5">
+                <ScoreStars score={Math.round(avgRating)} />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {avgRating.toFixed(1)}
+                </span>
+              </span>
+            )}
+          </div>
           <div className="text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
             <Badge variant="outline">{profile.employeeCode}</Badge>
             {profile.employment.jobTitle && <span>{profile.employment.jobTitle}</span>}

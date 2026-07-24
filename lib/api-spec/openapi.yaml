@@ -1888,6 +1888,36 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /chat/groups/{groupId}/messages/{messageId}:
+    delete:
+      operationId: deleteChatMessage
+      tags: [chat]
+      summary: Delete a chat message (sender or management)
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageDeleteResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /appraisals:
     get:
       operationId: listAppraisals
@@ -2076,9 +2106,24 @@ components:
           type: array
           items:
             type: integer
+        kind:
+          type: string
+        replyToId:
+          type: ["integer", "null"]
+        replyToBody:
+          type: ["string", "null"]
+        replyToUserName:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time
+
+    ChatMessageDeleteResult:
+      type: object
+      required: [ok]
+      properties:
+        ok:
+          type: boolean
 
     ChatMessageInput:
       type: object
@@ -2095,6 +2140,13 @@ components:
           type: array
           items:
             type: integer
+        mentionAll:
+          type: boolean
+        replyToId:
+          type: integer
+        kind:
+          type: string
+          enum: [text, voice]
 
     HealthStatus:
       type: object
@@ -2684,6 +2736,8 @@ components:
           type: string
         message:
           type: string
+        link:
+          type: ["string", "null"]
         readAt:
           type: ["string", "null"]
           format: date-time

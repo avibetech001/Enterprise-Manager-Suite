@@ -274,7 +274,9 @@ router.get(
       GetMySummaryResponse.parse({
         attendanceToday: attendanceRows[0] ?? null,
         leaveBalance: balance,
-        activeProjects: projects.filter((p) => p.status === "active").length,
+        // Count every project the employee is on that isn't finished
+        // (planning, active, on_hold) so the dashboard reflects real workload.
+        activeProjects: projects.filter((p) => p.status !== "completed").length,
         pendingFundRequests: funds.length,
         pendingRequisitions: reqs.length,
         announcements,

@@ -19,7 +19,10 @@ import {
 } from "@/components/ui/form";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Briefcase, Mail, Phone, MapPin, Edit2, User, AlertCircle } from "lucide-react";
+import { Briefcase, Mail, Phone, MapPin, Edit2, User, AlertCircle, Camera } from "lucide-react";
+import { useRef } from "react";
+import { useUpload } from "@workspace/object-storage-web";
+import { photoSrc } from "@/lib/photo";
 
 const updateProfileSchema = z.object({
   phone: z.string().min(1, "Phone is required"),
@@ -49,6 +52,32 @@ export default function MyProfile() {
   const { data: profile, isLoading } = useGetMyProfile();
   const updateProfile = useUpdateMyProfile();
   const [isEditing, setIsEditing] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const { uploadFile, isUploading } = useUpload({
+    onError: (err) => toast.error("Upload failed", { description: err.message }),
+  });
+
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file.");
+      return;
+    }
+    const res = await uploadFile(file);
+    if (!res) return;
+    updateProfile.mutate(
+      { data: { profilePhotoUrl: res.objectPath } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetMyProfileQueryKey() });
+          toast.success("Profile photo updated");
+        },
+        onError: () => toast.error("Failed to save profile photo"),
+      },
+    );
+  };
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(updateProfileSchema),
@@ -123,10 +152,29 @@ export default function MyProfile() {
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16 border-2 border-border">
-            <AvatarImage src={profile.profilePhotoUrl || undefined} />
-            <AvatarFallback className="text-xl">{profile.firstName[0]}{profile.lastName[0]}</AvatarFallback>
-          </Avatar>
+          <div className="relative">
+            <Avatar className="h-16 w-16 border-2 border-border">
+              <AvatarImage src={photoSrc(profile.profilePhotoUrl)} />
+              <AvatarFallback className="text-xl">{profile.firstName[0]}{profile.lastName[0]}</AvatarFallback>
+            </Avatar>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handlePhotoChange}
+            />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={isUploading || updateProfile.isPending}
+              className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center border-2 border-background shadow-sm disabled:opacity-60"
+              title="Upload profile picture"
+              aria-label="Upload profile picture"
+            >
+              <Camera className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <div>
             <h1 className="text-3xl font-bold tracking-tight">{profile.fullName}</h1>
             <div className="text-muted-foreground flex items-center gap-2 mt-1">

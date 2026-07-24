@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListChatGroups,
   useListChatMessages,
   useListChatGroupMembers,
   useSendChatMessage,
+  useDeleteChatMessage,
   getListChatMessagesQueryKey,
   useGetCurrentSession,
+  type ChatMessage,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
 import { Card, CardContent } from "@/components/ui/card";
@@ -32,12 +35,55 @@ import {
   Building2,
   Users,
   FileText,
+  Reply,
+  Trash2,
+  Mic,
+  Square,
 } from "lucide-react";
+
+// Render message text with clickable links.
+const URL_RE = /(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/gi;
+function Linkify({ text }: { text: string }) {
+  const parts = text.split(URL_RE);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (i % 2 === 1) {
+          const href = part.startsWith("http") ? part : `https://${part}`;
+          return (
+            <a
+              key={i}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="underline break-all"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {part}
+            </a>
+          );
+        }
+        return <span key={i}>{part}</span>;
+      })}
+    </>
+  );
+}
 
 export default function TeamChatPage() {
   const { data: session } = useGetCurrentSession();
   const { data: groups } = useListChatGroups();
-  const [activeGroupId, setActiveGroupId] = useState<string | null>(null);
+  const search = useSearch();
+  const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
+    // Support deep links from notifications: ...chat?group=dept-3
+    return new URLSearchParams(window.location.search).get("group");
+  });
+
+  // Stay in sync with the URL: opening another chat notification while
+  // already on this page must switch to the newly linked group.
+  useEffect(() => {
+    const linked = new URLSearchParams(search).get("group");
+    if (linked) setActiveGroupId(linked);
+  }, [search]);
 
   const activeGroup = groups?.find((g) => g.id === activeGroupId) || null;
 
@@ -59,6 +105,7 @@ export default function TeamChatPage() {
           groupId={activeGroup.id}
           groupName={activeGroup.name}
           myUserId={session?.user?.id}
+          isManagement={session?.user?.role !== "employee"}
         />
       </div>
     );
@@ -112,14 +159,173 @@ export default function TeamChatPage() {
   );
 }
 
+// A single message bubble with swipe-to-reply, reply preview, delete, voice
+// notes, and clickable links.
+function MessageBubble({
+  m,
+  mine,
+  canDelete,
+  onReply,
+  onDelete,
+}: {
+  m: ChatMessage;
+  mine: boolean;
+  canDelete: boolean;
+  onReply: () => void;
+  onDelete: () => void;
+}) {
+  const [dragX, setDragX] = useState(0);
+  const startX = useRef<number | null>(null);
+  const triggered = useRef(false);
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    startX.current = e.clientX;
+    triggered.current = false;
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (startX.current == null) return;
+    const dx = Math.max(0, Math.min(72, e.clientX - startX.current));
+    setDragX(dx);
+    if (dx >= 56 && !triggered.current) {
+      triggered.current = true;
+    }
+  };
+  const endDrag = () => {
+    if (triggered.current) onReply();
+    startX.current = null;
+    triggered.current = false;
+    setDragX(0);
+  };
+
+  const fileUrl = m.filePath
+    ? `${import.meta.env.BASE_URL}api/storage${m.filePath}`
+    : null;
+
+  return (
+    <div className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}>
+      {mine && (
+        <span className="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
+          <ActionButtons canDelete={canDelete} onReply={onReply} onDelete={onDelete} />
+        </span>
+      )}
+      <div
+        className={`max-w-[80%] rounded-lg px-3 py-2 text-sm select-none touch-pan-y ${
+          mine ? "bg-primary text-primary-foreground" : "bg-muted"
+        }`}
+        style={{
+          transform: dragX ? `translateX(${dragX}px)` : undefined,
+          transition: dragX ? undefined : "transform 150ms ease",
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={() => startX.current != null && endDrag()}
+      >
+        {!mine && (
+          <p className="text-xs font-medium mb-0.5 opacity-80">{m.userName}</p>
+        )}
+        {m.replyToId != null && (
+          <div
+            className={`mb-1.5 rounded border-l-2 px-2 py-1 text-xs ${
+              mine
+                ? "border-primary-foreground/50 bg-primary-foreground/10"
+                : "border-primary/50 bg-background/60"
+            }`}
+          >
+            <p className="font-medium">{m.replyToUserName || "Deleted"}</p>
+            <p className="truncate opacity-80">{m.replyToBody || "Message"}</p>
+          </div>
+        )}
+        {m.body && (
+          <p className="whitespace-pre-wrap break-words select-text">
+            <Linkify text={m.body} />
+          </p>
+        )}
+        {fileUrl && m.kind === "voice" ? (
+          <audio controls preload="none" src={fileUrl} className="mt-1 max-w-full h-9" />
+        ) : (
+          fileUrl && (
+            <a
+              href={fileUrl}
+              target="_blank"
+              rel="noreferrer"
+              className={`mt-1 flex items-center gap-1.5 text-xs underline break-all ${
+                mine ? "text-primary-foreground" : "text-foreground"
+              }`}
+            >
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              {m.fileName || "Attachment"}
+            </a>
+          )
+        )}
+        <p className={`text-[10px] mt-1 ${mine ? "opacity-70" : "text-muted-foreground"}`}>
+          {new Date(m.createdAt).toLocaleString([], {
+            month: "short",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}
+        </p>
+      </div>
+      {!mine && (
+        <span className="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
+          <ActionButtons canDelete={canDelete} onReply={onReply} onDelete={onDelete} />
+        </span>
+      )}
+      {/* Mobile: always-visible small actions */}
+      <span className="flex sm:hidden gap-0.5">
+        <ActionButtons canDelete={canDelete} onReply={onReply} onDelete={onDelete} />
+      </span>
+    </div>
+  );
+}
+
+function ActionButtons({
+  canDelete,
+  onReply,
+  onDelete,
+}: {
+  canDelete: boolean;
+  onReply: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onReply}
+        className="p-1 rounded text-muted-foreground hover:text-foreground"
+        title="Reply"
+        aria-label="Reply"
+      >
+        <Reply className="h-3.5 w-3.5" />
+      </button>
+      {canDelete && (
+        <button
+          type="button"
+          onClick={onDelete}
+          className="p-1 rounded text-muted-foreground hover:text-destructive"
+          title="Delete"
+          aria-label="Delete message"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      )}
+    </>
+  );
+}
+
 function GroupChat({
   groupId,
   groupName,
   myUserId,
+  isManagement,
 }: {
   groupId: string;
   groupName: string;
   myUserId?: number;
+  isManagement: boolean;
 }) {
   const queryClient = useQueryClient();
   const { data: messages } = useListChatMessages(groupId, {
@@ -130,12 +336,18 @@ function GroupChat({
   });
   const { data: members } = useListChatGroupMembers(groupId);
   const sendMessage = useSendChatMessage();
+  const deleteMessage = useDeleteChatMessage();
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<{
     objectPath: string;
     fileName: string;
   } | null>(null);
   const [mentionIds, setMentionIds] = useState<number[]>([]);
+  const [mentionAll, setMentionAll] = useState(false);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { uploadFile, isUploading } = useUpload({
@@ -146,6 +358,18 @@ function GroupChat({
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages?.length]);
 
+  // Stop the recorder if the user leaves the chat while recording.
+  useEffect(() => {
+    return () => {
+      recorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({
+      queryKey: getListChatMessagesQueryKey(groupId),
+    });
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -155,6 +379,11 @@ function GroupChat({
   };
 
   const handleTag = (userIdStr: string) => {
+    if (userIdStr === "__all__") {
+      setMentionAll(true);
+      setText((t) => (t ? `${t.replace(/\s$/, "")} @all ` : "@all "));
+      return;
+    }
     const userId = Number(userIdStr);
     const member = members?.find((m) => m.id === userId);
     if (!member) return;
@@ -162,17 +391,23 @@ function GroupChat({
     setText((t) => (t ? `${t.replace(/\s$/, "")} @${member.fullName} ` : `@${member.fullName} `));
   };
 
-  const handleSend = () => {
-    const body = text.trim();
-    if (!body && !attachment) return;
+  const doSend = (
+    payload: {
+      body?: string;
+      objectPath?: string;
+      fileName?: string;
+      kind?: "text" | "voice";
+    },
+    onDone?: () => void,
+  ) => {
     sendMessage.mutate(
       {
         groupId,
         data: {
-          body: body || undefined,
-          objectPath: attachment?.objectPath,
-          fileName: attachment?.fileName,
+          ...payload,
           mentionUserIds: mentionIds.length ? mentionIds : undefined,
+          mentionAll: mentionAll || undefined,
+          replyToId: replyTo?.id,
         },
       },
       {
@@ -180,9 +415,10 @@ function GroupChat({
           setText("");
           setAttachment(null);
           setMentionIds([]);
-          queryClient.invalidateQueries({
-            queryKey: getListChatMessagesQueryKey(groupId),
-          });
+          setMentionAll(false);
+          setReplyTo(null);
+          invalidate();
+          onDone?.();
         },
         onError: (err: any) => {
           toast.error("Failed to send message", {
@@ -193,6 +429,74 @@ function GroupChat({
     );
   };
 
+  const handleSend = () => {
+    const body = text.trim();
+    if (!body && !attachment) return;
+    doSend({
+      body: body || undefined,
+      objectPath: attachment?.objectPath,
+      fileName: attachment?.fileName,
+    });
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm")
+        ? "audio/webm"
+        : undefined;
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      chunksRef.current = [];
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = async () => {
+        stream.getTracks().forEach((t) => t.stop());
+        setIsRecording(false);
+        const blob = new Blob(chunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        if (blob.size === 0) return;
+        const ext = (recorder.mimeType || "audio/webm").includes("mp4")
+          ? "m4a"
+          : "webm";
+        const file = new File([blob], `voice-note.${ext}`, { type: blob.type });
+        const res = await uploadFile(file);
+        if (res) {
+          doSend({
+            objectPath: res.objectPath,
+            fileName: "Voice note",
+            kind: "voice",
+          });
+        }
+      };
+      recorderRef.current = recorder;
+      recorder.start();
+      setIsRecording(true);
+    } catch {
+      toast.error("Microphone unavailable", {
+        description: "Allow microphone access to send voice notes.",
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    recorderRef.current?.stop();
+  };
+
+  const handleDelete = (m: ChatMessage) => {
+    if (!window.confirm("Delete this message?")) return;
+    deleteMessage.mutate(
+      { groupId, messageId: m.id },
+      {
+        onSuccess: () => invalidate(),
+        onError: () => toast.error("Failed to delete message"),
+      },
+    );
+  };
+
+  const memberOptions = useMemo(() => members || [], [members]);
+
   return (
     <Card className="flex flex-col h-[70vh]">
       <div className="border-b px-4 py-3">
@@ -200,7 +504,7 @@ function GroupChat({
           <MessagesSquare className="h-4 w-4" />
           {groupName}
           <span className="text-xs text-muted-foreground font-normal">
-            {members?.length || 0} {(members?.length || 0) === 1 ? "member" : "members"}
+            {memberOptions.length} {memberOptions.length === 1 ? "member" : "members"}
           </span>
         </p>
       </div>
@@ -215,39 +519,14 @@ function GroupChat({
           {(messages || []).map((m) => {
             const mine = m.userId === myUserId;
             return (
-              <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm ${
-                    mine ? "bg-primary text-primary-foreground" : "bg-muted"
-                  }`}
-                >
-                  {!mine && (
-                    <p className="text-xs font-medium mb-0.5 opacity-80">{m.userName}</p>
-                  )}
-                  {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
-                  {m.filePath && (
-                    <a
-                      href={`${import.meta.env.BASE_URL}api/storage${m.filePath}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={`mt-1 flex items-center gap-1.5 text-xs underline break-all ${
-                        mine ? "text-primary-foreground" : "text-foreground"
-                      }`}
-                    >
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
-                      {m.fileName || "Attachment"}
-                    </a>
-                  )}
-                  <p className={`text-[10px] mt-1 ${mine ? "opacity-70" : "text-muted-foreground"}`}>
-                    {new Date(m.createdAt).toLocaleString([], {
-                      month: "short",
-                      day: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </p>
-                </div>
-              </div>
+              <MessageBubble
+                key={m.id}
+                m={m}
+                mine={mine}
+                canDelete={mine || isManagement}
+                onReply={() => setReplyTo(m)}
+                onDelete={() => handleDelete(m)}
+              />
             );
           })}
           <div ref={bottomRef} />
@@ -255,6 +534,20 @@ function GroupChat({
       </ScrollArea>
 
       <div className="border-t p-3 space-y-2">
+        {replyTo && (
+          <div className="flex items-start gap-2 rounded border-l-2 border-primary bg-muted/60 px-2.5 py-1.5 text-xs">
+            <Reply className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="font-medium">{replyTo.userName}</p>
+              <p className="truncate text-muted-foreground">
+                {replyTo.body || replyTo.fileName || "Attachment"}
+              </p>
+            </div>
+            <button onClick={() => setReplyTo(null)} aria-label="Cancel reply">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
         {attachment && (
           <Badge variant="secondary" className="gap-1.5 max-w-full">
             <Paperclip className="h-3 w-3 shrink-0" />
@@ -263,6 +556,12 @@ function GroupChat({
               <X className="h-3 w-3" />
             </button>
           </Badge>
+        )}
+        {isRecording && (
+          <div className="flex items-center gap-2 text-xs text-destructive">
+            <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+            Recording... tap the stop button to send.
+          </div>
         )}
         <div className="flex items-center gap-2">
           <input
@@ -276,11 +575,22 @@ function GroupChat({
             variant="outline"
             size="icon"
             className="shrink-0"
-            disabled={isUploading}
+            disabled={isUploading || isRecording}
             onClick={() => fileInputRef.current?.click()}
             title="Attach a file"
           >
             <Paperclip className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant={isRecording ? "destructive" : "outline"}
+            size="icon"
+            className="shrink-0"
+            disabled={isUploading || sendMessage.isPending}
+            onClick={isRecording ? stopRecording : startRecording}
+            title={isRecording ? "Stop and send" : "Record a voice note"}
+          >
+            {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
           <Select value="" onValueChange={handleTag}>
             <SelectTrigger className="w-10 px-0 justify-center shrink-0 [&>svg:last-child]:hidden" title="Tag someone">
@@ -288,7 +598,8 @@ function GroupChat({
               <SelectValue placeholder="" />
             </SelectTrigger>
             <SelectContent>
-              {(members || []).map((m) => (
+              <SelectItem value="__all__">@ Everyone</SelectItem>
+              {memberOptions.map((m) => (
                 <SelectItem key={m.id} value={String(m.id)}>
                   {m.fullName}
                 </SelectItem>
@@ -312,7 +623,7 @@ function GroupChat({
             size="icon"
             className="shrink-0"
             onClick={handleSend}
-            disabled={sendMessage.isPending || isUploading || (!text.trim() && !attachment)}
+            disabled={sendMessage.isPending || isUploading || isRecording || (!text.trim() && !attachment)}
             title="Send"
           >
             <Send className="h-4 w-4" />

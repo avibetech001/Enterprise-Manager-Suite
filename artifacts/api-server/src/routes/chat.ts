@@ -13,6 +13,10 @@ import {
   ListChatGroupMembersResponseItem as ChatMember,
   ListChatMessagesResponseItem as ChatMessage,
 } from "@workspace/api-zod";
+import {
+  DeleteChatMessageResponse,
+} from "@workspace/api-zod";
+import { alias } from "drizzle-orm/pg-core";
 import { requireAuth } from "../lib/auth";
 import { notify } from "../lib/notify";
 
@@ -137,6 +141,8 @@ router.get(
       group.departmentId === null
         ? isNull(chatMessagesTable.departmentId)
         : eq(chatMessagesTable.departmentId, group.departmentId);
+    const replyMsg = alias(chatMessagesTable, "reply_msg");
+    const replyUser = alias(usersTable, "reply_user");
     const rows = await db
       .select({
         id: chatMessagesTable.id,
@@ -145,11 +151,18 @@ router.get(
         filePath: chatMessagesTable.filePath,
         fileName: chatMessagesTable.fileName,
         mentionUserIds: chatMessagesTable.mentionUserIds,
+        kind: chatMessagesTable.kind,
+        replyToId: chatMessagesTable.replyToId,
+        replyToBody: replyMsg.body,
+        replyToFileName: replyMsg.fileName,
+        replyToUserName: replyUser.fullName,
         createdAt: chatMessagesTable.createdAt,
         userName: usersTable.fullName,
       })
       .from(chatMessagesTable)
       .innerJoin(usersTable, eq(usersTable.id, chatMessagesTable.userId))
+      .leftJoin(replyMsg, eq(replyMsg.id, chatMessagesTable.replyToId))
+      .leftJoin(replyUser, eq(replyUser.id, replyMsg.userId))
       .where(and(eq(chatMessagesTable.companyId, me.companyId), scope))
       .orderBy(desc(chatMessagesTable.createdAt))
       .limit(200);
@@ -165,6 +178,11 @@ router.get(
           filePath: r.filePath,
           fileName: r.fileName,
           mentionUserIds: r.mentionUserIds,
+          kind: r.kind,
+          replyToId: r.replyToId,
+          replyToBody:
+            r.replyToId != null ? r.replyToBody || r.replyToFileName || "" : null,
+          replyToUserName: r.replyToId != null ? r.replyToUserName : null,
           createdAt: r.createdAt.toISOString(),
         }),
       ),
@@ -198,36 +216,71 @@ router.post(
       return;
     }
 
-    // Only allow tagging users who are actually members of this group:
-    // company group = everyone in the company; department group = only
-    // users assigned to that department.
-    let mentionIds: number[] = [];
-    const requested = [...new Set(parsed.data.mentionUserIds || [])];
-    if (requested.length) {
-      const valid = await db
+    // Validate the replied-to message belongs to this same group.
+    let replyToId: number | null = null;
+    let replyPreview: { body: string; userName: string | null } | null = null;
+    if (parsed.data.replyToId != null) {
+      const scope =
+        group.departmentId === null
+          ? isNull(chatMessagesTable.departmentId)
+          : eq(chatMessagesTable.departmentId, group.departmentId);
+      const [target] = await db
         .select({
-          id: usersTable.id,
-          role: usersTable.role,
-          departmentId: employmentInfoTable.departmentId,
+          id: chatMessagesTable.id,
+          body: chatMessagesTable.body,
+          fileName: chatMessagesTable.fileName,
+          userName: usersTable.fullName,
         })
-        .from(usersTable)
-        .leftJoin(
-          employmentInfoTable,
-          eq(employmentInfoTable.userId, usersTable.id),
-        )
+        .from(chatMessagesTable)
+        .innerJoin(usersTable, eq(usersTable.id, chatMessagesTable.userId))
         .where(
           and(
-            eq(usersTable.companyId, me.companyId),
-            inArray(usersTable.id, requested),
+            eq(chatMessagesTable.id, parsed.data.replyToId),
+            eq(chatMessagesTable.companyId, me.companyId),
+            scope,
           ),
         );
-      mentionIds = valid
+      if (!target) {
+        res.status(400).json({ error: "Replied-to message not found." });
+        return;
+      }
+      replyToId = target.id;
+      replyPreview = {
+        body: target.body || target.fileName || "",
+        userName: target.userName,
+      };
+    }
+
+    // Group members (used for @all and mention validation): company group =
+    // everyone in the company; department group = only users in that dept.
+    const allMembers = await db
+      .select({
+        id: usersTable.id,
+        departmentId: employmentInfoTable.departmentId,
+      })
+      .from(usersTable)
+      .leftJoin(
+        employmentInfoTable,
+        eq(employmentInfoTable.userId, usersTable.id),
+      )
+      .where(eq(usersTable.companyId, me.companyId));
+    const memberIds = new Set(
+      allMembers
         .filter(
           (u) =>
             group.departmentId === null ||
             u.departmentId === group.departmentId,
         )
-        .map((v) => v.id);
+        .map((u) => u.id),
+    );
+
+    const mentionAll = parsed.data.mentionAll === true;
+    let mentionIds: number[];
+    if (mentionAll) {
+      mentionIds = [...memberIds];
+    } else {
+      const requested = [...new Set(parsed.data.mentionUserIds || [])];
+      mentionIds = requested.filter((id) => memberIds.has(id));
     }
 
     const [inserted] = await db
@@ -240,16 +293,22 @@ router.post(
         filePath: objectPath,
         fileName: objectPath ? parsed.data.fileName || "file" : null,
         mentionUserIds: mentionIds,
+        replyToId,
+        kind: parsed.data.kind === "voice" ? "voice" : "text",
       })
       .returning();
 
+    const link = `chat?group=${group.id}`;
     for (const uid of mentionIds) {
       if (uid === me.id) continue;
       void notify(
         me.companyId,
         "chat_mention",
-        `${me.fullName} mentioned you in the "${group.name}" chat.`,
+        mentionAll
+          ? `${me.fullName} mentioned everyone in the "${group.name}" chat.`
+          : `${me.fullName} mentioned you in the "${group.name}" chat.`,
         uid,
+        link,
       );
     }
 
@@ -263,9 +322,54 @@ router.post(
         filePath: inserted.filePath,
         fileName: inserted.fileName,
         mentionUserIds: inserted.mentionUserIds,
+        kind: inserted.kind,
+        replyToId,
+        replyToBody: replyPreview ? replyPreview.body : null,
+        replyToUserName: replyPreview ? replyPreview.userName : null,
         createdAt: inserted.createdAt.toISOString(),
       }),
     );
+  },
+);
+
+// Delete a message: the sender can delete their own; management can delete any
+// message in a group they have access to.
+router.delete(
+  "/chat/groups/:groupId/messages/:messageId",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const group = await resolveGroup(me, req.params.groupId as string);
+    if (!group) {
+      res.status(404).json({ error: "Group not found." });
+      return;
+    }
+    const messageId = Number(req.params.messageId);
+    const scope =
+      group.departmentId === null
+        ? isNull(chatMessagesTable.departmentId)
+        : eq(chatMessagesTable.departmentId, group.departmentId);
+    const [msg] = await db
+      .select({ id: chatMessagesTable.id, userId: chatMessagesTable.userId })
+      .from(chatMessagesTable)
+      .where(
+        and(
+          eq(chatMessagesTable.id, messageId),
+          eq(chatMessagesTable.companyId, me.companyId),
+          scope,
+        ),
+      );
+    if (!msg) {
+      res.status(404).json({ error: "Message not found." });
+      return;
+    }
+    const isManagement = me.role !== "employee";
+    if (msg.userId !== me.id && !isManagement) {
+      res.status(404).json({ error: "Message not found." });
+      return;
+    }
+    await db.delete(chatMessagesTable).where(eq(chatMessagesTable.id, msg.id));
+    res.json(DeleteChatMessageResponse.parse({ ok: true }));
   },
 );
 

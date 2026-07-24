@@ -869,6 +869,7 @@ export const ListNotificationsResponseItem = zod.object({
   "companyId": zod.number(),
   "type": zod.string(),
   "message": zod.string(),
+  "link": zod.string().nullish(),
   "readAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -887,6 +888,7 @@ export const MarkNotificationReadResponse = zod.object({
   "companyId": zod.number(),
   "type": zod.string(),
   "message": zod.string(),
+  "link": zod.string().nullish(),
   "readAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -2326,6 +2328,10 @@ export const ListChatMessagesResponseItem = zod.object({
   "filePath": zod.string().nullable(),
   "fileName": zod.string().nullable(),
   "mentionUserIds": zod.array(zod.number()),
+  "kind": zod.string().optional(),
+  "replyToId": zod.number().nullish(),
+  "replyToBody": zod.string().nullish(),
+  "replyToUserName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
 })
 export const ListChatMessagesResponse = zod.array(ListChatMessagesResponseItem)
@@ -2346,7 +2352,10 @@ export const SendChatMessageBody = zod.object({
   "body": zod.string().optional(),
   "objectPath": zod.string().min(1).optional(),
   "fileName": zod.string().min(1).optional(),
-  "mentionUserIds": zod.array(zod.number()).optional()
+  "mentionUserIds": zod.array(zod.number()).optional(),
+  "mentionAll": zod.boolean().optional(),
+  "replyToId": zod.number().optional(),
+  "kind": zod.enum(['text', 'voice']).optional()
 })
 
 export const SendChatMessageResponse = zod.object({
@@ -2358,7 +2367,24 @@ export const SendChatMessageResponse = zod.object({
   "filePath": zod.string().nullable(),
   "fileName": zod.string().nullable(),
   "mentionUserIds": zod.array(zod.number()),
+  "kind": zod.string().optional(),
+  "replyToId": zod.number().nullish(),
+  "replyToBody": zod.string().nullish(),
+  "replyToUserName": zod.string().nullish(),
   "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a chat message (sender or management)
+ */
+export const DeleteChatMessageParams = zod.object({
+  "groupId": zod.coerce.string(),
+  "messageId": zod.coerce.number()
+})
+
+export const DeleteChatMessageResponse = zod.object({
+  "ok": zod.boolean()
 })
 
 

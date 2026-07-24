@@ -5,6 +5,7 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { ChatMessageInputKind } from './chatMessageInputKind';
 
 export interface ChatMessageInput {
   body?: string;
@@ -13,4 +14,7 @@ export interface ChatMessageInput {
   /** @minLength 1 */
   fileName?: string;
   mentionUserIds?: number[];
+  mentionAll?: boolean;
+  replyToId?: number;
+  kind?: ChatMessageInputKind;
 }

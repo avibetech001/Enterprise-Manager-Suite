@@ -1,3 +1,4 @@
+import { photoSrc } from "@/lib/photo";
 import { useState, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
@@ -301,7 +302,7 @@ export default function EmployeeProfilePage() {
                   <Skeleton className="h-24 w-24 rounded-full" />
                 ) : (
                   <Avatar className="h-24 w-24 border-4 border-background shadow-sm">
-                    <AvatarImage src={employee?.profilePhotoUrl || undefined} />
+                    <AvatarImage src={photoSrc(employee?.profilePhotoUrl)} />
                     <AvatarFallback className="text-3xl">{employee?.firstName[0]}{employee?.lastName[0]}</AvatarFallback>
                   </Avatar>
                 )}

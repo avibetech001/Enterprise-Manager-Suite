@@ -7,4 +7,5 @@
 - [Object storage session auth](object-storage-session-auth.md) — storage routes use req.currentUser (no Replit Auth); downloads must be company-scoped via projects.submission_file_path; no `format: uri` in openapi.
 - [Web push notifications](web-push-notifications.md) — push rides on notify(); VAPID keys in singleton DB row; unsubscribe user-scoped; iPhone needs Add to Home Screen.
 - [shadcn form.tsx pitfall](shadcn-form-pitfall.md) — bare FormItem/FormLabel outside a FormField render prop crashes the page; use plain div + Label for read-only rows.
-- [Chat groups design](chat-groups-design.md) — chat membership is derived (company + department + management), no members table; all access via resolveGroup(); attachments authorized in storage route.
+- [Chat groups design](chat-groups-design.md) — chat membership is derived (company + department, NO management bypass), no members table; all access via resolveGroup(); attachments authorized in storage route.
+- [Notification deep links](notification-links.md) — notifications store role-agnostic `link` suffix; bell prefixes by role; pages must react to useSearch() for query params.

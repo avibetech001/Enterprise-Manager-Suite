@@ -127,6 +127,7 @@ router.post(
         inserted.periodLabel ? ` for ${inserted.periodLabel}` : ""
       }.`,
       input.userId,
+      "appraisals",
     );
 
     res.json(

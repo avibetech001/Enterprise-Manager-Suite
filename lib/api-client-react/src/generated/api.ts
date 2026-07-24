@@ -32,6 +32,7 @@ import type {
   ChatGroup,
   ChatMember,
   ChatMessage,
+  ChatMessageDeleteResult,
   ChatMessageInput,
   CheckInInput,
   CheckOutInput,
@@ -6280,6 +6281,79 @@ export const useSendChatMessage = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getSendChatMessageMutationOptions(options));
+    }
+
+export const getDeleteChatMessageUrl = (groupId: string,
+    messageId: number,) => {
+
+
+
+
+  return `/api/chat/groups/${groupId}/messages/${messageId}`
+}
+
+/**
+ * @summary Delete a chat message (sender or management)
+ */
+export const deleteChatMessage = async (groupId: string,
+    messageId: number, options?: RequestInit): Promise<ChatMessageDeleteResult> => {
+
+  return customFetch<ChatMessageDeleteResult>(getDeleteChatMessageUrl(groupId,messageId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteChatMessageMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatMessage>>, TError,{groupId: string;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteChatMessage>>, TError,{groupId: string;messageId: number}, TContext> => {
+
+const mutationKey = ['deleteChatMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteChatMessage>>, {groupId: string;messageId: number}> = (props) => {
+          const {groupId,messageId} = props ?? {};
+
+          return  deleteChatMessage(groupId,messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteChatMessageMutationResult = NonNullable<Awaited<ReturnType<typeof deleteChatMessage>>>
+
+    export type DeleteChatMessageMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a chat message (sender or management)
+ */
+export const useDeleteChatMessage = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteChatMessage>>, TError,{groupId: string;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteChatMessage>>,
+        TError,
+        {groupId: string;messageId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteChatMessageMutationOptions(options));
     }
 
 export const getListAppraisalsUrl = () => {

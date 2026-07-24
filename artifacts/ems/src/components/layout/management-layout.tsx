@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
+import { UnreadNavBadge } from "./unread-nav-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 export function ManagementLayout({ children }: { children: ReactNode }) {
@@ -55,6 +56,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                       <Link href="/dashboard">
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Dashboard</span>
+                        <UnreadNavBadge />
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

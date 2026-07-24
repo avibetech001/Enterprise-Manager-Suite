@@ -1,3 +1,4 @@
+import { photoSrc } from "@/lib/photo";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -101,7 +102,7 @@ export default function EmployeeSettings() {
     );
   };
 
-  const previewUrl = photoUrl.trim() || profile?.profilePhotoUrl || undefined;
+  const previewUrl = photoUrl.trim() || photoSrc(profile?.profilePhotoUrl);
 
   return (
     <div className="p-6 max-w-3xl mx-auto space-y-6">

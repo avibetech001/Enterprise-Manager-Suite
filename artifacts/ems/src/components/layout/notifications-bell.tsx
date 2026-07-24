@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useListNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, getListNotificationsQueryKey } from "@workspace/api-client-react";
+import { useLocation } from "wouter";
+import { useListNotifications, useMarkNotificationRead, useMarkAllNotificationsRead, getListNotificationsQueryKey, useGetCurrentSession } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Bell, CheckCircle2, UserPlus, FileEdit, Circle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,12 +16,40 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
 
+// Map notification types without an explicit link to a sensible page.
+const TYPE_FALLBACK_LINK: Record<string, string> = {
+  chat_mention: "chat",
+  appraisal: "appraisals",
+};
+
 export function NotificationsBell() {
   const [isOpen, setIsOpen] = useState(false);
+  const [, navigate] = useLocation();
   const queryClient = useQueryClient();
+  const { data: session } = useGetCurrentSession();
   const { data: notifications } = useListNotifications();
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
+
+  const isEmployee = session?.user?.role === "employee";
+
+  // Notification links are stored role-agnostic (e.g. "chat?group=dept-3");
+  // prefix them with the right base path for the current viewer.
+  const targetFor = (n: { link?: string | null; type: string }): string | null => {
+    const suffix = n.link || TYPE_FALLBACK_LINK[n.type] || null;
+    if (!suffix) return null;
+    return (isEmployee ? "/employee/" : "/") + suffix;
+  };
+
+  const handleOpen = (notification: { id: number; readAt: string | null; link?: string | null; type: string }) => {
+    if (!notification.readAt) handleMarkRead(notification.id);
+    const target = targetFor(notification);
+    if (target) {
+      setIsOpen(false);
+      // wouter's navigate drops query strings from the matcher but keeps the URL.
+      navigate(target);
+    }
+  };
 
   const unreadCount = notifications?.filter((n) => !n.readAt).length || 0;
   const recentNotifications = notifications?.slice(0, 10) || [];
@@ -86,7 +115,7 @@ export function NotificationsBell() {
                 <DropdownMenuItem 
                   key={notification.id} 
                   className={`flex items-start gap-3 p-3 cursor-pointer ${!notification.readAt ? "bg-muted/50" : ""}`}
-                  onClick={() => !notification.readAt && handleMarkRead(notification.id)}
+                  onClick={() => handleOpen(notification)}
                 >
                   <div className="mt-0.5">
                     {getIconForType(notification.type)}

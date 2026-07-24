@@ -20,6 +20,8 @@ export const chatMessagesTable = pgTable("chat_messages", {
   body: text("body").notNull().default(""),
   filePath: text("file_path"),
   fileName: text("file_name"),
+  replyToId: integer("reply_to_id"),
+  kind: text("kind").notNull().default("text"),
   mentionUserIds: integer("mention_user_ids").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

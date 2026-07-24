@@ -67,8 +67,27 @@ export interface ChatMessage {
   filePath: string | null;
   fileName: string | null;
   mentionUserIds: number[];
+  kind?: string;
+  /** @nullable */
+  replyToId?: number | null;
+  /** @nullable */
+  replyToBody?: string | null;
+  /** @nullable */
+  replyToUserName?: string | null;
   createdAt: string;
 }
+
+export interface ChatMessageDeleteResult {
+  ok: boolean;
+}
+
+export type ChatMessageInputKind = typeof ChatMessageInputKind[keyof typeof ChatMessageInputKind];
+
+
+export const ChatMessageInputKind = {
+  text: 'text',
+  voice: 'voice',
+} as const;
 
 export interface ChatMessageInput {
   body?: string;
@@ -77,6 +96,9 @@ export interface ChatMessageInput {
   /** @minLength 1 */
   fileName?: string;
   mentionUserIds?: number[];
+  mentionAll?: boolean;
+  replyToId?: number;
+  kind?: ChatMessageInputKind;
 }
 
 export interface HealthStatus {
@@ -458,6 +480,8 @@ export interface Notification {
   companyId: number;
   type: string;
   message: string;
+  /** @nullable */
+  link?: string | null;
   /** @nullable */
   readAt: string | null;
   createdAt: string;

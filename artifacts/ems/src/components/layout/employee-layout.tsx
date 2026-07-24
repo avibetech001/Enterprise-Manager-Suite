@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
+import { UnreadNavBadge } from "./unread-nav-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV = [
@@ -110,6 +111,7 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
                           <Link href={item.href}>
                             <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
+                            {item.href === "/employee" && <UnreadNavBadge />}
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

@@ -15,5 +15,12 @@ export interface ChatMessage {
   filePath: string | null;
   fileName: string | null;
   mentionUserIds: number[];
+  kind?: string;
+  /** @nullable */
+  replyToId?: number | null;
+  /** @nullable */
+  replyToBody?: string | null;
+  /** @nullable */
+  replyToUserName?: string | null;
   createdAt: Date;
 }
