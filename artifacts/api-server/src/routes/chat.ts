@@ -19,6 +19,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth } from "../lib/auth";
 import { notify } from "../lib/notify";
+import { sendPush } from "../lib/push";
 
 const router: IRouter = Router();
 
@@ -299,6 +300,24 @@ router.post(
       .returning();
 
     const link = `chat?group=${group.id}`;
+
+    // Push a phone notification for every new message to the other group
+    // members (mentioned members get a richer mention notification below).
+    const mentionSet = new Set(mentionIds);
+    const preview =
+      body ||
+      (parsed.data.kind === "voice"
+        ? "Voice note"
+        : inserted.fileName || "Attachment");
+    for (const uid of memberIds) {
+      if (uid === me.id || mentionSet.has(uid)) continue;
+      void sendPush(
+        me.companyId,
+        `${me.fullName} in "${group.name}": ${preview}`,
+        uid,
+      );
+    }
+
     for (const uid of mentionIds) {
       if (uid === me.id) continue;
       void notify(

@@ -18,12 +18,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { toast } from "sonner";
 import {
   MessagesSquare,
@@ -345,6 +343,7 @@ function GroupChat({
   const [mentionIds, setMentionIds] = useState<number[]>([]);
   const [mentionAll, setMentionAll] = useState(false);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [tagOpen, setTagOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -592,20 +591,52 @@ function GroupChat({
           >
             {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-          <Select value="" onValueChange={handleTag}>
-            <SelectTrigger className="w-10 px-0 justify-center shrink-0 [&>svg:last-child]:hidden" title="Tag someone">
-              <AtSign className="h-4 w-4" />
-              <SelectValue placeholder="" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">@ Everyone</SelectItem>
-              {memberOptions.map((m) => (
-                <SelectItem key={m.id} value={String(m.id)}>
-                  {m.fullName}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Popover open={tagOpen} onOpenChange={setTagOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="shrink-0"
+                title="Tag someone"
+              >
+                <AtSign className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="start"
+              className="w-60 p-1"
+              // Keep the list inside the screen and scrollable on phones.
+              collisionPadding={8}
+            >
+              <div className="max-h-[45vh] overflow-y-auto overscroll-contain">
+                <button
+                  type="button"
+                  className="w-full rounded px-2.5 py-2 text-left text-sm font-medium hover:bg-accent"
+                  onClick={() => {
+                    handleTag("__all__");
+                    setTagOpen(false);
+                  }}
+                >
+                  @ Everyone
+                </button>
+                {memberOptions.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    className="w-full rounded px-2.5 py-2 text-left text-sm hover:bg-accent"
+                    onClick={() => {
+                      handleTag(String(m.id));
+                      setTagOpen(false);
+                    }}
+                  >
+                    {m.fullName}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
           <Input
             value={text}
             onChange={(e) => setText(e.target.value)}
