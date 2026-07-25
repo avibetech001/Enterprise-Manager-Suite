@@ -83,8 +83,15 @@ export function NotificationsBell() {
     });
   };
 
+  // Opening the bell counts as "seeing" the notifications: clear the unread
+  // counter (nav badge + app icon number) once the panel closes.
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open && unreadCount > 0) handleMarkAllRead();
+  };
+
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
           <Bell className="h-4 w-4" />
