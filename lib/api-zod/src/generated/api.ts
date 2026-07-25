@@ -654,6 +654,16 @@ export const UpdateEmployeeResponse = zod.object({
 
 
 /**
+ * @summary Permanently delete an employee and all their records
+ */
+export const DeleteEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteEmployeeResponse = zod.void()
+
+
+/**
  * @summary Set a new password for an employee account
  */
 export const ResetEmployeePasswordParams = zod.object({

@@ -1747,6 +1747,77 @@ export const useUpdateEmployee = <TError = ErrorType<ErrorResponse>,
       return useMutation(getUpdateEmployeeMutationOptions(options));
     }
 
+export const getDeleteEmployeeUrl = (id: number,) => {
+
+
+
+
+  return `/api/employees/${id}`
+}
+
+/**
+ * @summary Permanently delete an employee and all their records
+ */
+export const deleteEmployee = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteEmployeeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteEmployeeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployee>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEmployee>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteEmployee'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEmployee>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteEmployee(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEmployee>>>
+
+    export type DeleteEmployeeMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Permanently delete an employee and all their records
+ */
+export const useDeleteEmployee = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEmployee>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEmployee>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEmployeeMutationOptions(options));
+    }
+
 export const getResetEmployeePasswordUrl = (id: number,) => {
 
 

@@ -9,6 +9,7 @@ import {
   useResendEmployeeActivation,
   useArchiveEmployee,
   useRestoreEmployee,
+  useDeleteEmployee,
   useListDepartments,
   useListEmployees,
   useGetEmployeeOverview,
@@ -52,8 +53,19 @@ import {
   RefreshCw,
   Ban,
   CheckCircle2,
-  Copy
+  Copy,
+  Trash2,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -91,8 +103,10 @@ export default function EmployeeProfilePage() {
   const resendActivation = useResendEmployeeActivation();
   const archiveEmployee = useArchiveEmployee();
   const restoreEmployee = useRestoreEmployee();
+  const deleteEmployee = useDeleteEmployee();
 
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [activationLink, setActivationLink] = useState<string | null>(null);
   const [isEditFormOpen, setIsEditFormOpen] = useState(false);
@@ -151,6 +165,20 @@ export default function EmployeeProfilePage() {
         }
       });
     }
+  };
+
+  const handleDelete = () => {
+    deleteEmployee.mutate({ id }, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+        queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
+        toast.success("Employee permanently deleted");
+        setLocation("/employees");
+      },
+      onError: (err: any) => {
+        toast.error("Failed to delete employee", { description: err?.data?.error || "Unknown error" });
+      },
+    });
   };
 
   const handleResetPassword = () => {
@@ -286,6 +314,12 @@ export default function EmployeeProfilePage() {
                 ) : (
                   <><Archive className="mr-2 h-4 w-4" /> Archive Employee</>
                 )}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => setDeleteDialogOpen(true)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete Permanently
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -612,6 +646,30 @@ export default function EmployeeProfilePage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Employee Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this employee permanently?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove {employee?.fullName || "this employee"} and
+              all their records — attendance, leave, chats, appraisals and more.
+              This cannot be undone. If you just want to hide them, use Archive instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleteEmployee.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {deleteEmployee.isPending ? "Deleting..." : "Delete Permanently"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

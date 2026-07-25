@@ -24,6 +24,7 @@ import {
   ResetEmployeePasswordParams,
   ResetEmployeePasswordBody,
   ArchiveEmployeeParams,
+  DeleteEmployeeParams,
   ArchiveEmployeeResponse,
   RestoreEmployeeParams,
   RestoreEmployeeResponse,
@@ -754,6 +755,36 @@ router.post(
       .where(eq(usersTable.id, user.id))
       .returning();
     res.json(ArchiveEmployeeResponse.parse(await loadFullEmployee(updated!)));
+  },
+);
+
+router.delete(
+  "/employees/:id",
+  requireAuth,
+  requireManagementPermission("manage_employees"),
+  async (req, res): Promise<void> => {
+    const params = DeleteEmployeeParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: params.error.message });
+      return;
+    }
+    const user = await findCompanyEmployee(
+      params.data.id,
+      req.currentUser!.companyId,
+    );
+    if (!user) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    // Permanent removal; related records (attendance, leave, chat messages,
+    // appraisals, ...) are removed via ON DELETE CASCADE.
+    await db.delete(usersTable).where(eq(usersTable.id, user.id));
+    await notifyCompany(
+      req.currentUser!.companyId,
+      "employee_deleted",
+      `${user.fullName}'s employee record was permanently deleted.`,
+    );
+    res.sendStatus(204);
   },
 );
 
