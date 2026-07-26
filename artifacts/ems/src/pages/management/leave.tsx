@@ -55,6 +55,7 @@ export default function LeavePage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [reviewTarget, setReviewTarget] = useState<{ req: LeaveRequestWithUser; action: "approved" | "rejected" } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [detailTarget, setDetailTarget] = useState<LeaveRequestWithUser | null>(null);
 
   const filtered = requests?.filter((r) => filter === "all" || r.status === filter) ?? [];
 
@@ -129,7 +130,12 @@ export default function LeavePage() {
               <TableBody>
                 {filtered.length > 0 ? (
                   filtered.map((r) => (
-                    <TableRow key={r.id} id={`focus-${r.id}`}>
+                    <TableRow
+                      key={r.id}
+                      id={`focus-${r.id}`}
+                      className="cursor-pointer"
+                      onClick={() => setDetailTarget(r)}
+                    >
                       <TableCell className="font-medium">{r.employeeName}</TableCell>
                       <TableCell className="capitalize">{r.type}</TableCell>
                       <TableCell className="text-sm">
@@ -141,7 +147,10 @@ export default function LeavePage() {
                       <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground">
                         {r.reviewNote || "—"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         {r.status === "pending" ? (
                           <div className="flex gap-2 justify-end">
                             <Button size="sm" variant="outline" onClick={() => openReview(r, "approved")}>
@@ -174,6 +183,74 @@ export default function LeavePage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Full details: tap a row to read the complete reason and review note. */}
+      <Dialog open={!!detailTarget} onOpenChange={(o) => !o && setDetailTarget(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Leave Request Details</DialogTitle>
+          </DialogHeader>
+          {detailTarget && (
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-medium">{detailTarget.employeeName}</span>
+                {statusBadge(detailTarget.status)}
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="capitalize">{detailTarget.type}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Days</p>
+                  <p>{detailTarget.days}</p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-xs text-muted-foreground">Dates</p>
+                  <p>{detailTarget.startDate} → {detailTarget.endDate}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Reason</p>
+                <p className="whitespace-pre-wrap break-words rounded bg-muted/60 p-3">
+                  {detailTarget.reason || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Review Note</p>
+                <p className="whitespace-pre-wrap break-words rounded bg-muted/60 p-3">
+                  {detailTarget.reviewNote || "—"}
+                </p>
+              </div>
+              {detailTarget.status === "pending" && (
+                <div className="flex gap-2 justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDetailTarget(null);
+                      openReview(detailTarget, "approved");
+                    }}
+                  >
+                    Approve
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700"
+                    onClick={() => {
+                      setDetailTarget(null);
+                      openReview(detailTarget, "rejected");
+                    }}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!reviewTarget} onOpenChange={(o) => !o && setReviewTarget(null)}>
         <DialogContent>
