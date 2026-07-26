@@ -1658,7 +1658,7 @@ paths:
     post:
       operationId: createPost
       tags: [content]
-      summary: Create a company post (management)
+      summary: Create a company post (knowledge base open to all; announcements/policies management-only)
       requestBody:
         required: true
         content:
@@ -3522,6 +3522,8 @@ components:
         body:
           type: string
           minLength: 1
+        link:
+          type: ["string", "null"]
 
     CompanyPost:
       type: object
@@ -3539,6 +3541,8 @@ components:
           type: string
         body:
           type: string
+        link:
+          type: ["string", "null"]
         createdAt:
           type: string
           format: date-time

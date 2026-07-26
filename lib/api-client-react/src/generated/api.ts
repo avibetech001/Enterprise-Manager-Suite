@@ -5466,7 +5466,7 @@ export const getCreatePostUrl = () => {
 }
 
 /**
- * @summary Create a company post (management)
+ * @summary Create a company post (knowledge base open to all; announcements/policies management-only)
  */
 export const createPost = async (companyPostInput: CompanyPostInput, options?: RequestInit): Promise<CompanyPost> => {
 
@@ -5515,7 +5515,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreatePostMutationError = ErrorType<unknown>
 
     /**
- * @summary Create a company post (management)
+ * @summary Create a company post (knowledge base open to all; announcements/policies management-only)
  */
 export const useCreatePost = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPost>>, TError,{data: BodyType<CompanyPostInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

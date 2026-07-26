@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Trash2, Plus } from "lucide-react";
+import { BookOpen, Trash2, Plus, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import {
@@ -41,6 +41,25 @@ export function categoryLabel(value: string | null | undefined): string | null {
   return KB_CATEGORIES.find((c) => c.value === value)?.label ?? null;
 }
 
+export function normalizeUrl(raw: string): string {
+  return /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+}
+
+export function PostLink({ link }: { link: string | null | undefined }) {
+  if (!link) return null;
+  return (
+    <a
+      href={normalizeUrl(link)}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center gap-1 mt-3 text-sm text-primary underline underline-offset-2 break-all"
+    >
+      <LinkIcon className="h-3.5 w-3.5 shrink-0" />
+      {link}
+    </a>
+  );
+}
+
 export default function ManagementKnowledgeBase() {
   const queryClient = useQueryClient();
   const queryKey = getListPostsQueryKey(PARAMS);
@@ -52,6 +71,7 @@ export default function ManagementKnowledgeBase() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState<string>("none");
+  const [link, setLink] = useState("");
 
   const submit = () => {
     if (!title.trim() || !body.trim()) {
@@ -68,6 +88,7 @@ export default function ManagementKnowledgeBase() {
               : (category as "idea_dump" | "samples" | "strategy"),
           title: title.trim(),
           body: body.trim(),
+          link: link.trim() || null,
         },
       },
       {
@@ -76,6 +97,7 @@ export default function ManagementKnowledgeBase() {
           setTitle("");
           setBody("");
           setCategory("none");
+          setLink("");
           setShowForm(false);
           queryClient.invalidateQueries({ queryKey });
         },
@@ -156,6 +178,15 @@ export default function ManagementKnowledgeBase() {
                 placeholder="Write the article content..."
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="kb-link">Link (optional)</Label>
+              <Input
+                id="kb-link"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="e.g. an Instagram post — https://www.instagram.com/p/..."
+              />
+            </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setShowForm(false)}>
                 Cancel
@@ -198,6 +229,7 @@ export default function ManagementKnowledgeBase() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.body}</p>
+                    <PostLink link={p.link} />
                     <div className="flex items-center justify-between mt-4">
                       <span className="text-xs text-muted-foreground">
                         Updated {format(new Date(p.updatedAt), "PPP")}

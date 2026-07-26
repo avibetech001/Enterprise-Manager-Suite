@@ -78,6 +78,9 @@ export default function EmployeeLeave() {
   useNotificationFocus(!!requests);
   const createLeave = useCreateLeaveRequest();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [detailTarget, setDetailTarget] = useState<
+    NonNullable<typeof requests>[number] | null
+  >(null);
 
   const form = useForm<LeaveFormValues>({
     resolver: zodResolver(leaveSchema),
@@ -173,7 +176,12 @@ export default function EmployeeLeave() {
               </TableHeader>
               <TableBody>
                 {requests.map((r) => (
-                  <TableRow key={r.id} id={`focus-${r.id}`}>
+                  <TableRow
+                    key={r.id}
+                    id={`focus-${r.id}`}
+                    className="cursor-pointer"
+                    onClick={() => setDetailTarget(r)}
+                  >
                     <TableCell className="capitalize">{r.type}</TableCell>
                     <TableCell>
                       {new Date(r.startDate).toLocaleDateString()} – {new Date(r.endDate).toLocaleDateString()}
@@ -192,6 +200,50 @@ export default function EmployeeLeave() {
           )}
         </CardContent>
       </Card>
+
+      {/* Full details: tap a row to read the complete reason and review note. */}
+      <Dialog open={!!detailTarget} onOpenChange={(o) => !o && setDetailTarget(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Leave Request Details</DialogTitle>
+          </DialogHeader>
+          {detailTarget && (
+            <div className="space-y-4 text-sm">
+              <div className="flex items-center justify-between gap-2">
+                <span className="capitalize font-medium">{detailTarget.type} leave</span>
+                <Badge variant="outline" className={statusBadgeClass(detailTarget.status)}>
+                  {detailTarget.status}
+                </Badge>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs text-muted-foreground">Dates</p>
+                  <p>
+                    {new Date(detailTarget.startDate).toLocaleDateString()} –{" "}
+                    {new Date(detailTarget.endDate).toLocaleDateString()}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Days</p>
+                  <p>{detailTarget.days}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Reason</p>
+                <p className="whitespace-pre-wrap break-words rounded bg-muted/60 p-3">
+                  {detailTarget.reason || "—"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground mb-1">Review Note</p>
+                <p className="whitespace-pre-wrap break-words rounded bg-muted/60 p-3">
+                  {detailTarget.reviewNote || "—"}
+                </p>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>

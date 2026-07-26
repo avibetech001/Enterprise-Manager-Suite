@@ -1081,6 +1081,7 @@ export const GetMySummaryResponse = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
+  "link": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }))
@@ -2118,6 +2119,7 @@ export const ListPostsResponseItem = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
+  "link": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -2125,7 +2127,7 @@ export const ListPostsResponse = zod.array(ListPostsResponseItem)
 
 
 /**
- * @summary Create a company post (management)
+ * @summary Create a company post (knowledge base open to all; announcements/policies management-only)
  */
 
 
@@ -2135,7 +2137,8 @@ export const CreatePostBody = zod.object({
   "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
   "category": zod.union([zod.literal('idea_dump'),zod.literal('samples'),zod.literal('strategy'),zod.literal(null)]).nullish(),
   "title": zod.string().min(1),
-  "body": zod.string().min(1)
+  "body": zod.string().min(1),
+  "link": zod.string().nullish()
 })
 
 export const CreatePostResponse = zod.object({
@@ -2145,6 +2148,7 @@ export const CreatePostResponse = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
+  "link": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -2165,7 +2169,8 @@ export const UpdatePostBody = zod.object({
   "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
   "category": zod.union([zod.literal('idea_dump'),zod.literal('samples'),zod.literal('strategy'),zod.literal(null)]).nullish(),
   "title": zod.string().min(1),
-  "body": zod.string().min(1)
+  "body": zod.string().min(1),
+  "link": zod.string().nullish()
 })
 
 export const UpdatePostResponse = zod.object({
@@ -2175,6 +2180,7 @@ export const UpdatePostResponse = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
+  "link": zod.string().nullish(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })

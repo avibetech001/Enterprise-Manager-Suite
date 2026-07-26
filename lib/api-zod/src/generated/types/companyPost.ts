@@ -14,6 +14,8 @@ export interface CompanyPost {
   category: string | null;
   title: string;
   body: string;
+  /** @nullable */
+  link?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

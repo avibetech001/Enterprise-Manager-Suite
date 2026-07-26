@@ -230,6 +230,7 @@ export const companyPostsTable = pgTable("company_posts", {
   category: text("category"),
   title: text("title").notNull(),
   body: text("body").notNull(),
+  link: text("link"),
   createdBy: integer("created_by").references(() => usersTable.id, {
     onDelete: "set null",
   }),

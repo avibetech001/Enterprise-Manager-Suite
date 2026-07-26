@@ -1,25 +1,85 @@
 import { useState } from "react";
-import { useListPosts } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useListPosts,
+  useCreatePost,
+  getListPostsQueryKey,
+} from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { BookOpen, Search } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { BookOpen, Search, Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { KB_CATEGORIES, categoryLabel } from "@/pages/management/knowledge-base";
+import { toast } from "sonner";
+import {
+  KB_CATEGORIES,
+  categoryLabel,
+  PostLink,
+} from "@/pages/management/knowledge-base";
+
+const PARAMS = { kind: "knowledge_base" as const };
 
 export default function EmployeeKnowledgeBase() {
-  const { data: posts, isLoading } = useListPosts(
-    { kind: "knowledge_base" },
-    { query: { queryKey: ["/api/posts", { kind: "knowledge_base" }] } }
-  );
+  const queryClient = useQueryClient();
+  const queryKey = getListPostsQueryKey(PARAMS);
+  const { data: posts, isLoading } = useListPosts(PARAMS, { query: { queryKey } });
+  const createPost = useCreatePost();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+
+  const [showForm, setShowForm] = useState(false);
+  const [title, setTitle] = useState("");
+  const [body, setBody] = useState("");
+  const [formCategory, setFormCategory] = useState<string>("none");
+  const [link, setLink] = useState("");
+
+  const submit = () => {
+    if (!title.trim() || !body.trim()) {
+      toast.error("Title and content are required.");
+      return;
+    }
+    createPost.mutate(
+      {
+        data: {
+          kind: "knowledge_base",
+          category:
+            formCategory === "none"
+              ? null
+              : (formCategory as "idea_dump" | "samples" | "strategy"),
+          title: title.trim(),
+          body: body.trim(),
+          link: link.trim() || null,
+        },
+      },
+      {
+        onSuccess: () => {
+          toast.success("Article published.");
+          setTitle("");
+          setBody("");
+          setFormCategory("none");
+          setLink("");
+          setShowForm(false);
+          queryClient.invalidateQueries({ queryKey });
+        },
+        onError: () => toast.error("Failed to publish article."),
+      }
+    );
+  };
 
   const filtered = (posts || []).filter((p) => {
     if (category && p.category !== category) return false;
@@ -30,13 +90,81 @@ export default function EmployeeKnowledgeBase() {
 
   return (
     <div className="p-6 max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <BookOpen className="h-7 w-7 text-muted-foreground" />
-          Knowledge Base
-        </h1>
-        <p className="text-muted-foreground mt-1">Guides, resources and helpful articles.</p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <BookOpen className="h-7 w-7 text-muted-foreground" />
+            Knowledge Base
+          </h1>
+          <p className="text-muted-foreground mt-1">Guides, resources and helpful articles.</p>
+        </div>
+        <Button onClick={() => setShowForm((v) => !v)}>
+          <Plus className="h-4 w-4 mr-2" />
+          New Article
+        </Button>
       </div>
+
+      {showForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">New Article</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="ekb-title">Title</Label>
+              <Input
+                id="ekb-title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="e.g. Content idea for next week"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Category</Label>
+              <Select value={formCategory} onValueChange={setFormCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No category</SelectItem>
+                  {KB_CATEGORIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>
+                      {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ekb-body">Content</Label>
+              <Textarea
+                id="ekb-body"
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={6}
+                placeholder="Write the article content..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ekb-link">Link (optional)</Label>
+              <Input
+                id="ekb-link"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="e.g. an Instagram post — https://www.instagram.com/p/..."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowForm(false)}>
+                Cancel
+              </Button>
+              <Button onClick={submit} disabled={createPost.isPending}>
+                Publish
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -102,6 +230,7 @@ export default function EmployeeKnowledgeBase() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <p className="text-sm text-muted-foreground whitespace-pre-wrap">{p.body}</p>
+                    <PostLink link={p.link} />
                   </AccordionContent>
                 </AccordionItem>
               ))}

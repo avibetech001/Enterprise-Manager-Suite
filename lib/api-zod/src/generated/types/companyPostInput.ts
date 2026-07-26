@@ -16,4 +16,6 @@ export interface CompanyPostInput {
   title: string;
   /** @minLength 1 */
   body: string;
+  /** @nullable */
+  link?: string | null;
 }

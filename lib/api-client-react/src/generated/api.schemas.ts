@@ -564,6 +564,8 @@ export interface CompanyPost {
   category: string | null;
   title: string;
   body: string;
+  /** @nullable */
+  link?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1029,6 +1031,8 @@ export interface CompanyPostInput {
   title: string;
   /** @minLength 1 */
   body: string;
+  /** @nullable */
+  link?: string | null;
 }
 
 export type ListEmployeesParams = {

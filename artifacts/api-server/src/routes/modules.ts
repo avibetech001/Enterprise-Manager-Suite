@@ -1653,6 +1653,19 @@ router.post(
 // Company posts (announcements, policies, knowledge base)
 // ---------------------------------------------------------------------------
 
+function isValidPostLink(raw: string): boolean {
+  const trimmed = raw.trim();
+  if (!trimmed) return true;
+  if (trimmed.length > 2048) return false;
+  const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    const url = new URL(withScheme);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
 router.get("/posts", requireAuth, async (req, res): Promise<void> => {
   const kind = typeof req.query.kind === "string" ? req.query.kind : null;
   const conditions = [
@@ -1670,11 +1683,23 @@ router.get("/posts", requireAuth, async (req, res): Promise<void> => {
 router.post(
   "/posts",
   requireAuth,
-  requireManagementPermission("manage_content"),
+  async (req, res, next): Promise<void> => {
+    // Knowledge base articles can be added by anyone in the company;
+    // announcements and policies remain management-only.
+    if (req.body?.kind === "knowledge_base") {
+      next();
+      return;
+    }
+    requireManagementPermission("manage_content")(req, res, next);
+  },
   async (req, res): Promise<void> => {
     const parsed = CreatePostBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: "Title and content are required." });
+      return;
+    }
+    if (parsed.data.link && !isValidPostLink(parsed.data.link)) {
+      res.status(400).json({ error: "Link must be a valid http(s) URL." });
       return;
     }
     const me = req.currentUser!;
@@ -1686,6 +1711,7 @@ router.post(
         category: parsed.data.category ?? null,
         title: parsed.data.title,
         body: parsed.data.body,
+        link: parsed.data.link?.trim() || null,
         createdBy: me.id,
       })
       .returning();
@@ -1725,6 +1751,10 @@ router.patch(
       res.status(400).json({ error: "Invalid post update." });
       return;
     }
+    if (parsed.data.link && !isValidPostLink(parsed.data.link)) {
+      res.status(400).json({ error: "Link must be a valid http(s) URL." });
+      return;
+    }
     const [post] = await db
       .update(companyPostsTable)
       .set({
@@ -1732,6 +1762,7 @@ router.patch(
         category: parsed.data.category ?? null,
         title: parsed.data.title,
         body: parsed.data.body,
+        link: parsed.data.link?.trim() || null,
       })
       .where(
         and(
