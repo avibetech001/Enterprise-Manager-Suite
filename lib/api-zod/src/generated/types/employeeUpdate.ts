@@ -27,6 +27,8 @@ export interface EmployeeUpdate {
   phone?: string;
   /** @nullable */
   personalEmail?: string | null;
+  /** @minLength 1 */
+  companyEmail?: string;
   /** @nullable */
   residentialAddress?: string | null;
   /** @nullable */

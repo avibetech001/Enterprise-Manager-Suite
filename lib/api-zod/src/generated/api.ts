@@ -588,6 +588,7 @@ export const UpdateEmployeeParams = zod.object({
 
 
 
+
 export const UpdateEmployeeBody = zod.object({
   "firstName": zod.string().min(1).optional(),
   "lastName": zod.string().min(1).optional(),
@@ -597,6 +598,7 @@ export const UpdateEmployeeBody = zod.object({
   "nationality": zod.string().nullish(),
   "phone": zod.string().min(1).optional(),
   "personalEmail": zod.string().nullish(),
+  "companyEmail": zod.string().min(1).optional(),
   "residentialAddress": zod.string().nullish(),
   "state": zod.string().nullish(),
   "city": zod.string().nullish(),

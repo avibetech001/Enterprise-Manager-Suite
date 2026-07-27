@@ -236,8 +236,12 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
                 <FormField control={form.control} name="companyEmail" render={({ field }) => (
                   <FormItem className="md:col-span-2">
                     <FormLabel>Company Email</FormLabel>
-                    <FormControl><Input type="email" {...field} placeholder="Auto-generated if left blank" /></FormControl>
-                    <FormDescription>Leave blank to auto-generate based on name.</FormDescription>
+                    <FormControl><Input type="email" {...field} placeholder={initialData ? "company email" : "Auto-generated if left blank"} /></FormControl>
+                    <FormDescription>
+                      {initialData
+                        ? "Changing this changes the email the employee logs in with."
+                        : "Leave blank to auto-generate based on name."}
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )} />

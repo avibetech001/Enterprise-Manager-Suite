@@ -543,6 +543,24 @@ router.patch(
       userChanges.fullName = fullName;
     }
     if (input.phone !== undefined) userChanges.phone = input.phone;
+    if (input.companyEmail !== undefined) {
+      const newEmail = input.companyEmail.trim().toLowerCase();
+      if (!newEmail) {
+        res.status(400).json({ error: "Company email cannot be empty." });
+        return;
+      }
+      if (newEmail !== user.email) {
+        const [existing] = await db
+          .select({ id: usersTable.id })
+          .from(usersTable)
+          .where(eq(usersTable.email, newEmail));
+        if (existing && existing.id !== user.id) {
+          res.status(409).json({ error: "Company email already in use." });
+          return;
+        }
+        userChanges.email = newEmail;
+      }
+    }
     if (input.accountStatus !== undefined)
       userChanges.status = input.accountStatus;
     await db.transaction(async (tx) => {
