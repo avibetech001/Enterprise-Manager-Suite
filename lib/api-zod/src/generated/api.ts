@@ -56,6 +56,7 @@ export const CompleteSetupResponse = zod.object({
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -91,6 +92,7 @@ export const ManagementLoginResponse = zod.object({
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -126,6 +128,7 @@ export const EmployeeLoginResponse = zod.object({
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -162,6 +165,7 @@ export const GetCurrentSessionResponse = zod.object({
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -452,6 +456,7 @@ export const ListEmployeesResponseItem = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -490,7 +495,8 @@ export const CreateEmployeeBody = zod.object({
   "jobTitle": zod.string().optional(),
   "employmentType": zod.enum(['full_time', 'part_time', 'contract', 'intern']).optional(),
   "startDate": zod.string().optional(),
-  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated']).optional()
+  "employmentStatus": zod.enum(['probation', 'active', 'on_leave', 'suspended', 'terminated']).optional(),
+  "canCreateProjects": zod.boolean().optional()
 })
 
 export const CreateEmployeeResponse = zod.object({
@@ -526,6 +532,7 @@ export const CreateEmployeeResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -571,6 +578,7 @@ export const GetEmployeeResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -599,6 +607,7 @@ export const UpdateEmployeeBody = zod.object({
   "phone": zod.string().min(1).optional(),
   "personalEmail": zod.string().nullish(),
   "companyEmail": zod.string().min(1).optional(),
+  "canCreateProjects": zod.boolean().optional(),
   "residentialAddress": zod.string().nullish(),
   "state": zod.string().nullish(),
   "city": zod.string().nullish(),
@@ -650,6 +659,7 @@ export const UpdateEmployeeResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -723,6 +733,7 @@ export const ArchiveEmployeeResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -768,6 +779,7 @@ export const RestoreEmployeeResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -809,6 +821,7 @@ export const GetMyProfileResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -868,6 +881,7 @@ export const UpdateMyProfileResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -990,6 +1004,7 @@ export const ResendEmployeeActivationResponse = zod.object({
 }),
   "accountStatus": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "archived": zod.boolean(),
+  "canCreateProjects": zod.boolean(),
   "activationLink": zod.string().nullable(),
   "createdAt": zod.coerce.date()
 })
@@ -1035,6 +1050,7 @@ export const ActivateEmployeeResponse = zod.object({
   "role": zod.enum(['super_admin', 'hr', 'employee']),
   "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
+  "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
 }),
   "company": zod.object({
@@ -1561,6 +1577,65 @@ export const ListMyProjectsResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 })
 export const ListMyProjectsResponse = zod.array(ListMyProjectsResponseItem)
+
+
+/**
+ * @summary Start a project (employee with the canCreateProjects capability)
+ */
+
+export const createMyProjectBodyProgressMin = 0;
+export const createMyProjectBodyProgressMax = 100;
+
+
+
+
+export const CreateMyProjectBody = zod.object({
+  "name": zod.string().min(1),
+  "description": zod.string().optional(),
+  "status": zod.enum(['planning', 'active', 'on_hold', 'completed']).optional(),
+  "startDate": zod.string().optional(),
+  "deadline": zod.string().optional(),
+  "progress": zod.number().min(createMyProjectBodyProgressMin).max(createMyProjectBodyProgressMax).optional(),
+  "urgent": zod.boolean().optional(),
+  "leadUserId": zod.number().nullish(),
+  "memberIds": zod.array(zod.number()).optional(),
+  "deliverables": zod.array(zod.object({
+  "title": zod.string().min(1),
+  "dueDate": zod.string().optional(),
+  "status": zod.enum(['pending', 'in_progress', 'done']).optional()
+})).optional()
+})
+
+export const CreateMyProjectResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**

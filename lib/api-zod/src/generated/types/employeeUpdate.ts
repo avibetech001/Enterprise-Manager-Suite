@@ -29,6 +29,7 @@ export interface EmployeeUpdate {
   personalEmail?: string | null;
   /** @minLength 1 */
   companyEmail?: string;
+  canCreateProjects?: boolean;
   /** @nullable */
   residentialAddress?: string | null;
   /** @nullable */

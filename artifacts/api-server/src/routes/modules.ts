@@ -34,6 +34,8 @@ import {
   CreateLeaveRequestResponse,
   CreatePostBody,
   CreatePostResponse,
+  CreateMyProjectBody,
+  CreateMyProjectResponse,
   CreateProjectBody,
   CreateProjectResponse,
   CreateRequisitionBody,
@@ -973,6 +975,64 @@ router.get(
     res.json(
       ListMyProjectsResponse.parse(await loadProjects(me.companyId, me.id)),
     );
+  },
+);
+
+router.post(
+  "/projects/me",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const me = req.currentUser!;
+    if (!me.canCreateProjects) {
+      res
+        .status(403)
+        .json({ error: "You are not allowed to start projects." });
+      return;
+    }
+    const parsed = CreateMyProjectBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Project name is required." });
+      return;
+    }
+    const { memberIds: rawMemberIds, deliverables, ...fields } = parsed.data;
+    const validatedMemberIds = await validateMemberIds(
+      me.companyId,
+      rawMemberIds,
+    );
+    // The creator always leads and is a member of their own project.
+    const memberIds = Array.from(
+      new Set([me.id, ...(validatedMemberIds ?? [])]),
+    );
+    const [project] = await db
+      .insert(projectsTable)
+      .values({
+        companyId: me.companyId,
+        name: fields.name,
+        description: fields.description ?? null,
+        status: fields.status ?? "planning",
+        startDate: fields.startDate || null,
+        deadline: fields.deadline || null,
+        progress: fields.progress ?? 0,
+        urgent: fields.urgent ?? false,
+        leadUserId: me.id,
+      })
+      .returning();
+    await syncProjectRelations(project.id, memberIds, deliverables);
+    for (const userId of memberIds) {
+      if (userId === me.id) continue;
+      await notify(
+        me.companyId,
+        "project_assigned",
+        `You have been assigned to the project "${project.name}".`,
+        userId,
+        `projects?id=${project.id}`,
+      );
+    }
+    const [full] = await loadProjects(me.companyId, me.id).then((all) =>
+      all.filter((p) => p.id === project.id),
+    );
+    res.status(201).json(CreateMyProjectResponse.parse(full));
   },
 );
 

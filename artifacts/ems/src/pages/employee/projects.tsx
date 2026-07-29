@@ -6,9 +6,18 @@ import {
   useUpdateMyProjectProgress,
   useSubmitMyProject,
   useDeleteMyProjectSubmission,
+  useCreateMyProject,
+  useGetCurrentSession,
   getListMyProjectsQueryKey,
   type ProjectDetail,
 } from "@workspace/api-client-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useUpload } from "@workspace/object-storage-web";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,7 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { FolderKanban, CalendarDays, Pencil, X, Upload, FileCheck2 } from "lucide-react";
+import { FolderKanban, CalendarDays, Pencil, X, Upload, FileCheck2, Plus } from "lucide-react";
 
 const PROJECT_STATUSES = ["planning", "active", "on_hold", "completed"] as const;
 const DELIVERABLE_STATUSES = ["pending", "in_progress", "done"] as const;
@@ -451,8 +460,123 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
   );
 }
 
+function NewProjectDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const queryClient = useQueryClient();
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [deadline, setDeadline] = useState("");
+
+  const createProject = useCreateMyProject({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getListMyProjectsQueryKey() });
+        toast.success("Project started", {
+          description: "Your new project has been created.",
+        });
+        setName("");
+        setDescription("");
+        setStartDate("");
+        setDeadline("");
+        onOpenChange(false);
+      },
+      onError: (err: any) => {
+        toast.error("Couldn't start project", {
+          description: err?.response?.data?.error || "Please try again.",
+        });
+      },
+    },
+  });
+
+  const handleCreate = () => {
+    if (!name.trim()) {
+      toast.error("Project name is required");
+      return;
+    }
+    createProject.mutate({
+      data: {
+        name: name.trim(),
+        ...(description.trim() ? { description: description.trim() } : {}),
+        ...(startDate ? { startDate } : {}),
+        ...(deadline ? { deadline } : {}),
+      },
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Start a New Project</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="np-name">Project name</Label>
+            <Input
+              id="np-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Client onboarding videos"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="np-desc">Description (optional)</Label>
+            <Textarea
+              id="np-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What is this project about?"
+              rows={3}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="np-start">Start date</Label>
+              <Input
+                id="np-start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="np-deadline">Deadline</Label>
+              <Input
+                id="np-deadline"
+                type="date"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            You will be the project lead. Management can add more team members later.
+          </p>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleCreate} disabled={createProject.isPending}>
+            {createProject.isPending ? "Creating..." : "Create Project"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function EmployeeProjects() {
   const { data: projects, isLoading } = useListMyProjects();
+  const { data: session } = useGetCurrentSession();
+  const canCreate = session?.user?.canCreateProjects === true;
+  const [newProjectOpen, setNewProjectOpen] = useState(false);
   useNotificationFocus(!!projects);
 
   if (isLoading) {
@@ -465,15 +589,26 @@ export default function EmployeeProjects() {
 
   return (
     <div className="p-6 max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-          <FolderKanban className="h-7 w-7 text-muted-foreground" />
-          My Projects
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Projects you are assigned to. Update the status, progress, and deliverables as you work.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <FolderKanban className="h-7 w-7 text-muted-foreground" />
+            My Projects
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Projects you are assigned to. Update the status, progress, and deliverables as you work.
+          </p>
+        </div>
+        {canCreate && (
+          <Button onClick={() => setNewProjectOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            New Project
+          </Button>
+        )}
       </div>
+      {canCreate && (
+        <NewProjectDialog open={newProjectOpen} onOpenChange={setNewProjectOpen} />
+      )}
 
       {!projects || projects.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-card">

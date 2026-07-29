@@ -114,6 +114,7 @@ function serializeEmployee(
     },
     accountStatus: user.status as "active" | "pending" | "inactive" | "suspended",
     archived: user.archived,
+    canCreateProjects: user.canCreateProjects,
     activationLink:
       user.status === "pending" && user.activationToken
         ? activationLinkFor(user.activationToken)
@@ -310,6 +311,7 @@ router.post(
           phone: input.phone,
           role: "employee",
           permissions: [],
+          canCreateProjects: input.canCreateProjects ?? false,
           status: "pending",
           archived: false,
           activationToken,
@@ -563,6 +565,8 @@ router.patch(
     }
     if (input.accountStatus !== undefined)
       userChanges.status = input.accountStatus;
+    if (input.canCreateProjects !== undefined)
+      userChanges.canCreateProjects = input.canCreateProjects;
     await db.transaction(async (tx) => {
       if (Object.keys(userChanges).length > 0) {
         await tx

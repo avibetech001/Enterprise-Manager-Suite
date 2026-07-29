@@ -33,4 +33,5 @@ export interface EmployeeInput {
   employmentType?: EmploymentType;
   startDate?: string;
   employmentStatus?: EmploymentStatus;
+  canCreateProjects?: boolean;
 }

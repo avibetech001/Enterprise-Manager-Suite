@@ -4048,6 +4048,77 @@ export function useListMyProjects<TData = Awaited<ReturnType<typeof listMyProjec
 
 
 
+export const getCreateMyProjectUrl = () => {
+
+
+
+
+  return `/api/projects/me`
+}
+
+/**
+ * @summary Start a project (employee with the canCreateProjects capability)
+ */
+export const createMyProject = async (projectInput: ProjectInput, options?: RequestInit): Promise<ProjectDetail> => {
+
+  return customFetch<ProjectDetail>(getCreateMyProjectUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(projectInput)
+  }
+);}
+
+
+
+
+
+export const getCreateMyProjectMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMyProject>>, TError,{data: BodyType<ProjectInput>}, TContext> => {
+
+const mutationKey = ['createMyProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMyProject>>, {data: BodyType<ProjectInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createMyProject(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateMyProjectMutationResult = NonNullable<Awaited<ReturnType<typeof createMyProject>>>
+    export type CreateMyProjectMutationBody = BodyType<ProjectInput>
+    export type CreateMyProjectMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Start a project (employee with the canCreateProjects capability)
+ */
+export const useCreateMyProject = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createMyProject>>,
+        TError,
+        {data: BodyType<ProjectInput>},
+        TContext
+      > => {
+      return useMutation(getCreateMyProjectMutationOptions(options));
+    }
+
 export const getRequestUploadUrlUrl = () => {
 
 

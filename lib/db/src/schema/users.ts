@@ -26,6 +26,8 @@ export const usersTable = pgTable("users", {
   // permission; employees have none. Stored as a text array of permission
   // keys (see PermissionKey in the OpenAPI spec).
   permissions: text("permissions").array().notNull().default([]),
+  // Employee-only capability: allows the employee to start (create) projects.
+  canCreateProjects: boolean("can_create_projects").notNull().default(false),
   status: text("status").notNull().default("active"),
   passwordHash: text("password_hash"),
   // Employee-only fields

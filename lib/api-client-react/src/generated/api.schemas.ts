@@ -204,6 +204,7 @@ export interface SessionUser {
   role: Role;
   permissions: PermissionKey[];
   status: UserStatus;
+  canCreateProjects: boolean;
   createdAt: string;
 }
 
@@ -386,6 +387,7 @@ export interface Employee {
   employment: EmploymentDetails;
   accountStatus: UserStatus;
   archived: boolean;
+  canCreateProjects: boolean;
   /** @nullable */
   activationLink: string | null;
   createdAt: string;
@@ -415,6 +417,7 @@ export interface EmployeeInput {
   employmentType?: EmploymentType;
   startDate?: string;
   employmentStatus?: EmploymentStatus;
+  canCreateProjects?: boolean;
 }
 
 export interface EmployeeUpdate {
@@ -436,6 +439,7 @@ export interface EmployeeUpdate {
   personalEmail?: string | null;
   /** @minLength 1 */
   companyEmail?: string;
+  canCreateProjects?: boolean;
   /** @nullable */
   residentialAddress?: string | null;
   /** @nullable */

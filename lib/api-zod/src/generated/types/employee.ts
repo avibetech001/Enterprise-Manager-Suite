@@ -40,6 +40,7 @@ export interface Employee {
   employment: EmploymentDetails;
   accountStatus: UserStatus;
   archived: boolean;
+  canCreateProjects: boolean;
   /** @nullable */
   activationLink: string | null;
   createdAt: Date;

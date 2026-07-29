@@ -1225,6 +1225,29 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/ProjectDetail"
+    post:
+      operationId: createMyProject
+      tags: [projects]
+      summary: Start a project (employee with the canCreateProjects capability)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "403":
+          description: Employee is not allowed to start projects
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /storage/uploads/request-url:
     post:
@@ -2282,7 +2305,7 @@ components:
     SessionUser:
       type: object
       required:
-        [id, companyId, fullName, email, phone, role, permissions, status, createdAt]
+        [id, companyId, fullName, email, phone, role, permissions, status, canCreateProjects, createdAt]
       properties:
         id:
           type: integer
@@ -2302,6 +2325,8 @@ components:
             $ref: "#/components/schemas/PermissionKey"
         status:
           $ref: "#/components/schemas/UserStatus"
+        canCreateProjects:
+          type: boolean
         createdAt:
           type: string
           format: date-time
@@ -2572,6 +2597,7 @@ components:
           employment,
           accountStatus,
           archived,
+          canCreateProjects,
           activationLink,
           createdAt,
         ]
@@ -2619,6 +2645,8 @@ components:
         accountStatus:
           $ref: "#/components/schemas/UserStatus"
         archived:
+          type: boolean
+        canCreateProjects:
           type: boolean
         activationLink:
           type: ["string", "null"]
@@ -2671,6 +2699,8 @@ components:
           type: string
         employmentStatus:
           $ref: "#/components/schemas/EmploymentStatus"
+        canCreateProjects:
+          type: boolean
 
     EmployeeUpdate:
       type: object
@@ -2697,6 +2727,8 @@ components:
         companyEmail:
           type: string
           minLength: 1
+        canCreateProjects:
+          type: boolean
         residentialAddress:
           type: ["string", "null"]
         state:

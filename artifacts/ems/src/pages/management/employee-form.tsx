@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useListDepartments } from "@workspace/api-client-react";
 import { toast } from "sonner";
@@ -51,7 +52,8 @@ const employeeSchema = z.object({
   jobTitle: z.string().optional(),
   employmentType: z.enum(["full_time", "part_time", "contract", "intern"]).optional().nullable(),
   startDate: z.string().optional(),
-  employmentStatus: z.enum(["probation", "active", "on_leave", "suspended", "terminated"]).optional()
+  employmentStatus: z.enum(["probation", "active", "on_leave", "suspended", "terminated"]).optional(),
+  canCreateProjects: z.boolean().optional()
 });
 
 type EmployeeFormValues = z.infer<typeof employeeSchema>;
@@ -92,7 +94,8 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
       jobTitle: "",
       employmentType: null,
       startDate: "",
-      employmentStatus: "active"
+      employmentStatus: "active",
+      canCreateProjects: false
     }
   });
 
@@ -120,6 +123,7 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
         employmentType: initialData.employment.employmentType || null,
         startDate: initialData.employment.startDate ? initialData.employment.startDate.split('T')[0] : "",
         employmentStatus: initialData.employment.employmentStatus || "active",
+        canCreateProjects: initialData.canCreateProjects ?? false,
       });
     }
   }, [initialData, form]);
@@ -303,6 +307,20 @@ export function EmployeeForm({ initialData, onSubmit, onCancel, isSubmitting }: 
                 )} />
 
               </div>
+
+              <FormField control={form.control} name="canCreateProjects" render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 mt-4">
+                  <div className="space-y-0.5">
+                    <FormLabel>Can start projects</FormLabel>
+                    <FormDescription>
+                      Allow this employee to create new projects from their Projects page.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )} />
             </div>
 
             <Separator />

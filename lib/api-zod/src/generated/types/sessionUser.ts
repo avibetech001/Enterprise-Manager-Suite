@@ -18,5 +18,6 @@ export interface SessionUser {
   role: Role;
   permissions: PermissionKey[];
   status: UserStatus;
+  canCreateProjects: boolean;
   createdAt: Date;
 }
