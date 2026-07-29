@@ -65,7 +65,11 @@ async function resolveGroup(
       ),
     );
   if (!dept) return null;
-  if ((await departmentIdOf(me.id)) !== dept.id) return null;
+  // Super admins can access every department chat; everyone else must be
+  // assigned to the department.
+  if (me.role !== "super_admin" && (await departmentIdOf(me.id)) !== dept.id) {
+    return null;
+  }
   return { id: groupId, name: dept.name, departmentId: dept.id };
 }
 
@@ -86,7 +90,7 @@ router.get(
       .where(eq(departmentsTable.companyId, me.companyId))
       .orderBy(asc(departmentsTable.name));
     for (const d of departments) {
-      if (myDeptId === d.id) {
+      if (me.role === "super_admin" || myDeptId === d.id) {
         groups.push({ id: `dept-${d.id}`, name: d.name, kind: "department" });
       }
     }

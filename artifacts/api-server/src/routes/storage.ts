@@ -157,7 +157,9 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           ),
         );
       if (chatMsg) {
-        if (chatMsg.departmentId == null) {
+        if (chatMsg.departmentId == null || me.role === "super_admin") {
+          // Company-wide attachments are open to everyone in the company;
+          // super admins can access every department chat's attachments.
           allowed = true;
         } else {
           const [emp] = await db
