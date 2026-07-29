@@ -90,7 +90,10 @@ import type {
   SetupInput,
   SetupStatus,
   UploadUrlRequest,
-  UploadUrlResponse
+  UploadUrlResponse,
+  WorkReport,
+  WorkReportInput,
+  WorkReportWithUser
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -5146,6 +5149,231 @@ export const useReviewFundRequest = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getReviewFundRequestMutationOptions(options));
     }
+
+export const getListMyWorkReportsUrl = () => {
+
+
+
+
+  return `/api/work-reports/me`
+}
+
+/**
+ * @summary List the current employee's work reports
+ */
+export const listMyWorkReports = async ( options?: RequestInit): Promise<WorkReport[]> => {
+
+  return customFetch<WorkReport[]>(getListMyWorkReportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMyWorkReportsQueryKey = () => {
+    return [
+    `/api/work-reports/me`
+    ] as const;
+    }
+
+
+export const getListMyWorkReportsQueryOptions = <TData = Awaited<ReturnType<typeof listMyWorkReports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyWorkReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMyWorkReportsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyWorkReports>>> = ({ signal }) => listMyWorkReports({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyWorkReports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMyWorkReportsQueryResult = NonNullable<Awaited<ReturnType<typeof listMyWorkReports>>>
+export type ListMyWorkReportsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List the current employee's work reports
+ */
+
+export function useListMyWorkReports<TData = Awaited<ReturnType<typeof listMyWorkReports>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyWorkReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMyWorkReportsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateWorkReportUrl = () => {
+
+
+
+
+  return `/api/work-reports/me`
+}
+
+/**
+ * @summary Submit a daily, weekly, or monthly work report (employee)
+ */
+export const createWorkReport = async (workReportInput: WorkReportInput, options?: RequestInit): Promise<WorkReport> => {
+
+  return customFetch<WorkReport>(getCreateWorkReportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(workReportInput)
+  }
+);}
+
+
+
+
+
+export const getCreateWorkReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkReport>>, TError,{data: BodyType<WorkReportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWorkReport>>, TError,{data: BodyType<WorkReportInput>}, TContext> => {
+
+const mutationKey = ['createWorkReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWorkReport>>, {data: BodyType<WorkReportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWorkReport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWorkReportMutationResult = NonNullable<Awaited<ReturnType<typeof createWorkReport>>>
+    export type CreateWorkReportMutationBody = BodyType<WorkReportInput>
+    export type CreateWorkReportMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Submit a daily, weekly, or monthly work report (employee)
+ */
+export const useCreateWorkReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWorkReport>>, TError,{data: BodyType<WorkReportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWorkReport>>,
+        TError,
+        {data: BodyType<WorkReportInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWorkReportMutationOptions(options));
+    }
+
+export const getListWorkReportsUrl = () => {
+
+
+
+
+  return `/api/work-reports`
+}
+
+/**
+ * @summary List all employee work reports (management)
+ */
+export const listWorkReports = async ( options?: RequestInit): Promise<WorkReportWithUser[]> => {
+
+  return customFetch<WorkReportWithUser[]>(getListWorkReportsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWorkReportsQueryKey = () => {
+    return [
+    `/api/work-reports`
+    ] as const;
+    }
+
+
+export const getListWorkReportsQueryOptions = <TData = Awaited<ReturnType<typeof listWorkReports>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWorkReportsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWorkReports>>> = ({ signal }) => listWorkReports({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWorkReports>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWorkReportsQueryResult = NonNullable<Awaited<ReturnType<typeof listWorkReports>>>
+export type ListWorkReportsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List all employee work reports (management)
+ */
+
+export function useListWorkReports<TData = Awaited<ReturnType<typeof listWorkReports>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWorkReports>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWorkReportsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export const getListMyRequisitionsUrl = () => {
 

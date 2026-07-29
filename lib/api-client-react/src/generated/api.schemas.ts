@@ -907,6 +907,48 @@ export type FundRequestWithUser = FundRequest & ({
   employeeCode: string | null;
 });
 
+export type WorkReportInputPeriod = typeof WorkReportInputPeriod[keyof typeof WorkReportInputPeriod];
+
+
+export const WorkReportInputPeriod = {
+  daily: 'daily',
+  weekly: 'weekly',
+  monthly: 'monthly',
+} as const;
+
+export interface WorkReportInput {
+  period: WorkReportInputPeriod;
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  reportDate: string;
+  /** @minLength 1 */
+  content: string;
+}
+
+export type WorkReportPeriod = typeof WorkReportPeriod[keyof typeof WorkReportPeriod];
+
+
+export const WorkReportPeriod = {
+  daily: 'daily',
+  weekly: 'weekly',
+  monthly: 'monthly',
+} as const;
+
+export interface WorkReport {
+  id: number;
+  companyId: number;
+  userId: number;
+  period: WorkReportPeriod;
+  reportDate: string;
+  content: string;
+  createdAt: string;
+}
+
+export type WorkReportWithUser = WorkReport & ({
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
+});
+
 export interface RequisitionInput {
   /** @minLength 1 */
   item: string;

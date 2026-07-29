@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetCurrentSession, useLogout, useGetPendingCounts, getGetPendingCountsQueryKey } from "@workspace/api-client-react";
 import logo from "@/assets/logo.svg";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck } from "lucide-react";
+import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck, NotebookPen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
@@ -136,6 +136,17 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                         <Link href="/projects">
                           <FolderKanban className="h-4 w-4" />
                           <span>Projects</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("view_reports") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/work-reports"} asChild>
+                        <Link href="/work-reports">
+                          <NotebookPen className="h-4 w-4" />
+                          <span>Work Reports</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

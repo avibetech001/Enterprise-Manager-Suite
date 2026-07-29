@@ -2091,6 +2091,63 @@ export const ReviewFundRequestResponse = zod.object({
 
 
 /**
+ * @summary List the current employee's work reports
+ */
+export const ListMyWorkReportsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "period": zod.enum(['daily', 'weekly', 'monthly']),
+  "reportDate": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMyWorkReportsResponse = zod.array(ListMyWorkReportsResponseItem)
+
+
+/**
+ * @summary Submit a daily, weekly, or monthly work report (employee)
+ */
+export const createWorkReportBodyReportDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+
+export const CreateWorkReportBody = zod.object({
+  "period": zod.enum(['daily', 'weekly', 'monthly']),
+  "reportDate": zod.string().regex(createWorkReportBodyReportDateRegExp),
+  "content": zod.string().min(1)
+})
+
+export const CreateWorkReportResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "period": zod.enum(['daily', 'weekly', 'monthly']),
+  "reportDate": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List all employee work reports (management)
+ */
+export const ListWorkReportsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "userId": zod.number(),
+  "period": zod.enum(['daily', 'weekly', 'monthly']),
+  "reportDate": zod.string(),
+  "content": zod.string(),
+  "createdAt": zod.coerce.date()
+}).and(zod.object({
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable()
+}))
+export const ListWorkReportsResponse = zod.array(ListWorkReportsResponseItem)
+
+
+/**
  * @summary List the current employee's requisitions
  */
 export const ListMyRequisitionsResponseItem = zod.object({

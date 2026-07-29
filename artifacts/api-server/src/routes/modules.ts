@@ -14,6 +14,7 @@ import {
   projectMembersTable,
   projectsTable,
   requisitionsTable,
+  workReportsTable,
   usersTable,
   employeeQueriesTable,
 } from "@workspace/db";
@@ -60,6 +61,10 @@ import {
   ListMyLeaveRequestsResponse,
   ListMyProjectsResponse,
   ListMyRequisitionsResponse,
+  ListMyWorkReportsResponse,
+  ListWorkReportsResponse,
+  CreateWorkReportBody,
+  CreateWorkReportResponse,
   ListPostsResponse,
   ListProjectsResponse,
   ListRequisitionsResponse,
@@ -1580,6 +1585,98 @@ router.post(
         employeeName: employee?.fullName ?? "",
         employeeCode: employee?.employeeCode ?? null,
       }),
+    );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Work Reports
+// ---------------------------------------------------------------------------
+
+router.get(
+  "/work-reports/me",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const rows = await db
+      .select()
+      .from(workReportsTable)
+      .where(
+        and(
+          eq(workReportsTable.userId, req.currentUser!.id),
+          eq(workReportsTable.companyId, req.currentUser!.companyId),
+        ),
+      )
+      .orderBy(desc(workReportsTable.createdAt));
+    res.json(ListMyWorkReportsResponse.parse(rows));
+  },
+);
+
+router.post(
+  "/work-reports/me",
+  requireAuth,
+  requireEmployee,
+  async (req, res): Promise<void> => {
+    const parsed = CreateWorkReportBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: "Period, report date, and content are required." });
+      return;
+    }
+    const reportDate = parsed.data.reportDate;
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(reportDate) ||
+      Number.isNaN(new Date(`${reportDate}T00:00:00Z`).getTime())
+    ) {
+      res.status(400).json({ error: "Invalid report date." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [report] = await db
+      .insert(workReportsTable)
+      .values({
+        companyId: me.companyId,
+        userId: me.id,
+        period: parsed.data.period,
+        reportDate: parsed.data.reportDate,
+        content: parsed.data.content.trim(),
+      })
+      .returning();
+    await notify(
+      me.companyId,
+      "work_report",
+      `${me.fullName} submitted a ${parsed.data.period} work report.`,
+      undefined,
+      "work-reports",
+    );
+    res.status(201).json(CreateWorkReportResponse.parse(report));
+  },
+);
+
+router.get(
+  "/work-reports",
+  requireAuth,
+  requireManagementPermission("view_reports"),
+  async (req, res): Promise<void> => {
+    const rows = await db
+      .select({
+        report: workReportsTable,
+        employeeName: usersTable.fullName,
+        employeeCode: usersTable.employeeCode,
+      })
+      .from(workReportsTable)
+      .innerJoin(usersTable, eq(workReportsTable.userId, usersTable.id))
+      .where(eq(workReportsTable.companyId, req.currentUser!.companyId))
+      .orderBy(desc(workReportsTable.createdAt));
+    res.json(
+      ListWorkReportsResponse.parse(
+        rows.map((r) => ({
+          ...r.report,
+          employeeName: r.employeeName,
+          employeeCode: r.employeeCode,
+        })),
+      ),
     );
   },
 );

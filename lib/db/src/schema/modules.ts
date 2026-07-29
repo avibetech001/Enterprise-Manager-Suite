@@ -268,6 +268,28 @@ export const employeeQueriesTable = pgTable("employee_queries", {
     .defaultNow(),
 });
 
+// period: "daily" | "weekly" | "monthly"
+export const workReportsTable = pgTable("work_reports", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  period: text("period").notNull(),
+  // The day (daily), week start (weekly), or month start (monthly) covered.
+  reportDate: date("report_date").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
 export type EmployeeQuery = typeof employeeQueriesTable.$inferSelect;
 export type AttendanceRecord = typeof attendanceRecordsTable.$inferSelect;
 export type LeaveRequest = typeof leaveRequestsTable.$inferSelect;

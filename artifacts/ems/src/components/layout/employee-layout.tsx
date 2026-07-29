@@ -33,6 +33,7 @@ import {
   LogOut,
   MessagesSquare,
   ClipboardCheck,
+  NotebookPen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
@@ -54,6 +55,7 @@ const NAV = [
       { href: "/employee/leave", icon: Palmtree, title: "Leave" },
       { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
       { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
+      { href: "/employee/work-reports", icon: NotebookPen, title: "Work Reports" },
       { href: "/employee/queries", icon: FileWarning, title: "My Queries" },
       { href: "/employee/chat", icon: MessagesSquare, title: "Team Chat" },
       { href: "/employee/appraisals", icon: ClipboardCheck, title: "My Appraisals" },

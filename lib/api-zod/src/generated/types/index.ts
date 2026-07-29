@@ -117,3 +117,8 @@ export * from './uploadUrlRequest';
 export * from './uploadUrlResponse';
 export * from './userStatus';
 export * from './weeklySchedule';
+export * from './workReport';
+export * from './workReportInput';
+export * from './workReportInputPeriod';
+export * from './workReportPeriod';
+export * from './workReportWithUser';
