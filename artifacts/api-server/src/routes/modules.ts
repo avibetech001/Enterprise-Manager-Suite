@@ -1624,13 +1624,33 @@ router.post(
         .json({ error: "Period, report date, and content are required." });
       return;
     }
+    // Strict calendar validation: reject overflow dates like 2024-02-31,
+    // which `new Date(...)` would silently roll into March.
+    const isValidDateStr = (s: string): boolean => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+      const d = new Date(`${s}T00:00:00Z`);
+      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+    };
     const reportDate = parsed.data.reportDate;
-    if (
-      !/^\d{4}-\d{2}-\d{2}$/.test(reportDate) ||
-      Number.isNaN(new Date(`${reportDate}T00:00:00Z`).getTime())
-    ) {
+    if (!isValidDateStr(reportDate)) {
       res.status(400).json({ error: "Invalid report date." });
       return;
+    }
+    // Weekly and monthly reports cover a range, so they need an end date.
+    let endDate: string | null = null;
+    if (parsed.data.period !== "daily") {
+      const raw = parsed.data.endDate;
+      if (!raw || !isValidDateStr(raw)) {
+        res
+          .status(400)
+          .json({ error: "End date is required for weekly and monthly reports." });
+        return;
+      }
+      if (raw < reportDate) {
+        res.status(400).json({ error: "End date must be on or after the start date." });
+        return;
+      }
+      endDate = raw;
     }
     const me = req.currentUser!;
     const [report] = await db
@@ -1640,6 +1660,7 @@ router.post(
         userId: me.id,
         period: parsed.data.period,
         reportDate: parsed.data.reportDate,
+        endDate,
         content: parsed.data.content.trim(),
       })
       .returning();

@@ -64,10 +64,12 @@ export default function EmployeeWorkReports() {
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
   const [reportDate, setReportDate] = useState(todayStr());
+  const [endDate, setEndDate] = useState("");
   const [content, setContent] = useState("");
   const [detail, setDetail] = useState<null | {
     period: string;
     reportDate: string;
+    endDate?: string | null;
     content: string;
   }>(null);
 
@@ -81,6 +83,7 @@ export default function EmployeeWorkReports() {
           description: "Management can now see your report.",
         });
         setContent("");
+        setEndDate("");
         setOpen(false);
       },
       onError: (err: any) => {
@@ -100,8 +103,23 @@ export default function EmployeeWorkReports() {
       toast.error("Please pick the date the report covers.");
       return;
     }
+    if (period !== "daily") {
+      if (!endDate) {
+        toast.error("Please pick the end date the report covers.");
+        return;
+      }
+      if (endDate < reportDate) {
+        toast.error("The end date must be on or after the start date.");
+        return;
+      }
+    }
     createReport.mutate({
-      data: { period, reportDate, content: content.trim() },
+      data: {
+        period,
+        reportDate,
+        endDate: period === "daily" ? undefined : endDate,
+        content: content.trim(),
+      },
     });
   };
 
@@ -146,6 +164,7 @@ export default function EmployeeWorkReports() {
                 setDetail({
                   period: r.period,
                   reportDate: r.reportDate,
+                  endDate: r.endDate,
                   content: r.content,
                 })
               }
@@ -158,6 +177,7 @@ export default function EmployeeWorkReports() {
                   <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
                     <CalendarDays className="h-3.5 w-3.5" />
                     {formatDateStr(r.reportDate)}
+                    {r.endDate ? ` → ${formatDateStr(r.endDate)}` : ""}
                   </span>
                 </CardTitle>
               </CardHeader>
@@ -183,7 +203,10 @@ export default function EmployeeWorkReports() {
                 <Label>Report type</Label>
                 <Select
                   value={period}
-                  onValueChange={(v) => setPeriod(v as typeof period)}
+                  onValueChange={(v) => {
+                    setPeriod(v as typeof period);
+                    setEndDate("");
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -197,11 +220,7 @@ export default function EmployeeWorkReports() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="wr-date">
-                  {period === "daily"
-                    ? "Day covered"
-                    : period === "weekly"
-                      ? "Week starting"
-                      : "Month starting"}
+                  {period === "daily" ? "Day covered" : "Start date"}
                 </Label>
                 <Input
                   id="wr-date"
@@ -211,6 +230,18 @@ export default function EmployeeWorkReports() {
                 />
               </div>
             </div>
+            {period !== "daily" && (
+              <div className="space-y-2">
+                <Label htmlFor="wr-end-date">End date</Label>
+                <Input
+                  id="wr-end-date"
+                  type="date"
+                  value={endDate}
+                  min={reportDate || undefined}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="wr-content">What did you do?</Label>
               <Textarea
@@ -248,6 +279,9 @@ export default function EmployeeWorkReports() {
                   </Badge>
                   <span className="text-sm font-normal text-muted-foreground">
                     {formatDateStr(detail.reportDate, "long")}
+                    {detail.endDate
+                      ? ` → ${formatDateStr(detail.endDate, "long")}`
+                      : ""}
                   </span>
                 </>
               )}

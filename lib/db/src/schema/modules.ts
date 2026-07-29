@@ -280,6 +280,8 @@ export const workReportsTable = pgTable("work_reports", {
   period: text("period").notNull(),
   // The day (daily), week start (weekly), or month start (monthly) covered.
   reportDate: date("report_date").notNull(),
+  // End of the period covered (weekly/monthly reports); null for daily.
+  endDate: date("end_date"),
   content: text("content").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()

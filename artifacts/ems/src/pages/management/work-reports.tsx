@@ -141,6 +141,7 @@ export default function ManagementWorkReports() {
                     <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground ml-auto">
                       <CalendarDays className="h-3.5 w-3.5" />
                       {formatDateStr(r.reportDate)}
+                      {r.endDate ? ` → ${formatDateStr(r.endDate)}` : ""}
                     </span>
                   </CardTitle>
                 </CardHeader>
@@ -170,6 +171,9 @@ export default function ManagementWorkReports() {
                   </Badge>
                   <span className="text-sm font-normal text-muted-foreground">
                     {formatDateStr(detail.reportDate, "long")}
+                    {detail.endDate
+                      ? ` → ${formatDateStr(detail.endDate, "long")}`
+                      : ""}
                   </span>
                 </>
               )}

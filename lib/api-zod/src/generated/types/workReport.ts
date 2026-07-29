@@ -13,6 +13,8 @@ export interface WorkReport {
   userId: number;
   period: WorkReportPeriod;
   reportDate: string;
+  /** @nullable */
+  endDate?: string | null;
   content: string;
   createdAt: Date;
 }

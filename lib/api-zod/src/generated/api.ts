@@ -2099,6 +2099,7 @@ export const ListMyWorkReportsResponseItem = zod.object({
   "userId": zod.number(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
+  "endDate": zod.string().nullish(),
   "content": zod.string(),
   "createdAt": zod.coerce.date()
 })
@@ -2109,12 +2110,14 @@ export const ListMyWorkReportsResponse = zod.array(ListMyWorkReportsResponseItem
  * @summary Submit a daily, weekly, or monthly work report (employee)
  */
 export const createWorkReportBodyReportDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createWorkReportBodyEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 
 export const CreateWorkReportBody = zod.object({
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string().regex(createWorkReportBodyReportDateRegExp),
+  "endDate": zod.string().regex(createWorkReportBodyEndDateRegExp).nullish(),
   "content": zod.string().min(1)
 })
 
@@ -2124,6 +2127,7 @@ export const CreateWorkReportResponse = zod.object({
   "userId": zod.number(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
+  "endDate": zod.string().nullish(),
   "content": zod.string(),
   "createdAt": zod.coerce.date()
 })
@@ -2138,6 +2142,7 @@ export const ListWorkReportsResponseItem = zod.object({
   "userId": zod.number(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
+  "endDate": zod.string().nullish(),
   "content": zod.string(),
   "createdAt": zod.coerce.date()
 }).and(zod.object({

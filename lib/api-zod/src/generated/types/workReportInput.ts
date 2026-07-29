@@ -11,6 +11,11 @@ export interface WorkReportInput {
   period: WorkReportInputPeriod;
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   reportDate: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  endDate?: string | null;
   /** @minLength 1 */
   content: string;
 }
