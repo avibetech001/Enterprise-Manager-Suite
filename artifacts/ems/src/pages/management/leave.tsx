@@ -56,6 +56,31 @@ export default function LeavePage() {
   const [reviewTarget, setReviewTarget] = useState<{ req: LeaveRequestWithUser; action: "approved" | "rejected" } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [detailTarget, setDetailTarget] = useState<LeaveRequestWithUser | null>(null);
+  const [detailNote, setDetailNote] = useState("");
+
+  const openDetail = (req: LeaveRequestWithUser) => {
+    setDetailTarget(req);
+    setDetailNote("");
+  };
+
+  const submitFromDetail = (req: LeaveRequestWithUser, action: "approved" | "rejected") => {
+    reviewLeave.mutate(
+      { id: req.id, data: { status: action, reviewNote: detailNote.trim() || undefined } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListLeaveRequestsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetPendingCountsQueryKey() });
+          toast.success(`Leave request ${action}`);
+          setDetailTarget(null);
+        },
+        onError: (error) => {
+          toast.error("Failed to review leave request", {
+            description: error.data?.error || "Unknown error occurred",
+          });
+        },
+      }
+    );
+  };
 
   const filtered = requests?.filter((r) => filter === "all" || r.status === filter) ?? [];
 
@@ -134,7 +159,15 @@ export default function LeavePage() {
                       key={r.id}
                       id={`focus-${r.id}`}
                       className="cursor-pointer"
-                      onClick={() => setDetailTarget(r)}
+                      tabIndex={0}
+                      aria-label={`View leave request from ${r.employeeName}`}
+                      onClick={() => openDetail(r)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          openDetail(r);
+                        }
+                      }}
                     >
                       <TableCell className="font-medium">{r.employeeName}</TableCell>
                       <TableCell className="capitalize">{r.type}</TableCell>
@@ -150,6 +183,7 @@ export default function LeavePage() {
                       <TableCell
                         className="text-right"
                         onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
                       >
                         {r.status === "pending" ? (
                           <div className="flex gap-2 justify-end">
@@ -223,29 +257,38 @@ export default function LeavePage() {
                 </p>
               </div>
               {detailTarget.status === "pending" && (
-                <div className="flex gap-2 justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setDetailTarget(null);
-                      openReview(detailTarget, "approved");
-                    }}
-                  >
-                    Approve
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-red-600 hover:text-red-700"
-                    onClick={() => {
-                      setDetailTarget(null);
-                      openReview(detailTarget, "rejected");
-                    }}
-                  >
-                    Reject
-                  </Button>
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium" htmlFor="leave-detail-note">
+                      Review note (optional)
+                    </label>
+                    <Textarea
+                      id="leave-detail-note"
+                      value={detailNote}
+                      onChange={(e) => setDetailNote(e.target.value)}
+                      placeholder="Write a note for the employee before approving or rejecting..."
+                      className="resize-none"
+                    />
+                  </div>
+                  <div className="flex gap-2 justify-end">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-red-600 hover:text-red-700"
+                      disabled={reviewLeave.isPending}
+                      onClick={() => submitFromDetail(detailTarget, "rejected")}
+                    >
+                      Reject
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={reviewLeave.isPending}
+                      onClick={() => submitFromDetail(detailTarget, "approved")}
+                    >
+                      Approve
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           )}

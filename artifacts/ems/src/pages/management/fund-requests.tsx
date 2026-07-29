@@ -56,6 +56,31 @@ export default function FundRequestsPage() {
   const [reviewTarget, setReviewTarget] = useState<{ req: FundRequestWithUser; action: "approved" | "rejected" } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
   const [detailTarget, setDetailTarget] = useState<FundRequestWithUser | null>(null);
+  const [detailNote, setDetailNote] = useState("");
+
+  const openDetail = (req: FundRequestWithUser) => {
+    setDetailTarget(req);
+    setDetailNote("");
+  };
+
+  const submitFromDetail = (req: FundRequestWithUser, action: "approved" | "rejected") => {
+    reviewFund.mutate(
+      { id: req.id, data: { status: action, reviewNote: detailNote.trim() || undefined } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListFundRequestsQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetPendingCountsQueryKey() });
+          toast.success(`Fund request ${action}`);
+          setDetailTarget(null);
+        },
+        onError: (error) => {
+          toast.error("Failed to review fund request", {
+            description: error.data?.error || "Unknown error occurred",
+          });
+        },
+      }
+    );
+  };
 
   const filtered = requests?.filter((r) => filter === "all" || r.status === filter) ?? [];
 
@@ -136,11 +161,11 @@ export default function FundRequestsPage() {
                       className="cursor-pointer"
                       tabIndex={0}
                       aria-label={`View fund request from ${r.employeeName}`}
-                      onClick={() => setDetailTarget(r)}
+                      onClick={() => openDetail(r)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          setDetailTarget(r);
+                          openDetail(r);
                         }
                       }}
                     >
@@ -155,7 +180,11 @@ export default function FundRequestsPage() {
                       <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground">
                         {r.reviewNote || "—"}
                       </TableCell>
-                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <TableCell
+                        className="text-right"
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                      >
                         {r.status === "pending" ? (
                           <div className="flex gap-2 justify-end">
                             <Button size="sm" variant="outline" onClick={() => openReview(r, "approved")}>
@@ -230,6 +259,20 @@ export default function FundRequestsPage() {
                   <p className="text-sm whitespace-pre-wrap break-words">{detailTarget.reviewNote}</p>
                 </div>
               )}
+              {detailTarget.status === "pending" && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="fund-detail-note">
+                    Review note (optional)
+                  </label>
+                  <Textarea
+                    id="fund-detail-note"
+                    value={detailNote}
+                    onChange={(e) => setDetailNote(e.target.value)}
+                    placeholder="Write a note for the employee before approving or rejecting..."
+                    className="resize-none"
+                  />
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -238,18 +281,14 @@ export default function FundRequestsPage() {
                 <Button
                   variant="outline"
                   className="text-red-600 hover:text-red-700"
-                  onClick={() => {
-                    if (detailTarget) openReview(detailTarget, "rejected");
-                    setDetailTarget(null);
-                  }}
+                  disabled={reviewFund.isPending}
+                  onClick={() => detailTarget && submitFromDetail(detailTarget, "rejected")}
                 >
                   Reject
                 </Button>
                 <Button
-                  onClick={() => {
-                    if (detailTarget) openReview(detailTarget, "approved");
-                    setDetailTarget(null);
-                  }}
+                  disabled={reviewFund.isPending}
+                  onClick={() => detailTarget && submitFromDetail(detailTarget, "approved")}
                 >
                   Approve
                 </Button>
