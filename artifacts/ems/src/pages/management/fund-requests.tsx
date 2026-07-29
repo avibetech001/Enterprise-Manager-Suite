@@ -55,6 +55,7 @@ export default function FundRequestsPage() {
   const [filter, setFilter] = useState<Filter>("all");
   const [reviewTarget, setReviewTarget] = useState<{ req: FundRequestWithUser; action: "approved" | "rejected" } | null>(null);
   const [reviewNote, setReviewNote] = useState("");
+  const [detailTarget, setDetailTarget] = useState<FundRequestWithUser | null>(null);
 
   const filtered = requests?.filter((r) => filter === "all" || r.status === filter) ?? [];
 
@@ -129,10 +130,23 @@ export default function FundRequestsPage() {
               <TableBody>
                 {filtered.length > 0 ? (
                   filtered.map((r) => (
-                    <TableRow key={r.id} id={`focus-${r.id}`}>
+                    <TableRow
+                      key={r.id}
+                      id={`focus-${r.id}`}
+                      className="cursor-pointer"
+                      tabIndex={0}
+                      aria-label={`View fund request from ${r.employeeName}`}
+                      onClick={() => setDetailTarget(r)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setDetailTarget(r);
+                        }
+                      }}
+                    >
                       <TableCell className="font-medium">{r.employeeName}</TableCell>
                       <TableCell>{r.amount}</TableCell>
-                      <TableCell>{r.purpose}</TableCell>
+                      <TableCell className="max-w-[160px] truncate">{r.purpose}</TableCell>
                       <TableCell className="max-w-[180px] truncate text-sm text-muted-foreground">
                         {r.details || "—"}
                       </TableCell>
@@ -141,7 +155,7 @@ export default function FundRequestsPage() {
                       <TableCell className="max-w-[160px] truncate text-sm text-muted-foreground">
                         {r.reviewNote || "—"}
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                         {r.status === "pending" ? (
                           <div className="flex gap-2 justify-end">
                             <Button size="sm" variant="outline" onClick={() => openReview(r, "approved")}>
@@ -174,6 +188,80 @@ export default function FundRequestsPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={!!detailTarget} onOpenChange={(o) => !o && setDetailTarget(null)}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Fund Request Details</DialogTitle>
+          </DialogHeader>
+          {detailTarget && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Employee</p>
+                  <p className="font-medium">{detailTarget.employeeName}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Amount</p>
+                  <p className="font-medium">{detailTarget.amount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Date</p>
+                  <p className="font-medium">{detailTarget.createdAt.slice(0, 10)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  {statusBadge(detailTarget.status)}
+                </div>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">Purpose</p>
+                <p className="text-sm whitespace-pre-wrap break-words">{detailTarget.purpose}</p>
+              </div>
+              {detailTarget.details && (
+                <div className="max-h-[35vh] overflow-y-auto">
+                  <p className="text-sm text-muted-foreground mb-1">Details</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{detailTarget.details}</p>
+                </div>
+              )}
+              {detailTarget.reviewNote && (
+                <div>
+                  <p className="text-sm text-muted-foreground mb-1">Review note</p>
+                  <p className="text-sm whitespace-pre-wrap break-words">{detailTarget.reviewNote}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            {detailTarget?.status === "pending" ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="text-red-600 hover:text-red-700"
+                  onClick={() => {
+                    if (detailTarget) openReview(detailTarget, "rejected");
+                    setDetailTarget(null);
+                  }}
+                >
+                  Reject
+                </Button>
+                <Button
+                  onClick={() => {
+                    if (detailTarget) openReview(detailTarget, "approved");
+                    setDetailTarget(null);
+                  }}
+                >
+                  Approve
+                </Button>
+              </>
+            ) : (
+              <Button variant="outline" onClick={() => setDetailTarget(null)}>
+                Close
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!reviewTarget} onOpenChange={(o) => !o && setReviewTarget(null)}>
         <DialogContent>
