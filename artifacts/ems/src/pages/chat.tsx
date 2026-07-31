@@ -88,11 +88,11 @@ export default function TeamChatPage() {
   // Chat view: full-width conversation with a back button.
   if (activeGroup) {
     return (
-      <div className="space-y-4">
+      <div className="flex h-full min-h-0 flex-col gap-2 p-3 sm:p-4">
         <Button
           variant="ghost"
           size="sm"
-          className="-ml-2"
+          className="-ml-2 self-start shrink-0"
           onClick={() => setActiveGroupId(null)}
         >
           <ArrowLeft className="h-4 w-4 mr-1.5" />
@@ -111,7 +111,7 @@ export default function TeamChatPage() {
 
   // Group list view: click a group to open its chat.
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-3 sm:p-4">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Team Chat</h1>
         <p className="text-muted-foreground mt-1">
@@ -525,7 +525,7 @@ function GroupChat({
   const memberOptions = useMemo(() => members || [], [members]);
 
   return (
-    <Card className="flex flex-col h-[70dvh]">
+    <Card className="flex min-h-0 flex-1 flex-col">
       <div className="border-b px-3 sm:px-4 py-3">
         <p className="font-medium text-sm flex items-center gap-2">
           <MessagesSquare className="h-4 w-4" />
@@ -536,7 +536,7 @@ function GroupChat({
         </p>
       </div>
 
-      <ScrollArea className="flex-1 px-3 sm:px-4">
+      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
         <div className="py-4 space-y-3">
           {(messages || []).length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
