@@ -164,14 +164,15 @@ function dayLabel(iso: string): string {
   const startOf = (x: Date) =>
     new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
   const diffDays = Math.round((startOf(now) - startOf(d)) / 86400000);
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
+  const dateStr = d.toLocaleDateString(undefined, {
     weekday: "short",
     month: "short",
     day: "numeric",
     year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
   });
+  if (diffDays === 0) return `Today · ${dateStr}`;
+  if (diffDays === 1) return `Yesterday · ${dateStr}`;
+  return dateStr;
 }
 
 function DaySeparator({ label }: { label: string }) {
