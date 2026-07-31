@@ -157,6 +157,35 @@ export default function TeamChatPage() {
   );
 }
 
+// "Today", "Yesterday", or a readable date for the day separators.
+function dayLabel(iso: string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const startOf = (x: Date) =>
+    new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOf(now) - startOf(d)) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+  });
+}
+
+function DaySeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 py-1">
+      <div className="h-px flex-1 bg-border" />
+      <span className="text-[11px] text-muted-foreground bg-muted rounded-full px-2.5 py-0.5">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-border" />
+    </div>
+  );
+}
+
 // A single message bubble with swipe-to-reply, reply preview, delete, voice
 // notes, and clickable links.
 function MessageBubble({
@@ -207,7 +236,7 @@ function MessageBubble({
         </span>
       )}
       <div
-        className={`max-w-[80%] rounded-lg px-3 py-2 text-sm select-none touch-pan-y ${
+        className={`min-w-0 max-w-[75%] rounded-lg px-3 py-2 text-sm select-none touch-pan-y ${
           mine ? "bg-primary text-primary-foreground" : "bg-muted"
         }`}
         style={{
@@ -258,9 +287,7 @@ function MessageBubble({
           )
         )}
         <p className={`text-[10px] mt-1 ${mine ? "opacity-70" : "text-muted-foreground"}`}>
-          {new Date(m.createdAt).toLocaleString([], {
-            month: "short",
-            day: "numeric",
+          {new Date(m.createdAt).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
           })}
@@ -497,8 +524,8 @@ function GroupChat({
   const memberOptions = useMemo(() => members || [], [members]);
 
   return (
-    <Card className="flex flex-col h-[70vh]">
-      <div className="border-b px-4 py-3">
+    <Card className="flex flex-col h-[70dvh]">
+      <div className="border-b px-3 sm:px-4 py-3">
         <p className="font-medium text-sm flex items-center gap-2">
           <MessagesSquare className="h-4 w-4" />
           {groupName}
@@ -508,31 +535,38 @@ function GroupChat({
         </p>
       </div>
 
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea className="flex-1 px-3 sm:px-4">
         <div className="py-4 space-y-3">
           {(messages || []).length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
               No messages yet. Say hello!
             </p>
           )}
-          {(messages || []).map((m) => {
+          {(messages || []).map((m, i, arr) => {
             const mine = m.userId === myUserId;
+            const prev = arr[i - 1];
+            const showDay =
+              !prev ||
+              new Date(prev.createdAt).toDateString() !==
+                new Date(m.createdAt).toDateString();
             return (
-              <MessageBubble
-                key={m.id}
-                m={m}
-                mine={mine}
-                canDelete={mine || isManagement}
-                onReply={() => setReplyTo(m)}
-                onDelete={() => handleDelete(m)}
-              />
+              <div key={m.id} className="space-y-3">
+                {showDay && <DaySeparator label={dayLabel(m.createdAt)} />}
+                <MessageBubble
+                  m={m}
+                  mine={mine}
+                  canDelete={mine || isManagement}
+                  onReply={() => setReplyTo(m)}
+                  onDelete={() => handleDelete(m)}
+                />
+              </div>
             );
           })}
           <div ref={bottomRef} />
         </div>
       </ScrollArea>
 
-      <div className="border-t p-3 space-y-2">
+      <div className="border-t p-2.5 sm:p-3 space-y-2">
         {replyTo && (
           <div className="flex items-start gap-2 rounded border-l-2 border-primary bg-muted/60 px-2.5 py-1.5 text-xs">
             <Reply className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary" />
@@ -562,7 +596,7 @@ function GroupChat({
             Recording... tap the stop button to send.
           </div>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -647,7 +681,7 @@ function GroupChat({
               }
             }}
             placeholder={isUploading ? "Uploading file..." : "Type a message..."}
-            className="flex-1"
+            className="flex-1 min-w-0"
           />
           <Button
             type="button"
