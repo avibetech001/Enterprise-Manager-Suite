@@ -266,7 +266,7 @@ function MessageBubble({
           </div>
         )}
         {m.body && (
-          <p className="whitespace-pre-wrap break-words select-text">
+          <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] select-text">
             <Linkify text={m.body} />
           </p>
         )}
@@ -536,7 +536,10 @@ function GroupChat({
         </p>
       </div>
 
-      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4">
+      {/* Radix ScrollArea renders its content wrapper as display:table, which
+          lets long messages expand it sideways and clip the chat on phones.
+          Force it back to a normal block that fills the viewport width. */}
+      <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4 [&_[data-radix-scroll-area-viewport]>div]:!block">
         <div className="py-4 space-y-3">
           {(messages || []).length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
