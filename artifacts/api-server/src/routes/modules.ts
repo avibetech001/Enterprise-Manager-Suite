@@ -169,6 +169,11 @@ async function companyHolidaySet(companyId: number): Promise<Set<string>> {
   return new Set(rows.map((r) => r.date));
 }
 
+// True when today's COMPANY_TZ date is a company public holiday.
+async function isHolidayToday(companyId: number): Promise<boolean> {
+  return (await companyHolidaySet(companyId)).has(today());
+}
+
 async function leaveBalance(
   companyId: number,
   userId: number,
@@ -483,6 +488,10 @@ async function validateScan(
   if (!codeRow || codeRow.code !== code.trim().toUpperCase()) {
     return { error: "Invalid attendance code." };
   }
+  // Public holidays are treated like "off" days — no check-in required.
+  if (await isHolidayToday(companyId)) {
+    return { error: "Today is a public holiday." };
+  }
   const settings = await getAttendanceSettings(companyId);
   const day = todaySchedule(parseSchedule(settings.weeklySchedule));
   if (day.mode === "off") {
@@ -748,7 +757,8 @@ router.get(
       employeeName: string;
       employeeCode: string | null;
     }> = [];
-    if (date) {
+    // Public holidays are non-working days — nobody is "absent" on them.
+    if (date && !(await companyHolidaySet(companyId)).has(date)) {
       const presentIds = new Set(rows.map((r) => r.record.userId));
       const employees = await db
         .select({
