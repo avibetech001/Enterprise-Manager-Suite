@@ -58,6 +58,21 @@ const leaveSchema = z.object({
 
 type LeaveFormValues = z.infer<typeof leaveSchema>;
 
+// Mirror of the server's workingDaysBetween (Mon–Fri only).
+function workingDaysBetween(start: string, end: string): number {
+  const startMs = new Date(`${start}T00:00:00Z`).getTime();
+  const endMs = new Date(`${end}T00:00:00Z`).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+    return NaN;
+  }
+  let count = 0;
+  for (let ms = startMs; ms <= endMs; ms += 86_400_000) {
+    const dow = new Date(ms).getUTCDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
+}
+
 function statusBadgeClass(status: string): string {
   switch (status) {
     case "approved":
@@ -91,6 +106,13 @@ export default function EmployeeLeave() {
       reason: "",
     },
   });
+
+  const startDate = form.watch("startDate");
+  const endDate = form.watch("endDate");
+  const leaveType = form.watch("type");
+  const requestedDays =
+    startDate && endDate ? workingDaysBetween(startDate, endDate) : null;
+  const remaining = balance?.remaining ?? 0;
 
   const handleOpen = () => {
     form.reset({ type: "annual", startDate: "", endDate: "", reason: "" });
@@ -304,6 +326,38 @@ export default function EmployeeLeave() {
                   )}
                 />
               </div>
+              {requestedDays !== null && (
+                <div className="text-sm rounded-md border px-3 py-2 space-y-1">
+                  {Number.isNaN(requestedDays) ? (
+                    <p className="text-red-600">
+                      End date must be on or after the start date.
+                    </p>
+                  ) : requestedDays === 0 ? (
+                    <p className="text-amber-600">
+                      This range only covers a weekend — it uses 0 working
+                      days. Pick dates that include at least one weekday
+                      (Mon–Fri).
+                    </p>
+                  ) : (
+                    <>
+                      <p>
+                        This request uses{" "}
+                        <span className="font-semibold">
+                          {requestedDays} working day
+                          {requestedDays === 1 ? "" : "s"}
+                        </span>{" "}
+                        (weekends don't count).
+                      </p>
+                      {leaveType !== "unpaid" && requestedDays > remaining && (
+                        <p className="text-amber-600">
+                          Warning: this exceeds your remaining balance of{" "}
+                          {remaining} day{remaining === 1 ? "" : "s"}.
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
               <FormField
                 control={form.control}
                 name="reason"
