@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { EmployeeForm } from "./employee-form";
@@ -156,20 +156,39 @@ export default function EmployeesPage() {
   }));
 
   const handleExportCSV = () => {
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const csv = XLSX.utils.sheet_to_csv(worksheet);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    if (exportData.length === 0) return;
+    const headers = Object.keys(exportData[0]);
+    const rows = exportData.map(row =>
+      headers.map(h => {
+        const val = String((row as Record<string, unknown>)[h] ?? "");
+        return val.includes(",") || val.includes('"') || val.includes("\n")
+          ? `"${val.replace(/"/g, '""')}"`
+          : val;
+      }).join(",")
+    );
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `employees_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `employees_${new Date().toISOString().split("T")[0]}.csv`;
     link.click();
   };
 
-  const handleExportExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Employees");
-    XLSX.writeFile(workbook, `employees_${new Date().toISOString().split('T')[0]}.xlsx`);
+  const handleExportExcel = async () => {
+    const workbook = new ExcelJS.Workbook();
+    const sheet = workbook.addWorksheet("Employees");
+    if (exportData.length === 0) return;
+    const headers = Object.keys(exportData[0]);
+    sheet.columns = headers.map(h => ({ header: h, key: h, width: 20 }));
+    exportData.forEach(row => sheet.addRow(row));
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `employees_${new Date().toISOString().split("T")[0]}.xlsx`;
+    link.click();
   };
 
   const handleExportPDF = () => {
