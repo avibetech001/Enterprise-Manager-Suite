@@ -3,7 +3,11 @@ import {
   useGetCompany, 
   useUpdateCompany,
   getGetCompanyQueryKey,
-  useGetCurrentSession
+  useGetCurrentSession,
+  useListHolidays,
+  useCreateHoliday,
+  useDeleteHoliday,
+  getListHolidaysQueryKey,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +25,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { Label } from "@/components/ui/label";
+import { Trash2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PushNotificationsCard } from "@/components/push-notifications-card";
 import { ChangePasswordCard } from "@/components/change-password-card";
@@ -38,6 +44,134 @@ const companySchema = z.object({
 
 type CompanyFormValues = z.infer<typeof companySchema>;
 
+function HolidaysCard({ canManage }: { canManage: boolean }) {
+  const queryClient = useQueryClient();
+  const { data: holidays, isLoading } = useListHolidays();
+  const createHoliday = useCreateHoliday();
+  const deleteHoliday = useDeleteHoliday();
+  const [date, setDate] = useState("");
+  const [name, setName] = useState("");
+
+  const refresh = () =>
+    queryClient.invalidateQueries({ queryKey: getListHolidaysQueryKey() });
+
+  const onAdd = () => {
+    if (!date || !name.trim()) {
+      toast.error("Enter both a date and a holiday name.");
+      return;
+    }
+    createHoliday.mutate(
+      { data: { date, name: name.trim() } },
+      {
+        onSuccess: () => {
+          setDate("");
+          setName("");
+          refresh();
+          toast.success("Holiday added");
+        },
+        onError: (error) =>
+          toast.error("Failed to add holiday", {
+            description: error.data?.error || "Unknown error occurred",
+          }),
+      },
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Public Holidays</CardTitle>
+        <CardDescription>
+          Days listed here don't count against employees' leave balances.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {canManage && (
+          <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
+            <div className="space-y-2">
+              <Label htmlFor="holiday-date">Date</Label>
+              <Input
+                id="holiday-date"
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2 flex-1">
+              <Label htmlFor="holiday-name">Name</Label>
+              <Input
+                id="holiday-name"
+                placeholder="e.g. Independence Day"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={onAdd}
+              disabled={createHoliday.isPending}
+            >
+              {createHoliday.isPending ? "Adding..." : "Add Holiday"}
+            </Button>
+          </div>
+        )}
+        {isLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : !holidays || holidays.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No public holidays added yet.
+          </p>
+        ) : (
+          <ul className="divide-y rounded-md border">
+            {holidays.map((h) => (
+              <li
+                key={h.id}
+                className="flex items-center justify-between px-4 py-2.5"
+              >
+                <div>
+                  <p className="text-sm font-medium">{h.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(`${h.date}T00:00:00`).toLocaleDateString(undefined, {
+                      weekday: "short",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </p>
+                </div>
+                {canManage && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label={`Delete ${h.name}`}
+                    disabled={deleteHoliday.isPending}
+                    onClick={() =>
+                      deleteHoliday.mutate(
+                        { id: h.id },
+                        {
+                          onSuccess: () => refresh(),
+                          onError: (error) =>
+                            toast.error("Failed to delete holiday", {
+                              description:
+                                error.data?.error || "Unknown error occurred",
+                            }),
+                        },
+                      )
+                    }
+                  >
+                    <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function SettingsCompanyPage() {
   const queryClient = useQueryClient();
   const { data: session } = useGetCurrentSession();
@@ -45,6 +179,9 @@ export default function SettingsCompanyPage() {
   const updateCompany = useUpdateCompany();
 
   const isSuperAdmin = session?.user?.role === "super_admin";
+  const canManageSettings =
+    isSuperAdmin ||
+    (session?.user?.permissions ?? []).includes("manage_company_settings");
 
   const form = useForm<CompanyFormValues>({
     resolver: zodResolver(companySchema),
@@ -122,6 +259,8 @@ export default function SettingsCompanyPage() {
       <PushNotificationsCard />
 
       <ChangePasswordCard />
+
+      <HolidaysCard canManage={canManageSettings} />
 
       <Card>
         <Form {...form}>

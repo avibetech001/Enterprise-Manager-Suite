@@ -242,6 +242,20 @@ export interface CompanyUpdate {
   annualLeaveDays?: number;
 }
 
+export interface Holiday {
+  id: number;
+  companyId: number;
+  date: string;
+  name: string;
+}
+
+export interface HolidayCreate {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  date: string;
+  /** @minLength 1 */
+  name: string;
+}
+
 export interface ManagementUser {
   id: number;
   companyId: number;

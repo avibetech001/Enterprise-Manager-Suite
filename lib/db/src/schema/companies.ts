@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { date, integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -18,6 +18,22 @@ export const companiesTable = pgTable("companies", {
     .notNull()
     .defaultNow(),
 });
+
+// Company-managed public holidays. Dates in this list do not count as
+// working days when computing leave durations.
+export const companyHolidaysTable = pgTable("company_holidays", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  date: date("date").notNull(),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export type CompanyHoliday = typeof companyHolidaysTable.$inferSelect;
 
 export const insertCompanySchema = createInsertSchema(companiesTable).omit({
   id: true,

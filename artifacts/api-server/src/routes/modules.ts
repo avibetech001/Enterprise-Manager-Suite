@@ -7,6 +7,7 @@ import {
   attendanceRecordsTable,
   attendanceSettingsTable,
   companiesTable,
+  companyHolidaysTable,
   companyPostsTable,
   fundRequestsTable,
   leaveRequestsTable,
@@ -136,8 +137,13 @@ function today(): string {
   return tzParts().date;
 }
 
-// Count working days only — Saturdays and Sundays do not use up leave.
-function workingDaysBetween(start: string, end: string): number {
+// Count working days only — Saturdays, Sundays, and company public holidays
+// do not use up leave.
+function workingDaysBetween(
+  start: string,
+  end: string,
+  holidays: ReadonlySet<string> = new Set(),
+): number {
   const startMs = new Date(`${start}T00:00:00Z`).getTime();
   const endMs = new Date(`${end}T00:00:00Z`).getTime();
   if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
@@ -145,10 +151,22 @@ function workingDaysBetween(start: string, end: string): number {
   }
   let count = 0;
   for (let ms = startMs; ms <= endMs; ms += 86_400_000) {
-    const dow = new Date(ms).getUTCDay();
-    if (dow !== 0 && dow !== 6) count++;
+    const d = new Date(ms);
+    const dow = d.getUTCDay();
+    if (dow === 0 || dow === 6) continue;
+    if (holidays.has(d.toISOString().slice(0, 10))) continue;
+    count++;
   }
   return count;
+}
+
+// Company public holiday dates (YYYY-MM-DD) for leave-day calculations.
+async function companyHolidaySet(companyId: number): Promise<Set<string>> {
+  const rows = await db
+    .select({ date: companyHolidaysTable.date })
+    .from(companyHolidaysTable)
+    .where(eq(companyHolidaysTable.companyId, companyId));
+  return new Set(rows.map((r) => r.date));
 }
 
 async function leaveBalance(
@@ -884,18 +902,23 @@ router.post(
       return;
     }
     const { type, startDate, endDate, reason } = parsed.data;
-    const days = workingDaysBetween(startDate, endDate);
+    const me = req.currentUser!;
+    const days = workingDaysBetween(
+      startDate,
+      endDate,
+      await companyHolidaySet(me.companyId),
+    );
     if (Number.isNaN(days)) {
       res.status(400).json({ error: "End date must be on or after the start date." });
       return;
     }
     if (days < 1) {
       res.status(400).json({
-        error: "The selected dates fall on a weekend — leave only counts working days (Mon–Fri).",
+        error:
+          "The selected dates fall entirely on weekends or public holidays — leave only counts working days.",
       });
       return;
     }
-    const me = req.currentUser!;
     if (type !== "unpaid") {
       const balance = await leaveBalance(me.companyId, me.id);
       if (days > balance.remaining) {

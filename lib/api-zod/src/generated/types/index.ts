@@ -63,6 +63,8 @@ export * from './fundRequest';
 export * from './fundRequestInput';
 export * from './fundRequestWithUser';
 export * from './healthStatus';
+export * from './holiday';
+export * from './holidayCreate';
 export * from './leaveBalance';
 export * from './leaveCreateInput';
 export * from './leaveCreateInputType';

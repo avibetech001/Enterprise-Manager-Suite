@@ -234,6 +234,48 @@ export const UpdateCompanyResponse = zod.object({
 
 
 /**
+ * @summary List the company's public holidays
+ */
+export const ListHolidaysResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "date": zod.string(),
+  "name": zod.string()
+})
+export const ListHolidaysResponse = zod.array(ListHolidaysResponseItem)
+
+
+/**
+ * @summary Add a public holiday (management)
+ */
+export const createHolidayBodyDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+
+export const CreateHolidayBody = zod.object({
+  "date": zod.string().regex(createHolidayBodyDateRegExp),
+  "name": zod.string().min(1)
+})
+
+export const CreateHolidayResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "date": zod.string(),
+  "name": zod.string()
+})
+
+
+/**
+ * @summary Remove a public holiday (management)
+ */
+export const DeleteHolidayParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteHolidayResponse = zod.void()
+
+
+/**
  * @summary List the catalog of assignable RBAC permissions
  */
 export const ListPermissionsResponseItem = zod.object({
