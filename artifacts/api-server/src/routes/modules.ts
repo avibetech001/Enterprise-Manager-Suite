@@ -136,9 +136,19 @@ function today(): string {
   return tzParts().date;
 }
 
-function daysBetween(start: string, end: string): number {
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  return Math.floor(ms / 86_400_000) + 1;
+// Count working days only — Saturdays and Sundays do not use up leave.
+function workingDaysBetween(start: string, end: string): number {
+  const startMs = new Date(`${start}T00:00:00Z`).getTime();
+  const endMs = new Date(`${end}T00:00:00Z`).getTime();
+  if (Number.isNaN(startMs) || Number.isNaN(endMs) || endMs < startMs) {
+    return NaN;
+  }
+  let count = 0;
+  for (let ms = startMs; ms <= endMs; ms += 86_400_000) {
+    const dow = new Date(ms).getUTCDay();
+    if (dow !== 0 && dow !== 6) count++;
+  }
+  return count;
 }
 
 async function leaveBalance(
@@ -874,9 +884,15 @@ router.post(
       return;
     }
     const { type, startDate, endDate, reason } = parsed.data;
-    const days = daysBetween(startDate, endDate);
-    if (Number.isNaN(days) || days < 1) {
+    const days = workingDaysBetween(startDate, endDate);
+    if (Number.isNaN(days)) {
       res.status(400).json({ error: "End date must be on or after the start date." });
+      return;
+    }
+    if (days < 1) {
+      res.status(400).json({
+        error: "The selected dates fall on a weekend — leave only counts working days (Mon–Fri).",
+      });
       return;
     }
     const me = req.currentUser!;
