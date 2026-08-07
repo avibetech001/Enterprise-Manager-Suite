@@ -54,7 +54,7 @@ export const CompleteSetupResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
@@ -90,7 +90,7 @@ export const ManagementLoginResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
@@ -126,7 +126,7 @@ export const EmployeeLoginResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
@@ -163,7 +163,7 @@ export const GetCurrentSessionResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()
@@ -279,7 +279,7 @@ export const DeleteHolidayResponse = zod.void()
  * @summary List the catalog of assignable RBAC permissions
  */
 export const ListPermissionsResponseItem = zod.object({
-  "key": zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports']),
+  "key": zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports']),
   "label": zod.string(),
   "description": zod.string()
 })
@@ -296,7 +296,7 @@ export const ListManagementUsersResponseItem = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
@@ -318,7 +318,7 @@ export const CreateManagementUserBody = zod.object({
   "phone": zod.string().min(1),
   "password": zod.string().min(createManagementUserBodyPasswordMin),
   "role": zod.enum(['super_admin', 'hr']).optional(),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])).optional()
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])).optional()
 })
 
 export const CreateManagementUserResponse = zod.object({
@@ -328,7 +328,7 @@ export const CreateManagementUserResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
@@ -349,7 +349,7 @@ export const UpdateManagementUserBody = zod.object({
   "fullName": zod.string().min(1).optional(),
   "phone": zod.string().min(1).optional(),
   "role": zod.enum(['super_admin', 'hr']).optional(),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])).optional(),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])).optional(),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']).optional()
 })
 
@@ -360,7 +360,7 @@ export const UpdateManagementUserResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "createdAt": zod.coerce.date()
 })
@@ -1090,7 +1090,7 @@ export const ActivateEmployeeResponse = zod.object({
   "email": zod.string(),
   "phone": zod.string(),
   "role": zod.enum(['super_admin', 'hr', 'employee']),
-  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_requisitions', 'manage_content', 'view_reports'])),
+  "permissions": zod.array(zod.enum(['manage_users', 'manage_employees', 'manage_departments', 'manage_company_settings', 'manage_attendance_settings', 'manage_leave', 'manage_projects', 'manage_finance', 'manage_invoices', 'manage_requisitions', 'manage_content', 'view_reports'])),
   "status": zod.enum(['active', 'pending', 'inactive', 'suspended']),
   "canCreateProjects": zod.boolean(),
   "createdAt": zod.coerce.date()

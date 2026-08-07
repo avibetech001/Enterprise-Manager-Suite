@@ -18,6 +18,7 @@ export const PermissionKey = {
   manage_leave: 'manage_leave',
   manage_projects: 'manage_projects',
   manage_finance: 'manage_finance',
+  manage_invoices: 'manage_invoices',
   manage_requisitions: 'manage_requisitions',
   manage_content: 'manage_content',
   view_reports: 'view_reports',

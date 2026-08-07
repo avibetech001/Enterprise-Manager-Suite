@@ -54,6 +54,12 @@ export const PERMISSION_CATALOG = [
     description: "Review, approve, and reject employee fund requests.",
   },
   {
+    key: "manage_invoices" as const,
+    label: "Manage Invoices",
+    description:
+      "Generate, print, and track invoices for approved fund requests.",
+  },
+  {
     key: "manage_requisitions" as const,
     label: "Manage Requisitions",
     description: "Review and fulfill internal requisition requests.",
@@ -148,7 +154,8 @@ export function requireRole(...roles: Array<User["role"]>) {
   };
 }
 
-export function requireManagementPermission(key: PermissionKey) {
+// Accepts one or more permission keys — the user needs ANY of them.
+export function requireManagementPermission(...keys: PermissionKey[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
     const user = req.currentUser;
     if (!user) {
@@ -159,7 +166,7 @@ export function requireManagementPermission(key: PermissionKey) {
       res.status(403).json({ error: "Not permitted" });
       return;
     }
-    if (!hasPermission(user, key)) {
+    if (!keys.some((key) => hasPermission(user, key))) {
       res.status(403).json({ error: "Not permitted" });
       return;
     }

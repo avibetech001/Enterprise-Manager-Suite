@@ -2473,6 +2473,7 @@ components:
           manage_leave,
           manage_projects,
           manage_finance,
+          manage_invoices,
           manage_requisitions,
           manage_content,
           view_reports,

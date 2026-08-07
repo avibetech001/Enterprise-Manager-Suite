@@ -168,7 +168,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                     </SidebarMenuItem>
                   )}
 
-                  {(hasPerm("manage_finance") || isSuperAdmin) && (
+                  {(hasPerm("manage_finance") || hasPerm("manage_invoices") || isSuperAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton isActive={location === "/invoices"} asChild>
                         <Link href="/invoices">

@@ -1533,7 +1533,7 @@ router.get(
 router.get(
   "/fund-requests",
   requireAuth,
-  requireManagementPermission("manage_finance"),
+  requireManagementPermission("manage_finance", "manage_invoices"),
   async (req, res): Promise<void> => {
     const rows = await db
       .select({
@@ -1696,7 +1696,7 @@ async function invoiceWithDetails(invoiceId: number, companyId: number) {
 router.get(
   "/invoices",
   requireAuth,
-  requireManagementPermission("manage_finance"),
+  requireManagementPermission("manage_finance", "manage_invoices"),
   async (req, res): Promise<void> => {
     const rows = await db
       .select({
@@ -1735,7 +1735,7 @@ router.get(
 router.post(
   "/invoices",
   requireAuth,
-  requireManagementPermission("manage_finance"),
+  requireManagementPermission("manage_finance", "manage_invoices"),
   async (req, res): Promise<void> => {
     const parsed = CreateInvoiceBody.safeParse(req.body);
     if (!parsed.success) {
@@ -1792,7 +1792,7 @@ router.post(
 router.post(
   "/invoices/:id/status",
   requireAuth,
-  requireManagementPermission("manage_finance"),
+  requireManagementPermission("manage_finance", "manage_invoices"),
   async (req, res): Promise<void> => {
     const parsed = UpdateInvoiceStatusBody.safeParse(req.body);
     const id = Number(req.params.id);
