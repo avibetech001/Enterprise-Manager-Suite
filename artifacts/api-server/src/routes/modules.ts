@@ -10,6 +10,7 @@ import {
   companyHolidaysTable,
   companyPostsTable,
   fundRequestsTable,
+  invoicesTable,
   leaveRequestsTable,
   projectDeliverablesTable,
   projectMembersTable,
@@ -56,6 +57,11 @@ import {
   GetPendingCountsResponse,
   ListAttendanceRecordsResponse,
   ListFundRequestsResponse,
+  ListInvoicesResponse,
+  CreateInvoiceBody,
+  CreateInvoiceResponse,
+  UpdateInvoiceStatusBody,
+  UpdateInvoiceStatusResponse,
   ListLeaveRequestsResponse,
   ListMyAttendanceResponse,
   ListMyFundRequestsResponse,
@@ -1599,6 +1605,16 @@ router.post(
       return;
     }
     const me = req.currentUser!;
+    const [existingInvoice] = await db
+      .select({ id: invoicesTable.id })
+      .from(invoicesTable)
+      .where(eq(invoicesTable.fundRequestId, id));
+    if (existingInvoice) {
+      res.status(400).json({
+        error: "This fund request already has an invoice and can no longer be re-reviewed.",
+      });
+      return;
+    }
     const [updated] = await db
       .update(fundRequestsTable)
       .set({
@@ -1635,6 +1651,191 @@ router.post(
         employeeCode: employee?.employeeCode ?? null,
       }),
     );
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Invoices (generated from approved fund requests)
+// ---------------------------------------------------------------------------
+
+async function invoiceWithDetails(invoiceId: number, companyId: number) {
+  const [row] = await db
+    .select({
+      invoice: invoicesTable,
+      amount: fundRequestsTable.amount,
+      purpose: fundRequestsTable.purpose,
+      details: fundRequestsTable.details,
+      requestDate: fundRequestsTable.createdAt,
+      employeeName: usersTable.fullName,
+      employeeCode: usersTable.employeeCode,
+    })
+    .from(invoicesTable)
+    .innerJoin(
+      fundRequestsTable,
+      eq(invoicesTable.fundRequestId, fundRequestsTable.id),
+    )
+    .innerJoin(usersTable, eq(fundRequestsTable.userId, usersTable.id))
+    .where(
+      and(
+        eq(invoicesTable.id, invoiceId),
+        eq(invoicesTable.companyId, companyId),
+      ),
+    );
+  if (!row) return null;
+  return {
+    ...row.invoice,
+    amount: row.amount,
+    purpose: row.purpose,
+    details: row.details,
+    requestDate: row.requestDate,
+    employeeName: row.employeeName,
+    employeeCode: row.employeeCode,
+  };
+}
+
+router.get(
+  "/invoices",
+  requireAuth,
+  requireManagementPermission("manage_finance"),
+  async (req, res): Promise<void> => {
+    const rows = await db
+      .select({
+        invoice: invoicesTable,
+        amount: fundRequestsTable.amount,
+        purpose: fundRequestsTable.purpose,
+        details: fundRequestsTable.details,
+        requestDate: fundRequestsTable.createdAt,
+        employeeName: usersTable.fullName,
+        employeeCode: usersTable.employeeCode,
+      })
+      .from(invoicesTable)
+      .innerJoin(
+        fundRequestsTable,
+        eq(invoicesTable.fundRequestId, fundRequestsTable.id),
+      )
+      .innerJoin(usersTable, eq(fundRequestsTable.userId, usersTable.id))
+      .where(eq(invoicesTable.companyId, req.currentUser!.companyId))
+      .orderBy(desc(invoicesTable.createdAt));
+    res.json(
+      ListInvoicesResponse.parse(
+        rows.map((r) => ({
+          ...r.invoice,
+          amount: r.amount,
+          purpose: r.purpose,
+          details: r.details,
+          requestDate: r.requestDate,
+          employeeName: r.employeeName,
+          employeeCode: r.employeeCode,
+        })),
+      ),
+    );
+  },
+);
+
+router.post(
+  "/invoices",
+  requireAuth,
+  requireManagementPermission("manage_finance"),
+  async (req, res): Promise<void> => {
+    const parsed = CreateInvoiceBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Select a fund request to invoice." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [fundRequest] = await db
+      .select()
+      .from(fundRequestsTable)
+      .where(
+        and(
+          eq(fundRequestsTable.id, parsed.data.fundRequestId),
+          eq(fundRequestsTable.companyId, me.companyId),
+        ),
+      );
+    if (!fundRequest) {
+      res.status(404).json({ error: "Fund request not found." });
+      return;
+    }
+    if (fundRequest.status !== "approved") {
+      res.status(400).json({
+        error: "Only approved fund requests can be invoiced.",
+      });
+      return;
+    }
+    const inserted = await db
+      .insert(invoicesTable)
+      .values({
+        companyId: me.companyId,
+        fundRequestId: fundRequest.id,
+        invoiceNumber: "PENDING",
+        createdBy: me.id,
+      })
+      .onConflictDoNothing({ target: invoicesTable.fundRequestId })
+      .returning();
+    if (inserted.length === 0) {
+      res.status(400).json({
+        error: "An invoice already exists for this fund request.",
+      });
+      return;
+    }
+    const created = inserted[0];
+    const invoiceNumber = `INV-${String(created.id).padStart(4, "0")}`;
+    await db
+      .update(invoicesTable)
+      .set({ invoiceNumber })
+      .where(eq(invoicesTable.id, created.id));
+    const full = await invoiceWithDetails(created.id, me.companyId);
+    res.status(201).json(CreateInvoiceResponse.parse(full));
+  },
+);
+
+router.post(
+  "/invoices/:id/status",
+  requireAuth,
+  requireManagementPermission("manage_finance"),
+  async (req, res): Promise<void> => {
+    const parsed = UpdateInvoiceStatusBody.safeParse(req.body);
+    const id = Number(req.params.id);
+    if (!parsed.success || Number.isNaN(id)) {
+      res.status(400).json({ error: "Invalid invoice update." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [updated] = await db
+      .update(invoicesTable)
+      .set({
+        status: parsed.data.status,
+        statusNote: parsed.data.note?.trim() || null,
+      })
+      .where(
+        and(
+          eq(invoicesTable.id, id),
+          eq(invoicesTable.companyId, me.companyId),
+          eq(invoicesTable.status, "pending"),
+        ),
+      )
+      .returning();
+    if (!updated) {
+      const [exists] = await db
+        .select({ status: invoicesTable.status })
+        .from(invoicesTable)
+        .where(
+          and(
+            eq(invoicesTable.id, id),
+            eq(invoicesTable.companyId, me.companyId),
+          ),
+        );
+      if (exists) {
+        res.status(400).json({
+          error: `This invoice was already marked as ${exists.status} and can't be changed.`,
+        });
+      } else {
+        res.status(404).json({ error: "Invoice not found." });
+      }
+      return;
+    }
+    const full = await invoiceWithDetails(updated.id, me.companyId);
+    res.json(UpdateInvoiceStatusResponse.parse(full));
   },
 );
 

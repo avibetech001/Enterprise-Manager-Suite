@@ -1650,6 +1650,75 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /invoices:
+    get:
+      operationId: listInvoices
+      tags: [funds]
+      summary: List all invoices (management)
+      responses:
+        "200":
+          description: Invoices with fund request and employee info
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InvoiceWithDetails"
+    post:
+      operationId: createInvoice
+      tags: [funds]
+      summary: Generate an invoice from an approved fund request (management)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceInput"
+      responses:
+        "201":
+          description: Created invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceWithDetails"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /invoices/{id}/status:
+    post:
+      operationId: updateInvoiceStatus
+      tags: [funds]
+      summary: Mark an invoice as paid or rejected (management)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceStatusInput"
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InvoiceWithDetails"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /work-reports/me:
     get:
       operationId: listMyWorkReports
@@ -3527,6 +3596,71 @@ components:
               type: string
             employeeCode:
               type: ["string", "null"]
+
+    InvoiceInput:
+      type: object
+      required: [fundRequestId]
+      properties:
+        fundRequestId:
+          type: integer
+
+    InvoiceStatusInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [paid, rejected]
+        note:
+          type: string
+
+    InvoiceWithDetails:
+      type: object
+      required:
+        [
+          id,
+          companyId,
+          fundRequestId,
+          invoiceNumber,
+          status,
+          statusNote,
+          createdAt,
+          employeeName,
+          employeeCode,
+          amount,
+          purpose,
+          details,
+          requestDate,
+        ]
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        fundRequestId:
+          type: integer
+        invoiceNumber:
+          type: string
+        status:
+          type: string
+        statusNote:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        employeeName:
+          type: string
+        employeeCode:
+          type: ["string", "null"]
+        amount:
+          type: string
+        purpose:
+          type: string
+        details:
+          type: ["string", "null"]
+        requestDate:
+          type: string
+          format: date-time
 
     WorkReportInput:
       type: object

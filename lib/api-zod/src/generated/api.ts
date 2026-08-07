@@ -2133,6 +2133,80 @@ export const ReviewFundRequestResponse = zod.object({
 
 
 /**
+ * @summary List all invoices (management)
+ */
+export const ListInvoicesResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "fundRequestId": zod.number(),
+  "invoiceNumber": zod.string(),
+  "status": zod.string(),
+  "statusNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "requestDate": zod.coerce.date()
+})
+export const ListInvoicesResponse = zod.array(ListInvoicesResponseItem)
+
+
+/**
+ * @summary Generate an invoice from an approved fund request (management)
+ */
+export const CreateInvoiceBody = zod.object({
+  "fundRequestId": zod.number()
+})
+
+export const CreateInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "fundRequestId": zod.number(),
+  "invoiceNumber": zod.string(),
+  "status": zod.string(),
+  "statusNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "requestDate": zod.coerce.date()
+})
+
+
+/**
+ * @summary Mark an invoice as paid or rejected (management)
+ */
+export const UpdateInvoiceStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const UpdateInvoiceStatusBody = zod.object({
+  "status": zod.enum(['paid', 'rejected']),
+  "note": zod.string().optional()
+})
+
+export const UpdateInvoiceStatusResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "fundRequestId": zod.number(),
+  "invoiceNumber": zod.string(),
+  "status": zod.string(),
+  "statusNote": zod.string().nullable(),
+  "createdAt": zod.coerce.date(),
+  "employeeName": zod.string(),
+  "employeeCode": zod.string().nullable(),
+  "amount": zod.string(),
+  "purpose": zod.string(),
+  "details": zod.string().nullable(),
+  "requestDate": zod.coerce.date()
+})
+
+
+/**
  * @summary List the current employee's work reports
  */
 export const ListMyWorkReportsResponseItem = zod.object({

@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetCurrentSession, useLogout, useGetPendingCounts, getGetPendingCountsQueryKey } from "@workspace/api-client-react";
 import logo from "@/assets/logo.svg";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck, NotebookPen } from "lucide-react";
+import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck, NotebookPen, ReceiptText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
@@ -163,6 +163,17 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                               {pendingCounts!.fundRequests}
                             </Badge>
                           )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_finance") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/invoices"} asChild>
+                        <Link href="/invoices">
+                          <ReceiptText className="h-4 w-4" />
+                          <span>Invoices</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

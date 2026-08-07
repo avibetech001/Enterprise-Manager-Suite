@@ -921,6 +921,42 @@ export type FundRequestWithUser = FundRequest & ({
   employeeCode: string | null;
 });
 
+export interface InvoiceInput {
+  fundRequestId: number;
+}
+
+export type InvoiceStatusInputStatus = typeof InvoiceStatusInputStatus[keyof typeof InvoiceStatusInputStatus];
+
+
+export const InvoiceStatusInputStatus = {
+  paid: 'paid',
+  rejected: 'rejected',
+} as const;
+
+export interface InvoiceStatusInput {
+  status: InvoiceStatusInputStatus;
+  note?: string;
+}
+
+export interface InvoiceWithDetails {
+  id: number;
+  companyId: number;
+  fundRequestId: number;
+  invoiceNumber: string;
+  status: string;
+  /** @nullable */
+  statusNote: string | null;
+  createdAt: string;
+  employeeName: string;
+  /** @nullable */
+  employeeCode: string | null;
+  amount: string;
+  purpose: string;
+  /** @nullable */
+  details: string | null;
+  requestDate: string;
+}
+
 export type WorkReportInputPeriod = typeof WorkReportInputPeriod[keyof typeof WorkReportInputPeriod];
 
 

@@ -34,6 +34,7 @@ import ManagementAttendancePage from '@/pages/management/attendance';
 import ManagementLeavePage from '@/pages/management/leave';
 import ManagementProjectsPage from '@/pages/management/projects';
 import ManagementFundRequestsPage from '@/pages/management/fund-requests';
+import ManagementInvoicesPage from '@/pages/management/invoices';
 import ManagementAnnouncementsPage from '@/pages/management/announcements';
 
 // Future imports for Mgmt
@@ -189,6 +190,7 @@ function Router() {
         ["/leave", ManagementLeavePage],
         ["/projects", ManagementProjectsPage],
         ["/fund-requests", ManagementFundRequestsPage],
+        ["/invoices", ManagementInvoicesPage],
         ["/work-reports", ManagementWorkReportsPage],
         ["/announcements", ManagementAnnouncementsPage],
         ["/knowledge-base", ManagementKnowledgeBasePage],
