@@ -38,6 +38,7 @@ type Filter = (typeof FILTERS)[number];
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
     rejected: "bg-red-50 text-red-700 border-red-200",
     pending: "bg-amber-50 text-amber-700 border-amber-200",
   };
@@ -67,8 +68,7 @@ export default function InvoicesPage() {
   const printRef = useRef<HTMLDivElement>(null);
 
   const invoicedIds = new Set(invoices?.map((i) => i.fundRequestId) ?? []);
-  const invoiceable =
-    fundRequests?.filter((r) => r.status === "approved" && !invoicedIds.has(r.id)) ?? [];
+  const allRequests = fundRequests ?? [];
 
   const filtered = invoices?.filter((i) => filter === "all" || i.status === filter) ?? [];
 
@@ -282,33 +282,49 @@ export default function InvoicesPage() {
             <DialogTitle>Generate Invoice</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Pick an approved fund request that hasn't been invoiced yet.
+            All fund requests are listed — only approved ones that haven't been invoiced yet
+            can be turned into an invoice.
           </p>
           <div className="max-h-[50vh] overflow-y-auto space-y-2">
-            {invoiceable.length > 0 ? (
-              invoiceable.map((r) => (
-                <div
-                  key={r.id}
-                  className="flex items-center justify-between gap-3 rounded-md border p-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-sm truncate">
-                      {r.employeeName} — {r.amount}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate">{r.purpose}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    disabled={createInvoice.isPending}
-                    onClick={() => generate(r.id)}
+            {allRequests.length > 0 ? (
+              allRequests.map((r) => {
+                const alreadyInvoiced = invoicedIds.has(r.id);
+                const canInvoice = r.status === "approved" && !alreadyInvoiced;
+                return (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between gap-3 rounded-md border p-3"
                   >
-                    <FileText className="h-4 w-4 mr-1" /> Invoice
-                  </Button>
-                </div>
-              ))
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">
+                        {r.employeeName} — {r.amount}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">{r.purpose}</p>
+                      <div className="mt-1">{statusBadge(r.status)}</div>
+                    </div>
+                    {canInvoice ? (
+                      <Button
+                        size="sm"
+                        disabled={createInvoice.isPending}
+                        onClick={() => generate(r.id)}
+                      >
+                        <FileText className="h-4 w-4 mr-1" /> Invoice
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-muted-foreground whitespace-nowrap">
+                        {alreadyInvoiced
+                          ? "Already invoiced"
+                          : r.status === "pending"
+                            ? "Awaiting approval"
+                            : "Rejected"}
+                      </span>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p className="text-sm text-muted-foreground py-6 text-center">
-                No approved fund requests are waiting for an invoice.
+                No fund requests yet.
               </p>
             )}
           </div>
