@@ -3640,9 +3640,6 @@ components:
         amount:
           type: string
           minLength: 1
-        dueDate:
-          type: ["string", "null"]
-          pattern: '^\d{4}-\d{2}-\d{2}$'
 
     InvoiceStatusInput:
       type: object
@@ -3666,7 +3663,6 @@ components:
           clientPhone,
           description,
           amount,
-          dueDate,
           status,
           statusNote,
           paidAt,
@@ -3690,8 +3686,6 @@ components:
           type: string
         amount:
           type: string
-        dueDate:
-          type: ["string", "null"]
         status:
           type: string
         statusNote:

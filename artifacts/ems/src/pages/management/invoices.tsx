@@ -54,10 +54,6 @@ function downloadInvoicePdf(invoice: Invoice, companyName: string) {
   doc.text(invoice.status === "paid" ? "RECEIPT / PAID INVOICE" : "INVOICE", margin, y);
   doc.text(`Issued ${invoice.createdAt.slice(0, 10)}`, right, y, { align: "right" });
   y += 14;
-  if (invoice.dueDate) {
-    doc.text(`Due ${invoice.dueDate}`, right, y, { align: "right" });
-    y += 14;
-  }
   if (invoice.paidAt) {
     doc.text(`Paid ${invoice.paidAt.slice(0, 10)}`, right, y, { align: "right" });
     y += 14;
@@ -152,7 +148,6 @@ const EMPTY_FORM = {
   clientPhone: "",
   description: "",
   amount: "",
-  dueDate: "",
 };
 
 export default function InvoicesPage() {
@@ -197,7 +192,6 @@ export default function InvoicesPage() {
           clientPhone: form.clientPhone.trim() || undefined,
           description: form.description.trim(),
           amount: form.amount.trim(),
-          dueDate: form.dueDate || undefined,
         },
       },
       {
@@ -375,7 +369,6 @@ export default function InvoicesPage() {
                   <TableHead>Client</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Description</TableHead>
-                  <TableHead>Due</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -402,7 +395,6 @@ export default function InvoicesPage() {
                       <TableCell className="max-w-[180px] truncate">
                         {inv.description}
                       </TableCell>
-                      <TableCell className="text-sm">{inv.dueDate || "—"}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           {statusBadge(inv.status)}
@@ -459,7 +451,7 @@ export default function InvoicesPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                       No invoices yet. Generate one for a client to get started.
                     </TableCell>
                   </TableRow>
@@ -517,25 +509,14 @@ export default function InvoicesPage() {
                 className="resize-none"
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="inv-amount">Amount *</Label>
-                <Input
-                  id="inv-amount"
-                  value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                  placeholder="e.g. GHS 5,000"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="inv-due">Due date</Label>
-                <Input
-                  id="inv-due"
-                  type="date"
-                  value={form.dueDate}
-                  onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="inv-amount">Amount *</Label>
+              <Input
+                id="inv-amount"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                placeholder="e.g. GHS 5,000"
+              />
             </div>
           </div>
           <DialogFooter>
@@ -567,9 +548,6 @@ export default function InvoicesPage() {
                   <p className="text-xs text-muted-foreground">
                     Issued {detail.createdAt.slice(0, 10)}
                   </p>
-                  {detail.dueDate && (
-                    <p className="text-xs text-muted-foreground">Due {detail.dueDate}</p>
-                  )}
                   <div className="mt-1 flex justify-end">{statusBadge(detail.status)}</div>
                 </div>
               </div>

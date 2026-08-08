@@ -2144,7 +2144,6 @@ export const ListInvoicesResponseItem = zod.object({
   "clientPhone": zod.string().nullable(),
   "description": zod.string(),
   "amount": zod.string(),
-  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
   "paidAt": zod.coerce.date().nullable(),
@@ -2160,7 +2159,6 @@ export const ListInvoicesResponse = zod.array(ListInvoicesResponseItem)
 
 
 
-export const createInvoiceBodyDueDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
 
 
 export const CreateInvoiceBody = zod.object({
@@ -2168,8 +2166,7 @@ export const CreateInvoiceBody = zod.object({
   "clientEmail": zod.string().optional(),
   "clientPhone": zod.string().optional(),
   "description": zod.string().min(1),
-  "amount": zod.string().min(1),
-  "dueDate": zod.string().regex(createInvoiceBodyDueDateRegExp).nullish()
+  "amount": zod.string().min(1)
 })
 
 export const CreateInvoiceResponse = zod.object({
@@ -2181,7 +2178,6 @@ export const CreateInvoiceResponse = zod.object({
   "clientPhone": zod.string().nullable(),
   "description": zod.string(),
   "amount": zod.string(),
-  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
   "paidAt": zod.coerce.date().nullable(),
@@ -2211,7 +2207,6 @@ export const UpdateInvoiceStatusResponse = zod.object({
   "clientPhone": zod.string().nullable(),
   "description": zod.string(),
   "amount": zod.string(),
-  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
   "paidAt": zod.coerce.date().nullable(),
@@ -2236,7 +2231,6 @@ export const SendInvoiceReceiptResponse = zod.object({
   "clientPhone": zod.string().nullable(),
   "description": zod.string(),
   "amount": zod.string(),
-  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
   "paidAt": zod.coerce.date().nullable(),

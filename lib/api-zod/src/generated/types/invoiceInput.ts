@@ -15,9 +15,4 @@ export interface InvoiceInput {
   description: string;
   /** @minLength 1 */
   amount: string;
-  /**
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}$
-     */
-  dueDate?: string | null;
 }

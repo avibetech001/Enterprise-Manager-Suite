@@ -1685,10 +1685,6 @@ router.post(
     }
     const me = req.currentUser!;
     const data = parsed.data;
-    if (data.dueDate && !isValidDateStr(data.dueDate)) {
-      res.status(400).json({ error: "Invalid due date." });
-      return;
-    }
     const withNumber = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(invoicesTable)
@@ -1700,7 +1696,6 @@ router.post(
           clientPhone: data.clientPhone?.trim() || null,
           description: data.description.trim(),
           amount: data.amount.trim(),
-          dueDate: data.dueDate ?? null,
           createdBy: me.id,
         })
         .returning();

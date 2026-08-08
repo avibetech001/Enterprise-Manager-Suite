@@ -17,8 +17,6 @@ export interface Invoice {
   clientPhone: string | null;
   description: string;
   amount: string;
-  /** @nullable */
-  dueDate: string | null;
   status: string;
   /** @nullable */
   statusNote: string | null;

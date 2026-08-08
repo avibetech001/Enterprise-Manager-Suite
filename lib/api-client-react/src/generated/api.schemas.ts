@@ -931,11 +931,6 @@ export interface InvoiceInput {
   description: string;
   /** @minLength 1 */
   amount: string;
-  /**
-     * @nullable
-     * @pattern ^\d{4}-\d{2}-\d{2}$
-     */
-  dueDate?: string | null;
 }
 
 export type InvoiceStatusInputStatus = typeof InvoiceStatusInputStatus[keyof typeof InvoiceStatusInputStatus];
@@ -962,8 +957,6 @@ export interface Invoice {
   clientPhone: string | null;
   description: string;
   amount: string;
-  /** @nullable */
-  dueDate: string | null;
   status: string;
   /** @nullable */
   statusNote: string | null;

@@ -203,7 +203,6 @@ export const invoicesTable = pgTable("invoices", {
   clientPhone: text("client_phone"),
   description: text("description").notNull(),
   amount: text("amount").notNull(),
-  dueDate: date("due_date"),
   status: text("status").notNull().default("unpaid"),
   statusNote: text("status_note"),
   paidAt: timestamp("paid_at", { withTimezone: true }),
