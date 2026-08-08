@@ -2221,7 +2221,7 @@ export const UpdateInvoiceStatusResponse = zod.object({
 
 
 /**
- * @summary Email a payment receipt to the client (management)
+ * @summary Record that a payment receipt was shared with the client (management)
  */
 export const SendInvoiceReceiptParams = zod.object({
   "id": zod.coerce.number()

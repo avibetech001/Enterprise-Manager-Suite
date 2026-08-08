@@ -5603,7 +5603,7 @@ export const getSendInvoiceReceiptUrl = (id: number,) => {
 }
 
 /**
- * @summary Email a payment receipt to the client (management)
+ * @summary Record that a payment receipt was shared with the client (management)
  */
 export const sendInvoiceReceipt = async (id: number, options?: RequestInit): Promise<Invoice> => {
 
@@ -5652,7 +5652,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type SendInvoiceReceiptMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Email a payment receipt to the client (management)
+ * @summary Record that a payment receipt was shared with the client (management)
  */
 export const useSendInvoiceReceipt = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendInvoiceReceipt>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}

@@ -31,7 +31,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, Plus, Mail, Download } from "lucide-react";
+import { Printer, Plus, Mail, Download, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 
@@ -244,22 +244,54 @@ export default function InvoicesPage() {
     );
   };
 
-  const submitReceipt = (invoice: Invoice) => {
+  const recordReceiptShared = (invoice: Invoice) => {
     sendReceipt.mutate(
       { id: invoice.id },
       {
         onSuccess: (inv) => {
           invalidate();
-          toast.success(`Receipt emailed to ${inv.clientEmail}`);
           setDetail((d) => (d && d.id === inv.id ? inv : d));
-        },
-        onError: (error) => {
-          toast.error("Failed to send receipt", {
-            description: error.data?.error || "Unknown error occurred",
-          });
         },
       },
     );
+  };
+
+  const shareReceipt = async (invoice: Invoice) => {
+    const companyName = session?.company.name || "5th Element";
+    const paidDate = invoice.paidAt ? invoice.paidAt.slice(0, 10) : "";
+    const text = [
+      `Payment Receipt — ${invoice.invoiceNumber}`,
+      `From: ${companyName}`,
+      `To: ${invoice.clientName}`,
+      ``,
+      `Description: ${invoice.description}`,
+      `Amount paid: ${invoice.amount}`,
+      paidDate ? `Payment date: ${paidDate}` : "",
+      ``,
+      `Thank you for your payment!`,
+    ]
+      .filter((line, i, arr) => line !== "" || arr[i - 1] !== "")
+      .join("\n");
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Receipt ${invoice.invoiceNumber}`, text });
+        recordReceiptShared(invoice);
+        toast.success("Receipt shared");
+      } catch {
+        // user closed the share sheet — not an error
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text);
+        recordReceiptShared(invoice);
+        toast.success("Receipt copied", {
+          description: "Paste it into WhatsApp, SMS, or any messaging app.",
+        });
+      } catch {
+        toast.error("Could not copy the receipt. Try the Download PDF option instead.");
+      }
+    }
   };
 
   return (
@@ -410,15 +442,14 @@ export default function InvoicesPage() {
                               Cancel
                             </Button>
                           </div>
-                        ) : inv.status === "paid" && inv.clientEmail ? (
+                        ) : inv.status === "paid" ? (
                           <Button
                             size="sm"
                             variant="outline"
-                            disabled={sendReceipt.isPending}
-                            onClick={() => submitReceipt(inv)}
+                            onClick={() => shareReceipt(inv)}
                           >
-                            <Mail className="h-4 w-4 mr-1" />
-                            {inv.receiptSentAt ? "Resend Receipt" : "Send Receipt"}
+                            <Share2 className="h-4 w-4 mr-1" />
+                            {inv.receiptSentAt ? "Share Again" : "Share Receipt"}
                           </Button>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
@@ -624,10 +655,10 @@ export default function InvoicesPage() {
                 </Button>
               </>
             )}
-            {detail?.status === "paid" && detail.clientEmail && (
-              <Button disabled={sendReceipt.isPending} onClick={() => submitReceipt(detail)}>
-                <Mail className="h-4 w-4 mr-1" />
-                {detail.receiptSentAt ? "Resend Receipt" : "Send Receipt"}
+            {detail?.status === "paid" && (
+              <Button onClick={() => shareReceipt(detail)}>
+                <Share2 className="h-4 w-4 mr-1" />
+                {detail.receiptSentAt ? "Share Again" : "Share Receipt"}
               </Button>
             )}
           </DialogFooter>

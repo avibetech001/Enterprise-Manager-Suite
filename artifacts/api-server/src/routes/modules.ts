@@ -94,7 +94,6 @@ import {
   requireRole,
   verifyPassword,
 } from "../lib/auth";
-import { sendReceiptEmail } from "../lib/email";
 import { notify } from "../lib/notify";
 import { ObjectStorageService } from "../lib/objectStorage";
 
@@ -1794,38 +1793,12 @@ router.post(
     }
     if (invoice.status !== "paid") {
       res.status(400).json({
-        error: "Receipts can only be sent for paid invoices.",
+        error: "Receipts can only be shared for paid invoices.",
       });
       return;
     }
-    if (!invoice.clientEmail) {
-      res.status(400).json({
-        error: "This invoice has no client email. Edit it to add one first.",
-      });
-      return;
-    }
-    const [company] = await db
-      .select()
-      .from(companiesTable)
-      .where(eq(companiesTable.id, me.companyId));
-    const sent = await sendReceiptEmail({
-      to: invoice.clientEmail,
-      clientName: invoice.clientName,
-      companyName: company?.name ?? "5th Element",
-      invoiceNumber: invoice.invoiceNumber,
-      description: invoice.description,
-      amount: invoice.amount,
-      paidAt: invoice.paidAt ?? new Date(),
-    });
-    if (!sent.ok) {
-      res.status(400).json({
-        error:
-          sent.reason === "credits"
-            ? "The email service (SendGrid) has run out of sending credits. Top up or upgrade the SendGrid plan, then try again."
-            : "The receipt email could not be sent. Please try again in a moment.",
-      });
-      return;
-    }
+    // Sharing happens on the user's device (WhatsApp, SMS, etc.);
+    // this endpoint just records that the receipt went out.
     const [updated] = await db
       .update(invoicesTable)
       .set({ receiptSentAt: new Date() })

@@ -1723,7 +1723,7 @@ paths:
     post:
       operationId: sendInvoiceReceipt
       tags: [invoices]
-      summary: Email a payment receipt to the client (management)
+      summary: Record that a payment receipt was shared with the client (management)
       parameters:
         - name: id
           in: path
