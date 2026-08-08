@@ -76,7 +76,9 @@ export async function sendActivationEmail(options: {
 
 /**
  * Emails a payment receipt to a client for a paid invoice.
- * Returns true when SendGrid accepts the message; false on any failure.
+ * Returns { ok: true } when SendGrid accepts the message; on failure,
+ * { ok: false, reason } where reason is "credits" when the SendGrid
+ * plan is out of sending credits, otherwise "error".
  */
 export async function sendReceiptEmail(options: {
   to: string;
@@ -86,7 +88,7 @@ export async function sendReceiptEmail(options: {
   description: string;
   amount: string;
   paidAt: Date;
-}): Promise<boolean> {
+}): Promise<{ ok: true } | { ok: false; reason: "credits" | "error" }> {
   const { to, clientName, companyName, invoiceNumber, description, amount, paidAt } =
     options;
   const paidDate = paidAt.toISOString().slice(0, 10);
@@ -137,12 +139,15 @@ export async function sendReceiptEmail(options: {
     if (!response.ok) {
       const detail = await response.text().catch(() => "");
       console.error(`Receipt email to ${to} failed: ${response.status} ${detail}`);
-      return false;
+      if (detail.includes("Maximum credits exceeded")) {
+        return { ok: false, reason: "credits" };
+      }
+      return { ok: false, reason: "error" };
     }
-    return true;
+    return { ok: true };
   } catch (error) {
     console.error(`Receipt email to ${to} failed:`, error);
-    return false;
+    return { ok: false, reason: "error" };
   }
 }
 

@@ -1817,10 +1817,12 @@ router.post(
       amount: invoice.amount,
       paidAt: invoice.paidAt ?? new Date(),
     });
-    if (!sent) {
+    if (!sent.ok) {
       res.status(400).json({
         error:
-          "The receipt email could not be sent. Please try again in a moment.",
+          sent.reason === "credits"
+            ? "The email service (SendGrid) has run out of sending credits. Top up or upgrade the SendGrid plan, then try again."
+            : "The receipt email could not be sent. Please try again in a moment.",
       });
       return;
     }
