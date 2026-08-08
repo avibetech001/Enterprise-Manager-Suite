@@ -62,6 +62,7 @@ import {
   CreateInvoiceResponse,
   UpdateInvoiceStatusBody,
   UpdateInvoiceStatusResponse,
+  SendInvoiceReceiptResponse,
   ListLeaveRequestsResponse,
   ListMyAttendanceResponse,
   ListMyFundRequestsResponse,
@@ -93,6 +94,7 @@ import {
   requireRole,
   verifyPassword,
 } from "../lib/auth";
+import { sendReceiptEmail } from "../lib/email";
 import { notify } from "../lib/notify";
 import { ObjectStorageService } from "../lib/objectStorage";
 
@@ -141,6 +143,14 @@ function tzParts(): { date: string; weekday: number; minutes: number } {
 
 function today(): string {
   return tzParts().date;
+}
+
+// Strict calendar validation: reject overflow dates like 2024-02-31,
+// which `new Date(...)` would silently roll into March.
+function isValidDateStr(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(`${s}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
 }
 
 // Count working days only — Saturdays, Sundays, and company public holidays
@@ -1605,16 +1615,6 @@ router.post(
       return;
     }
     const me = req.currentUser!;
-    const [existingInvoice] = await db
-      .select({ id: invoicesTable.id })
-      .from(invoicesTable)
-      .where(eq(invoicesTable.fundRequestId, id));
-    if (existingInvoice) {
-      res.status(400).json({
-        error: "This fund request already has an invoice and can no longer be re-reviewed.",
-      });
-      return;
-    }
     const [updated] = await db
       .update(fundRequestsTable)
       .set({
@@ -1655,43 +1655,8 @@ router.post(
 );
 
 // ---------------------------------------------------------------------------
-// Invoices (generated from approved fund requests)
+// Client invoices — bills the company sends to its clients
 // ---------------------------------------------------------------------------
-
-async function invoiceWithDetails(invoiceId: number, companyId: number) {
-  const [row] = await db
-    .select({
-      invoice: invoicesTable,
-      amount: fundRequestsTable.amount,
-      purpose: fundRequestsTable.purpose,
-      details: fundRequestsTable.details,
-      requestDate: fundRequestsTable.createdAt,
-      employeeName: usersTable.fullName,
-      employeeCode: usersTable.employeeCode,
-    })
-    .from(invoicesTable)
-    .innerJoin(
-      fundRequestsTable,
-      eq(invoicesTable.fundRequestId, fundRequestsTable.id),
-    )
-    .innerJoin(usersTable, eq(fundRequestsTable.userId, usersTable.id))
-    .where(
-      and(
-        eq(invoicesTable.id, invoiceId),
-        eq(invoicesTable.companyId, companyId),
-      ),
-    );
-  if (!row) return null;
-  return {
-    ...row.invoice,
-    amount: row.amount,
-    purpose: row.purpose,
-    details: row.details,
-    requestDate: row.requestDate,
-    employeeName: row.employeeName,
-    employeeCode: row.employeeCode,
-  };
-}
 
 router.get(
   "/invoices",
@@ -1699,36 +1664,11 @@ router.get(
   requireManagementPermission("manage_finance", "manage_invoices"),
   async (req, res): Promise<void> => {
     const rows = await db
-      .select({
-        invoice: invoicesTable,
-        amount: fundRequestsTable.amount,
-        purpose: fundRequestsTable.purpose,
-        details: fundRequestsTable.details,
-        requestDate: fundRequestsTable.createdAt,
-        employeeName: usersTable.fullName,
-        employeeCode: usersTable.employeeCode,
-      })
+      .select()
       .from(invoicesTable)
-      .innerJoin(
-        fundRequestsTable,
-        eq(invoicesTable.fundRequestId, fundRequestsTable.id),
-      )
-      .innerJoin(usersTable, eq(fundRequestsTable.userId, usersTable.id))
       .where(eq(invoicesTable.companyId, req.currentUser!.companyId))
       .orderBy(desc(invoicesTable.createdAt));
-    res.json(
-      ListInvoicesResponse.parse(
-        rows.map((r) => ({
-          ...r.invoice,
-          amount: r.amount,
-          purpose: r.purpose,
-          details: r.details,
-          requestDate: r.requestDate,
-          employeeName: r.employeeName,
-          employeeCode: r.employeeCode,
-        })),
-      ),
-    );
+    res.json(ListInvoicesResponse.parse(rows));
   },
 );
 
@@ -1739,53 +1679,41 @@ router.post(
   async (req, res): Promise<void> => {
     const parsed = CreateInvoiceBody.safeParse(req.body);
     if (!parsed.success) {
-      res.status(400).json({ error: "Select a fund request to invoice." });
+      res.status(400).json({
+        error: "Client name, description, and amount are required.",
+      });
       return;
     }
     const me = req.currentUser!;
-    const [fundRequest] = await db
-      .select()
-      .from(fundRequestsTable)
-      .where(
-        and(
-          eq(fundRequestsTable.id, parsed.data.fundRequestId),
-          eq(fundRequestsTable.companyId, me.companyId),
-        ),
-      );
-    if (!fundRequest) {
-      res.status(404).json({ error: "Fund request not found." });
+    const data = parsed.data;
+    if (data.dueDate && !isValidDateStr(data.dueDate)) {
+      res.status(400).json({ error: "Invalid due date." });
       return;
     }
-    if (fundRequest.status !== "approved") {
-      res.status(400).json({
-        error: "Only approved fund requests can be invoiced.",
-      });
-      return;
-    }
-    const inserted = await db
-      .insert(invoicesTable)
-      .values({
-        companyId: me.companyId,
-        fundRequestId: fundRequest.id,
-        invoiceNumber: "PENDING",
-        createdBy: me.id,
-      })
-      .onConflictDoNothing({ target: invoicesTable.fundRequestId })
-      .returning();
-    if (inserted.length === 0) {
-      res.status(400).json({
-        error: "An invoice already exists for this fund request.",
-      });
-      return;
-    }
-    const created = inserted[0];
-    const invoiceNumber = `INV-${String(created.id).padStart(4, "0")}`;
-    await db
-      .update(invoicesTable)
-      .set({ invoiceNumber })
-      .where(eq(invoicesTable.id, created.id));
-    const full = await invoiceWithDetails(created.id, me.companyId);
-    res.status(201).json(CreateInvoiceResponse.parse(full));
+    const withNumber = await db.transaction(async (tx) => {
+      const [created] = await tx
+        .insert(invoicesTable)
+        .values({
+          companyId: me.companyId,
+          invoiceNumber: "PENDING",
+          clientName: data.clientName.trim(),
+          clientEmail: data.clientEmail?.trim() || null,
+          clientPhone: data.clientPhone?.trim() || null,
+          description: data.description.trim(),
+          amount: data.amount.trim(),
+          dueDate: data.dueDate ?? null,
+          createdBy: me.id,
+        })
+        .returning();
+      const invoiceNumber = `INV-${String(created.id).padStart(4, "0")}`;
+      const [finalized] = await tx
+        .update(invoicesTable)
+        .set({ invoiceNumber })
+        .where(eq(invoicesTable.id, created.id))
+        .returning();
+      return finalized;
+    });
+    res.status(201).json(CreateInvoiceResponse.parse(withNumber));
   },
 );
 
@@ -1806,12 +1734,13 @@ router.post(
       .set({
         status: parsed.data.status,
         statusNote: parsed.data.note?.trim() || null,
+        paidAt: parsed.data.status === "paid" ? new Date() : null,
       })
       .where(
         and(
           eq(invoicesTable.id, id),
           eq(invoicesTable.companyId, me.companyId),
-          eq(invoicesTable.status, "pending"),
+          eq(invoicesTable.status, "unpaid"),
         ),
       )
       .returning();
@@ -1834,8 +1763,73 @@ router.post(
       }
       return;
     }
-    const full = await invoiceWithDetails(updated.id, me.companyId);
-    res.json(UpdateInvoiceStatusResponse.parse(full));
+    res.json(UpdateInvoiceStatusResponse.parse(updated));
+  },
+);
+
+// (send-receipt uses the shared email helper)
+router.post(
+  "/invoices/:id/send-receipt",
+  requireAuth,
+  requireManagementPermission("manage_finance", "manage_invoices"),
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      res.status(400).json({ error: "Invalid invoice." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [invoice] = await db
+      .select()
+      .from(invoicesTable)
+      .where(
+        and(
+          eq(invoicesTable.id, id),
+          eq(invoicesTable.companyId, me.companyId),
+        ),
+      );
+    if (!invoice) {
+      res.status(404).json({ error: "Invoice not found." });
+      return;
+    }
+    if (invoice.status !== "paid") {
+      res.status(400).json({
+        error: "Receipts can only be sent for paid invoices.",
+      });
+      return;
+    }
+    if (!invoice.clientEmail) {
+      res.status(400).json({
+        error: "This invoice has no client email. Edit it to add one first.",
+      });
+      return;
+    }
+    const [company] = await db
+      .select()
+      .from(companiesTable)
+      .where(eq(companiesTable.id, me.companyId));
+    const sent = await sendReceiptEmail({
+      to: invoice.clientEmail,
+      clientName: invoice.clientName,
+      companyName: company?.name ?? "5th Element",
+      invoiceNumber: invoice.invoiceNumber,
+      description: invoice.description,
+      amount: invoice.amount,
+      paidAt: invoice.paidAt ?? new Date(),
+    });
+    if (!sent) {
+      res.status(400).json({
+        error:
+          "The receipt email could not be sent. Please try again in a moment.",
+      });
+      return;
+    }
+    const [updated] = await db
+      .update(invoicesTable)
+      .set({ receiptSentAt: new Date() })
+      .where(eq(invoicesTable.id, invoice.id))
+      .returning();
+    res.json(SendInvoiceReceiptResponse.parse(updated));
   },
 );
 
@@ -1874,13 +1868,6 @@ router.post(
         .json({ error: "Period, report date, and content are required." });
       return;
     }
-    // Strict calendar validation: reject overflow dates like 2024-02-31,
-    // which `new Date(...)` would silently roll into March.
-    const isValidDateStr = (s: string): boolean => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
-      const d = new Date(`${s}T00:00:00Z`);
-      return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
-    };
     const reportDate = parsed.data.reportDate;
     if (!isValidDateStr(reportDate)) {
       res.status(400).json({ error: "Invalid report date." });

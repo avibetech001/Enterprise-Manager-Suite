@@ -1,18 +1,20 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListInvoices,
   useCreateInvoice,
   useUpdateInvoiceStatus,
-  useListFundRequests,
+  useSendInvoiceReceipt,
   getListInvoicesQueryKey,
   useGetCurrentSession,
-  InvoiceWithDetails,
+  Invoice,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import {
   Table,
   TableBody,
@@ -29,67 +31,89 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, Plus, FileText } from "lucide-react";
+import { Printer, Plus, Mail } from "lucide-react";
 import { toast } from "sonner";
 
-const FILTERS = ["all", "pending", "paid", "rejected"] as const;
+const FILTERS = ["all", "unpaid", "paid", "cancelled"] as const;
 type Filter = (typeof FILTERS)[number];
 
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    approved: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    rejected: "bg-red-50 text-red-700 border-red-200",
-    pending: "bg-amber-50 text-amber-700 border-amber-200",
+    cancelled: "bg-red-50 text-red-700 border-red-200",
+    unpaid: "bg-amber-50 text-amber-700 border-amber-200",
   };
   return (
-    <Badge variant="outline" className={`capitalize ${map[status] || map.pending}`}>
+    <Badge variant="outline" className={`capitalize ${map[status] || map.unpaid}`}>
       {status}
     </Badge>
   );
 }
 
+const EMPTY_FORM = {
+  clientName: "",
+  clientEmail: "",
+  clientPhone: "",
+  description: "",
+  amount: "",
+  dueDate: "",
+};
+
 export default function InvoicesPage() {
   const queryClient = useQueryClient();
   const { data: invoices, isLoading } = useListInvoices();
-  const { data: fundRequests } = useListFundRequests();
   const createInvoice = useCreateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
+  const sendReceipt = useSendInvoiceReceipt();
   const { data: session } = useGetCurrentSession();
 
   const [filter, setFilter] = useState<Filter>("all");
-  const [generateOpen, setGenerateOpen] = useState(false);
-  const [detail, setDetail] = useState<InvoiceWithDetails | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [form, setForm] = useState(EMPTY_FORM);
+  const [detail, setDetail] = useState<Invoice | null>(null);
   const [statusTarget, setStatusTarget] = useState<{
-    invoice: InvoiceWithDetails;
-    action: "paid" | "rejected";
+    invoice: Invoice;
+    action: "paid" | "cancelled";
   } | null>(null);
   const [statusNote, setStatusNote] = useState("");
-  const printRef = useRef<HTMLDivElement>(null);
-
-  const invoicedIds = new Set(invoices?.map((i) => i.fundRequestId) ?? []);
-  const allRequests = fundRequests ?? [];
 
   const filtered = invoices?.filter((i) => filter === "all" || i.status === filter) ?? [];
 
   const counts = {
-    pending: invoices?.filter((i) => i.status === "pending").length ?? 0,
+    unpaid: invoices?.filter((i) => i.status === "unpaid").length ?? 0,
     paid: invoices?.filter((i) => i.status === "paid").length ?? 0,
-    rejected: invoices?.filter((i) => i.status === "rejected").length ?? 0,
+    cancelled: invoices?.filter((i) => i.status === "cancelled").length ?? 0,
   };
 
-  const generate = (fundRequestId: number) => {
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
+
+  const submitCreate = () => {
+    if (!form.clientName.trim() || !form.description.trim() || !form.amount.trim()) {
+      toast.error("Client name, description, and amount are required.");
+      return;
+    }
     createInvoice.mutate(
-      { data: { fundRequestId } },
+      {
+        data: {
+          clientName: form.clientName.trim(),
+          clientEmail: form.clientEmail.trim() || undefined,
+          clientPhone: form.clientPhone.trim() || undefined,
+          description: form.description.trim(),
+          amount: form.amount.trim(),
+          dueDate: form.dueDate || undefined,
+        },
+      },
       {
         onSuccess: (inv) => {
-          queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
-          toast.success(`Invoice ${inv.invoiceNumber} generated`);
-          setGenerateOpen(false);
+          invalidate();
+          toast.success(`Invoice ${inv.invoiceNumber} created`);
+          setCreateOpen(false);
+          setForm(EMPTY_FORM);
           setDetail(inv);
         },
         onError: (error) => {
-          toast.error("Failed to generate invoice", {
+          toast.error("Failed to create invoice", {
             description: error.data?.error || "Unknown error occurred",
           });
         },
@@ -106,8 +130,12 @@ export default function InvoicesPage() {
       },
       {
         onSuccess: (inv) => {
-          queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
-          toast.success(`Invoice marked as ${statusTarget.action}`);
+          invalidate();
+          toast.success(
+            statusTarget.action === "paid"
+              ? "Invoice marked as paid"
+              : "Invoice cancelled",
+          );
           setStatusTarget(null);
           setDetail((d) => (d && d.id === inv.id ? inv : d));
         },
@@ -120,8 +148,22 @@ export default function InvoicesPage() {
     );
   };
 
-  const printInvoice = () => {
-    window.print();
+  const submitReceipt = (invoice: Invoice) => {
+    sendReceipt.mutate(
+      { id: invoice.id },
+      {
+        onSuccess: (inv) => {
+          invalidate();
+          toast.success(`Receipt emailed to ${inv.clientEmail}`);
+          setDetail((d) => (d && d.id === inv.id ? inv : d));
+        },
+        onError: (error) => {
+          toast.error("Failed to send receipt", {
+            description: error.data?.error || "Unknown error occurred",
+          });
+        },
+      },
+    );
   };
 
   return (
@@ -132,7 +174,7 @@ export default function InvoicesPage() {
           #invoice-print-area, #invoice-print-area * { visibility: visible !important; }
           #invoice-print-area {
             position: fixed; inset: 0; background: white; padding: 40px;
-            z-index: 9999; overflow: visible;
+            z-index: 9999; overflow: visible; max-height: none !important;
           }
         }
       `}</style>
@@ -141,10 +183,15 @@ export default function InvoicesPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
           <p className="text-muted-foreground mt-1">
-            Generate, print, and track invoices for approved fund requests.
+            Bill your clients, track payments, and send receipts.
           </p>
         </div>
-        <Button onClick={() => setGenerateOpen(true)}>
+        <Button
+          onClick={() => {
+            setForm(EMPTY_FORM);
+            setCreateOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4 mr-1" /> Generate Invoice
         </Button>
       </div>
@@ -152,8 +199,8 @@ export default function InvoicesPage() {
       <div className="grid grid-cols-3 gap-3 max-w-md">
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold">{counts.pending}</p>
-            <p className="text-xs text-muted-foreground">Pending</p>
+            <p className="text-2xl font-bold text-amber-600">{counts.unpaid}</p>
+            <p className="text-xs text-muted-foreground">Unpaid</p>
           </CardContent>
         </Card>
         <Card>
@@ -164,8 +211,8 @@ export default function InvoicesPage() {
         </Card>
         <Card>
           <CardContent className="p-4">
-            <p className="text-2xl font-bold text-red-600">{counts.rejected}</p>
-            <p className="text-xs text-muted-foreground">Rejected</p>
+            <p className="text-2xl font-bold text-red-600">{counts.cancelled}</p>
+            <p className="text-xs text-muted-foreground">Cancelled</p>
           </CardContent>
         </Card>
       </div>
@@ -197,10 +244,10 @@ export default function InvoicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
-                  <TableHead>Employee</TableHead>
+                  <TableHead>Client</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Purpose</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead>Due</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -222,17 +269,28 @@ export default function InvoicesPage() {
                       }}
                     >
                       <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                      <TableCell>{inv.employeeName}</TableCell>
+                      <TableCell>{inv.clientName}</TableCell>
                       <TableCell>{inv.amount}</TableCell>
-                      <TableCell className="max-w-[180px] truncate">{inv.purpose}</TableCell>
-                      <TableCell className="text-sm">{inv.createdAt.slice(0, 10)}</TableCell>
-                      <TableCell>{statusBadge(inv.status)}</TableCell>
+                      <TableCell className="max-w-[180px] truncate">
+                        {inv.description}
+                      </TableCell>
+                      <TableCell className="text-sm">{inv.dueDate || "—"}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5">
+                          {statusBadge(inv.status)}
+                          {inv.receiptSentAt && (
+                            <span title="Receipt sent">
+                              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
                       <TableCell
                         className="text-right"
                         onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
                       >
-                        {inv.status === "pending" ? (
+                        {inv.status === "unpaid" ? (
                           <div className="flex gap-2 justify-end">
                             <Button
                               size="sm"
@@ -249,13 +307,23 @@ export default function InvoicesPage() {
                               variant="outline"
                               className="text-red-600 hover:text-red-700"
                               onClick={() => {
-                                setStatusTarget({ invoice: inv, action: "rejected" });
+                                setStatusTarget({ invoice: inv, action: "cancelled" });
                                 setStatusNote("");
                               }}
                             >
-                              Reject
+                              Cancel
                             </Button>
                           </div>
+                        ) : inv.status === "paid" && inv.clientEmail ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={sendReceipt.isPending}
+                            onClick={() => submitReceipt(inv)}
+                          >
+                            <Mail className="h-4 w-4 mr-1" />
+                            {inv.receiptSentAt ? "Resend Receipt" : "Send Receipt"}
+                          </Button>
                         ) : (
                           <span className="text-muted-foreground text-sm">—</span>
                         )}
@@ -265,7 +333,7 @@ export default function InvoicesPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
-                      No invoices yet. Generate one from an approved fund request.
+                      No invoices yet. Generate one for a client to get started.
                     </TableCell>
                   </TableRow>
                 )}
@@ -275,59 +343,82 @@ export default function InvoicesPage() {
         </CardContent>
       </Card>
 
-      {/* Generate invoice dialog */}
-      <Dialog open={generateOpen} onOpenChange={setGenerateOpen}>
+      {/* Create invoice dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Generate Invoice</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            All fund requests are listed — only approved ones that haven't been invoiced yet
-            can be turned into an invoice.
-          </p>
-          <div className="max-h-[50vh] overflow-y-auto space-y-2">
-            {allRequests.length > 0 ? (
-              allRequests.map((r) => {
-                const alreadyInvoiced = invoicedIds.has(r.id);
-                const canInvoice = r.status === "approved" && !alreadyInvoiced;
-                return (
-                  <div
-                    key={r.id}
-                    className="flex items-center justify-between gap-3 rounded-md border p-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">
-                        {r.employeeName} — {r.amount}
-                      </p>
-                      <p className="text-xs text-muted-foreground truncate">{r.purpose}</p>
-                      <div className="mt-1">{statusBadge(r.status)}</div>
-                    </div>
-                    {canInvoice ? (
-                      <Button
-                        size="sm"
-                        disabled={createInvoice.isPending}
-                        onClick={() => generate(r.id)}
-                      >
-                        <FileText className="h-4 w-4 mr-1" /> Invoice
-                      </Button>
-                    ) : (
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {alreadyInvoiced
-                          ? "Already invoiced"
-                          : r.status === "pending"
-                            ? "Awaiting approval"
-                            : "Rejected"}
-                      </span>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                No fund requests yet.
-              </p>
-            )}
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label htmlFor="inv-client">Client name *</Label>
+              <Input
+                id="inv-client"
+                value={form.clientName}
+                onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+                placeholder="e.g. Acme Ltd"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="inv-email">Client email</Label>
+                <Input
+                  id="inv-email"
+                  type="email"
+                  value={form.clientEmail}
+                  onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
+                  placeholder="For sending receipts"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inv-phone">Client phone</Label>
+                <Input
+                  id="inv-phone"
+                  value={form.clientPhone}
+                  onChange={(e) => setForm({ ...form, clientPhone: e.target.value })}
+                  placeholder="Optional"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="inv-desc">Description *</Label>
+              <Textarea
+                id="inv-desc"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                placeholder="What is this invoice for? e.g. Website design — March"
+                className="resize-none"
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="inv-amount">Amount *</Label>
+                <Input
+                  id="inv-amount"
+                  value={form.amount}
+                  onChange={(e) => setForm({ ...form, amount: e.target.value })}
+                  placeholder="e.g. GHS 5,000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="inv-due">Due date</Label>
+                <Input
+                  id="inv-due"
+                  type="date"
+                  value={form.dueDate}
+                  onChange={(e) => setForm({ ...form, dueDate: e.target.value })}
+                />
+              </div>
+            </div>
           </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={submitCreate} disabled={createInvoice.isPending}>
+              Generate Invoice
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -338,36 +429,40 @@ export default function InvoicesPage() {
             <DialogTitle>Invoice {detail?.invoiceNumber}</DialogTitle>
           </DialogHeader>
           {detail && (
-            <div
-              id="invoice-print-area"
-              ref={printRef}
-              className="space-y-5 max-h-[60vh] overflow-y-auto"
-            >
+            <div id="invoice-print-area" className="space-y-5 max-h-[60vh] overflow-y-auto">
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-lg font-bold">{session?.company.name || "5th Element"}</p>
-                  <p className="text-xs text-muted-foreground">Fund Request Invoice</p>
+                  <p className="text-xs text-muted-foreground">Invoice</p>
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{detail.invoiceNumber}</p>
                   <p className="text-xs text-muted-foreground">
                     Issued {detail.createdAt.slice(0, 10)}
                   </p>
+                  {detail.dueDate && (
+                    <p className="text-xs text-muted-foreground">Due {detail.dueDate}</p>
+                  )}
                   <div className="mt-1 flex justify-end">{statusBadge(detail.status)}</div>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3 text-sm border-t pt-4">
                 <div>
-                  <p className="text-muted-foreground">Payee (Employee)</p>
-                  <p className="font-medium">{detail.employeeName}</p>
-                  {detail.employeeCode && (
-                    <p className="text-xs text-muted-foreground">{detail.employeeCode}</p>
+                  <p className="text-muted-foreground">Billed to</p>
+                  <p className="font-medium">{detail.clientName}</p>
+                  {detail.clientEmail && (
+                    <p className="text-xs text-muted-foreground">{detail.clientEmail}</p>
+                  )}
+                  {detail.clientPhone && (
+                    <p className="text-xs text-muted-foreground">{detail.clientPhone}</p>
                   )}
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Request date</p>
-                  <p className="font-medium">{detail.requestDate.slice(0, 10)}</p>
-                </div>
+                {detail.paidAt && (
+                  <div>
+                    <p className="text-muted-foreground">Paid on</p>
+                    <p className="font-medium">{detail.paidAt.slice(0, 10)}</p>
+                  </div>
+                )}
               </div>
               <div className="border rounded-md">
                 <div className="flex justify-between items-start gap-4 p-3 border-b bg-muted/40 text-xs font-medium text-muted-foreground">
@@ -375,14 +470,9 @@ export default function InvoicesPage() {
                   <span>Amount</span>
                 </div>
                 <div className="flex justify-between items-start gap-4 p-3 text-sm">
-                  <div className="min-w-0">
-                    <p className="whitespace-pre-wrap break-words">{detail.purpose}</p>
-                    {detail.details && (
-                      <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words mt-1">
-                        {detail.details}
-                      </p>
-                    )}
-                  </div>
+                  <p className="whitespace-pre-wrap break-words min-w-0">
+                    {detail.description}
+                  </p>
                   <p className="font-semibold whitespace-nowrap">{detail.amount}</p>
                 </div>
                 <div className="flex justify-between items-center gap-4 p-3 border-t text-sm">
@@ -396,23 +486,28 @@ export default function InvoicesPage() {
                   <p className="text-sm whitespace-pre-wrap break-words">{detail.statusNote}</p>
                 </div>
               )}
+              {detail.receiptSentAt && (
+                <p className="text-xs text-muted-foreground">
+                  Receipt sent {detail.receiptSentAt.slice(0, 10)}
+                </p>
+              )}
             </div>
           )}
           <DialogFooter className="flex-wrap gap-2">
-            <Button variant="outline" onClick={printInvoice}>
+            <Button variant="outline" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
-            {detail?.status === "pending" && (
+            {detail?.status === "unpaid" && (
               <>
                 <Button
                   variant="outline"
                   className="text-red-600 hover:text-red-700"
                   onClick={() => {
-                    setStatusTarget({ invoice: detail, action: "rejected" });
+                    setStatusTarget({ invoice: detail, action: "cancelled" });
                     setStatusNote("");
                   }}
                 >
-                  Reject
+                  Cancel Invoice
                 </Button>
                 <Button
                   onClick={() => {
@@ -424,6 +519,12 @@ export default function InvoicesPage() {
                 </Button>
               </>
             )}
+            {detail?.status === "paid" && detail.clientEmail && (
+              <Button disabled={sendReceipt.isPending} onClick={() => submitReceipt(detail)}>
+                <Mail className="h-4 w-4 mr-1" />
+                {detail.receiptSentAt ? "Resend Receipt" : "Send Receipt"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -433,13 +534,11 @@ export default function InvoicesPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {statusTarget?.action === "paid" ? "Mark Invoice as Paid" : "Reject Invoice"}
+              {statusTarget?.action === "paid" ? "Mark Invoice as Paid" : "Cancel Invoice"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <label className="text-sm font-medium" htmlFor="invoice-status-note">
-              Note (optional)
-            </label>
+            <Label htmlFor="invoice-status-note">Note (optional)</Label>
             <Textarea
               id="invoice-status-note"
               value={statusNote}
@@ -447,14 +546,14 @@ export default function InvoicesPage() {
               placeholder={
                 statusTarget?.action === "paid"
                   ? "e.g. Paid via bank transfer on..."
-                  : "Reason for rejecting this invoice..."
+                  : "Reason for cancelling this invoice..."
               }
               className="resize-none"
             />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStatusTarget(null)}>
-              Cancel
+              Back
             </Button>
             <Button onClick={submitStatus} disabled={updateStatus.isPending}>
               Confirm

@@ -6,21 +6,25 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface InvoiceWithDetails {
+export interface Invoice {
   id: number;
   companyId: number;
-  fundRequestId: number;
   invoiceNumber: string;
+  clientName: string;
+  /** @nullable */
+  clientEmail: string | null;
+  /** @nullable */
+  clientPhone: string | null;
+  description: string;
+  amount: string;
+  /** @nullable */
+  dueDate: string | null;
   status: string;
   /** @nullable */
   statusNote: string | null;
+  /** @nullable */
+  paidAt: Date | null;
+  /** @nullable */
+  receiptSentAt: Date | null;
   createdAt: Date;
-  employeeName: string;
-  /** @nullable */
-  employeeCode: string | null;
-  amount: string;
-  purpose: string;
-  /** @nullable */
-  details: string | null;
-  requestDate: Date;
 }

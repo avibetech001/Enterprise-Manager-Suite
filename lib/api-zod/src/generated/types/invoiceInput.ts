@@ -7,5 +7,17 @@
  */
 
 export interface InvoiceInput {
-  fundRequestId: number;
+  /** @minLength 1 */
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  /** @minLength 1 */
+  description: string;
+  /** @minLength 1 */
+  amount: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dueDate?: string | null;
 }

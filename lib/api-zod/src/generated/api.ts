@@ -2133,76 +2133,115 @@ export const ReviewFundRequestResponse = zod.object({
 
 
 /**
- * @summary List all invoices (management)
+ * @summary List all client invoices (management)
  */
 export const ListInvoicesResponseItem = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
-  "fundRequestId": zod.number(),
   "invoiceNumber": zod.string(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string().nullable(),
+  "clientPhone": zod.string().nullable(),
+  "description": zod.string(),
+  "amount": zod.string(),
+  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
-  "createdAt": zod.coerce.date(),
-  "employeeName": zod.string(),
-  "employeeCode": zod.string().nullable(),
-  "amount": zod.string(),
-  "purpose": zod.string(),
-  "details": zod.string().nullable(),
-  "requestDate": zod.coerce.date()
+  "paidAt": zod.coerce.date().nullable(),
+  "receiptSentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
 })
 export const ListInvoicesResponse = zod.array(ListInvoicesResponseItem)
 
 
 /**
- * @summary Generate an invoice from an approved fund request (management)
+ * @summary Generate an invoice for a client (management)
  */
+
+
+
+export const createInvoiceBodyDueDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
 export const CreateInvoiceBody = zod.object({
-  "fundRequestId": zod.number()
+  "clientName": zod.string().min(1),
+  "clientEmail": zod.string().optional(),
+  "clientPhone": zod.string().optional(),
+  "description": zod.string().min(1),
+  "amount": zod.string().min(1),
+  "dueDate": zod.string().regex(createInvoiceBodyDueDateRegExp).nullish()
 })
 
 export const CreateInvoiceResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
-  "fundRequestId": zod.number(),
   "invoiceNumber": zod.string(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string().nullable(),
+  "clientPhone": zod.string().nullable(),
+  "description": zod.string(),
+  "amount": zod.string(),
+  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
-  "createdAt": zod.coerce.date(),
-  "employeeName": zod.string(),
-  "employeeCode": zod.string().nullable(),
-  "amount": zod.string(),
-  "purpose": zod.string(),
-  "details": zod.string().nullable(),
-  "requestDate": zod.coerce.date()
+  "paidAt": zod.coerce.date().nullable(),
+  "receiptSentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
 })
 
 
 /**
- * @summary Mark an invoice as paid or rejected (management)
+ * @summary Mark an invoice as paid or cancelled (management)
  */
 export const UpdateInvoiceStatusParams = zod.object({
   "id": zod.coerce.number()
 })
 
 export const UpdateInvoiceStatusBody = zod.object({
-  "status": zod.enum(['paid', 'rejected']),
+  "status": zod.enum(['paid', 'cancelled']),
   "note": zod.string().optional()
 })
 
 export const UpdateInvoiceStatusResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
-  "fundRequestId": zod.number(),
   "invoiceNumber": zod.string(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string().nullable(),
+  "clientPhone": zod.string().nullable(),
+  "description": zod.string(),
+  "amount": zod.string(),
+  "dueDate": zod.string().nullable(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
-  "createdAt": zod.coerce.date(),
-  "employeeName": zod.string(),
-  "employeeCode": zod.string().nullable(),
+  "paidAt": zod.coerce.date().nullable(),
+  "receiptSentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Email a payment receipt to the client (management)
+ */
+export const SendInvoiceReceiptParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SendInvoiceReceiptResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "invoiceNumber": zod.string(),
+  "clientName": zod.string(),
+  "clientEmail": zod.string().nullable(),
+  "clientPhone": zod.string().nullable(),
+  "description": zod.string(),
   "amount": zod.string(),
-  "purpose": zod.string(),
-  "details": zod.string().nullable(),
-  "requestDate": zod.coerce.date()
+  "dueDate": zod.string().nullable(),
+  "status": zod.string(),
+  "statusNote": zod.string().nullable(),
+  "paidAt": zod.coerce.date().nullable(),
+  "receiptSentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
 })
 
 

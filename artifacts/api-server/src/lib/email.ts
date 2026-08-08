@@ -74,6 +74,78 @@ export async function sendActivationEmail(options: {
   }
 }
 
+/**
+ * Emails a payment receipt to a client for a paid invoice.
+ * Returns true when SendGrid accepts the message; false on any failure.
+ */
+export async function sendReceiptEmail(options: {
+  to: string;
+  clientName: string;
+  companyName: string;
+  invoiceNumber: string;
+  description: string;
+  amount: string;
+  paidAt: Date;
+}): Promise<boolean> {
+  const { to, clientName, companyName, invoiceNumber, description, amount, paidAt } =
+    options;
+  const paidDate = paidAt.toISOString().slice(0, 10);
+  try {
+    const connectors = new ReplitConnectors();
+    const response = await connectors.proxy("sendgrid", "/v3/mail/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to, name: clientName }] }],
+        from: { email: FROM_EMAIL, name: companyName },
+        subject: `Payment receipt — Invoice ${invoiceNumber} from ${companyName}`,
+        content: [
+          {
+            type: "text/plain",
+            value: [
+              `Dear ${clientName},`,
+              "",
+              `Thank you for your payment. This is a receipt for invoice ${invoiceNumber}.`,
+              "",
+              `Description: ${description}`,
+              `Amount paid: ${amount}`,
+              `Payment date: ${paidDate}`,
+              "",
+              `— ${companyName}`,
+            ].join("\n"),
+          },
+          {
+            type: "text/html",
+            value: `
+              <div style="font-family:Arial,Helvetica,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a1a;">
+                <h2 style="margin:0 0 4px;">Payment Receipt</h2>
+                <p style="margin:0 0 20px;color:#666;">Invoice ${escapeHtml(invoiceNumber)}</p>
+                <p>Dear ${escapeHtml(clientName)},</p>
+                <p>Thank you for your payment. This confirms we received your payment for the invoice below.</p>
+                <table style="width:100%;border-collapse:collapse;margin:20px 0;font-size:14px;">
+                  <tr><td style="padding:8px 0;color:#666;">Description</td><td style="padding:8px 0;text-align:right;">${escapeHtml(description)}</td></tr>
+                  <tr><td style="padding:8px 0;color:#666;">Amount paid</td><td style="padding:8px 0;text-align:right;font-weight:bold;">${escapeHtml(amount)}</td></tr>
+                  <tr><td style="padding:8px 0;color:#666;">Payment date</td><td style="padding:8px 0;text-align:right;">${paidDate}</td></tr>
+                </table>
+                <p style="font-size:13px;color:#666;">— ${escapeHtml(companyName)}</p>
+              </div>
+            `,
+          },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.error(`Receipt email to ${to} failed: ${response.status} ${detail}`);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`Receipt email to ${to} failed:`, error);
+    return false;
+  }
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

@@ -57,7 +57,7 @@ export const PERMISSION_CATALOG = [
     key: "manage_invoices" as const,
     label: "Manage Invoices",
     description:
-      "Generate, print, and track invoices for approved fund requests.",
+      "Generate, print, and track client invoices and send payment receipts.",
   },
   {
     key: "manage_requisitions" as const,

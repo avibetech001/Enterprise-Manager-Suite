@@ -1653,21 +1653,21 @@ paths:
   /invoices:
     get:
       operationId: listInvoices
-      tags: [funds]
-      summary: List all invoices (management)
+      tags: [invoices]
+      summary: List all client invoices (management)
       responses:
         "200":
-          description: Invoices with fund request and employee info
+          description: Client invoices
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/InvoiceWithDetails"
+                  $ref: "#/components/schemas/Invoice"
     post:
       operationId: createInvoice
-      tags: [funds]
-      summary: Generate an invoice from an approved fund request (management)
+      tags: [invoices]
+      summary: Generate an invoice for a client (management)
       requestBody:
         required: true
         content:
@@ -1680,7 +1680,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InvoiceWithDetails"
+                $ref: "#/components/schemas/Invoice"
         "400":
           description: Invalid input
           content:
@@ -1691,8 +1691,8 @@ paths:
   /invoices/{id}/status:
     post:
       operationId: updateInvoiceStatus
-      tags: [funds]
-      summary: Mark an invoice as paid or rejected (management)
+      tags: [invoices]
+      summary: Mark an invoice as paid or cancelled (management)
       parameters:
         - name: id
           in: path
@@ -1711,7 +1711,32 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/InvoiceWithDetails"
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /invoices/{id}/send-receipt:
+    post:
+      operationId: sendInvoiceReceipt
+      tags: [invoices]
+      summary: Email a payment receipt to the client (management)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated invoice (receipt sent)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
         "400":
           description: Invalid input
           content:
@@ -3600,10 +3625,24 @@ components:
 
     InvoiceInput:
       type: object
-      required: [fundRequestId]
+      required: [clientName, description, amount]
       properties:
-        fundRequestId:
-          type: integer
+        clientName:
+          type: string
+          minLength: 1
+        clientEmail:
+          type: string
+        clientPhone:
+          type: string
+        description:
+          type: string
+          minLength: 1
+        amount:
+          type: string
+          minLength: 1
+        dueDate:
+          type: ["string", "null"]
+          pattern: '^\d{4}-\d{2}-\d{2}$'
 
     InvoiceStatusInput:
       type: object
@@ -3611,55 +3650,59 @@ components:
       properties:
         status:
           type: string
-          enum: [paid, rejected]
+          enum: [paid, cancelled]
         note:
           type: string
 
-    InvoiceWithDetails:
+    Invoice:
       type: object
       required:
         [
           id,
           companyId,
-          fundRequestId,
           invoiceNumber,
+          clientName,
+          clientEmail,
+          clientPhone,
+          description,
+          amount,
+          dueDate,
           status,
           statusNote,
+          paidAt,
+          receiptSentAt,
           createdAt,
-          employeeName,
-          employeeCode,
-          amount,
-          purpose,
-          details,
-          requestDate,
         ]
       properties:
         id:
           type: integer
         companyId:
           type: integer
-        fundRequestId:
-          type: integer
         invoiceNumber:
           type: string
+        clientName:
+          type: string
+        clientEmail:
+          type: ["string", "null"]
+        clientPhone:
+          type: ["string", "null"]
+        description:
+          type: string
+        amount:
+          type: string
+        dueDate:
+          type: ["string", "null"]
         status:
           type: string
         statusNote:
           type: ["string", "null"]
-        createdAt:
-          type: string
+        paidAt:
+          type: ["string", "null"]
           format: date-time
-        employeeName:
-          type: string
-        employeeCode:
+        receiptSentAt:
           type: ["string", "null"]
-        amount:
-          type: string
-        purpose:
-          type: string
-        details:
-          type: ["string", "null"]
-        requestDate:
+          format: date-time
+        createdAt:
           type: string
           format: date-time
 

@@ -923,7 +923,19 @@ export type FundRequestWithUser = FundRequest & ({
 });
 
 export interface InvoiceInput {
-  fundRequestId: number;
+  /** @minLength 1 */
+  clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  /** @minLength 1 */
+  description: string;
+  /** @minLength 1 */
+  amount: string;
+  /**
+     * @nullable
+     * @pattern ^\d{4}-\d{2}-\d{2}$
+     */
+  dueDate?: string | null;
 }
 
 export type InvoiceStatusInputStatus = typeof InvoiceStatusInputStatus[keyof typeof InvoiceStatusInputStatus];
@@ -931,7 +943,7 @@ export type InvoiceStatusInputStatus = typeof InvoiceStatusInputStatus[keyof typ
 
 export const InvoiceStatusInputStatus = {
   paid: 'paid',
-  rejected: 'rejected',
+  cancelled: 'cancelled',
 } as const;
 
 export interface InvoiceStatusInput {
@@ -939,23 +951,27 @@ export interface InvoiceStatusInput {
   note?: string;
 }
 
-export interface InvoiceWithDetails {
+export interface Invoice {
   id: number;
   companyId: number;
-  fundRequestId: number;
   invoiceNumber: string;
+  clientName: string;
+  /** @nullable */
+  clientEmail: string | null;
+  /** @nullable */
+  clientPhone: string | null;
+  description: string;
+  amount: string;
+  /** @nullable */
+  dueDate: string | null;
   status: string;
   /** @nullable */
   statusNote: string | null;
+  /** @nullable */
+  paidAt: string | null;
+  /** @nullable */
+  receiptSentAt: string | null;
   createdAt: string;
-  employeeName: string;
-  /** @nullable */
-  employeeCode: string | null;
-  amount: string;
-  purpose: string;
-  /** @nullable */
-  details: string | null;
-  requestDate: string;
 }
 
 export type WorkReportInputPeriod = typeof WorkReportInputPeriod[keyof typeof WorkReportInputPeriod];

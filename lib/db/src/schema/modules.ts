@@ -190,19 +190,24 @@ export const fundRequestsTable = pgTable("fund_requests", {
     .$onUpdate(() => new Date()),
 });
 
-// status: "pending" | "paid" | "rejected"
+// Client invoices — bills the company sends to its clients.
+// status: "unpaid" | "paid" | "cancelled"
 export const invoicesTable = pgTable("invoices", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id")
     .notNull()
     .references(() => companiesTable.id, { onDelete: "cascade" }),
-  fundRequestId: integer("fund_request_id")
-    .notNull()
-    .unique()
-    .references(() => fundRequestsTable.id, { onDelete: "cascade" }),
   invoiceNumber: text("invoice_number").notNull(),
-  status: text("status").notNull().default("pending"),
+  clientName: text("client_name").notNull(),
+  clientEmail: text("client_email"),
+  clientPhone: text("client_phone"),
+  description: text("description").notNull(),
+  amount: text("amount").notNull(),
+  dueDate: date("due_date"),
+  status: text("status").notNull().default("unpaid"),
   statusNote: text("status_note"),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+  receiptSentAt: timestamp("receipt_sent_at", { withTimezone: true }),
   createdBy: integer("created_by").references(() => usersTable.id, {
     onDelete: "set null",
   }),
