@@ -9,4 +9,5 @@
 - [Web push notifications](web-push-notifications.md) — push rides on notify(); VAPID keys in singleton DB row; unsubscribe user-scoped; iPhone needs Add to Home Screen.
 - [shadcn form.tsx pitfall](shadcn-form-pitfall.md) — bare FormItem/FormLabel outside a FormField render prop crashes the page; use plain div + Label for read-only rows.
 - [Chat groups design](chat-groups-design.md) — chat membership is derived (company + department, super_admin bypass (chat + storage routes in sync)), no members table; all access via resolveGroup(); attachments authorized in storage route.
+- [Invoice letterhead & naira PDFs](invoice-letterhead.md) — invoices match the official letterhead; jsPDF needs embedded Noto fonts for ₦; legacy invoices with empty items fall back to stored amount.
 - [Notification deep links](notification-links.md) — notifications store role-agnostic `link` suffix; bell prefixes by role; pages must react to useSearch() for query params.

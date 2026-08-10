@@ -1679,12 +1679,52 @@ router.post(
     const parsed = CreateInvoiceBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
-        error: "Client name, description, and amount are required.",
+        error: "Client name and at least one line item are required.",
       });
       return;
     }
     const me = req.currentUser!;
     const data = parsed.data;
+    const items = data.items.map((it) => ({
+      description: it.description.trim(),
+      quantity: it.quantity,
+      rate: it.rate,
+      discountPct: it.discountPct,
+      vatPct: it.vatPct,
+    }));
+    for (const it of items) {
+      if (
+        !it.description ||
+        !Number.isFinite(it.quantity) ||
+        it.quantity <= 0 ||
+        it.quantity > 1_000_000 ||
+        !Number.isFinite(it.rate) ||
+        it.rate < 0 ||
+        it.rate > 1_000_000_000_000 ||
+        !Number.isFinite(it.discountPct) ||
+        it.discountPct < 0 ||
+        it.discountPct > 100 ||
+        !Number.isFinite(it.vatPct) ||
+        it.vatPct < 0 ||
+        it.vatPct > 100
+      ) {
+        res.status(400).json({
+          error:
+            "Each line item needs a description, a quantity above 0, a rate of 0 or more, and discount/VAT between 0 and 100.",
+        });
+        return;
+      }
+    }
+    const total = items.reduce(
+      (sum, it) =>
+        sum +
+        it.quantity * it.rate * (1 - it.discountPct / 100) * (1 + it.vatPct / 100),
+      0,
+    );
+    if (!Number.isFinite(total) || total < 0 || total > 10_000_000_000_000) {
+      res.status(400).json({ error: "The invoice total is too large or invalid." });
+      return;
+    }
     const withNumber = await db.transaction(async (tx) => {
       const [created] = await tx
         .insert(invoicesTable)
@@ -1692,10 +1732,11 @@ router.post(
           companyId: me.companyId,
           invoiceNumber: "PENDING",
           clientName: data.clientName.trim(),
+          clientAddress: data.clientAddress?.trim() || null,
           clientEmail: data.clientEmail?.trim() || null,
           clientPhone: data.clientPhone?.trim() || null,
-          description: data.description.trim(),
-          amount: data.amount.trim(),
+          items,
+          amount: total.toFixed(2),
           createdBy: me.id,
         })
         .returning();

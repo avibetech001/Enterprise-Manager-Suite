@@ -2,6 +2,7 @@ import {
   boolean,
   date,
   integer,
+  jsonb,
   pgTable,
   serial,
   text,
@@ -192,6 +193,13 @@ export const fundRequestsTable = pgTable("fund_requests", {
 
 // Client invoices — bills the company sends to its clients.
 // status: "unpaid" | "paid" | "cancelled"
+export type InvoiceItem = {
+  description: string;
+  quantity: number;
+  rate: number; // unit price in naira
+  discountPct: number;
+  vatPct: number;
+};
 export const invoicesTable = pgTable("invoices", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id")
@@ -199,9 +207,12 @@ export const invoicesTable = pgTable("invoices", {
     .references(() => companiesTable.id, { onDelete: "cascade" }),
   invoiceNumber: text("invoice_number").notNull(),
   clientName: text("client_name").notNull(),
+  clientAddress: text("client_address"),
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),
-  description: text("description").notNull(),
+  // Line items: [{ description, quantity, rate, discountPct, vatPct }]
+  items: jsonb("items").$type<InvoiceItem[]>().notNull().default([]),
+  // Grand total (balance due), numeric string e.g. "1500000.00"
   amount: text("amount").notNull(),
   status: text("status").notNull().default("unpaid"),
   statusNote: text("status_note"),

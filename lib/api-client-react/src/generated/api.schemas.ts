@@ -922,15 +922,39 @@ export type FundRequestWithUser = FundRequest & ({
   employeeCode: string | null;
 });
 
+export interface InvoiceItem {
+  /** @minLength 1 */
+  description: string;
+  /**
+     * @minimum 0
+     * @maximum 1000000
+     */
+  quantity: number;
+  /**
+     * @minimum 0
+     * @maximum 1000000000000
+     */
+  rate: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  discountPct: number;
+  /**
+     * @minimum 0
+     * @maximum 100
+     */
+  vatPct: number;
+}
+
 export interface InvoiceInput {
   /** @minLength 1 */
   clientName: string;
+  clientAddress?: string;
   clientEmail?: string;
   clientPhone?: string;
-  /** @minLength 1 */
-  description: string;
-  /** @minLength 1 */
-  amount: string;
+  /** @minItems 1 */
+  items: InvoiceItem[];
 }
 
 export type InvoiceStatusInputStatus = typeof InvoiceStatusInputStatus[keyof typeof InvoiceStatusInputStatus];
@@ -952,10 +976,12 @@ export interface Invoice {
   invoiceNumber: string;
   clientName: string;
   /** @nullable */
+  clientAddress: string | null;
+  /** @nullable */
   clientEmail: string | null;
   /** @nullable */
   clientPhone: string | null;
-  description: string;
+  items: InvoiceItem[];
   amount: string;
   status: string;
   /** @nullable */

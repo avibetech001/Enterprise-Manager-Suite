@@ -6,8 +6,8 @@ import {
   useUpdateInvoiceStatus,
   useSendInvoiceReceipt,
   getListInvoicesQueryKey,
-  useGetCurrentSession,
   Invoice,
+  InvoiceItem,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,100 +31,306 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, Plus, Mail, Download, Share2 } from "lucide-react";
+import { Printer, Plus, Mail, Download, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
+import logoUrl from "@/assets/invoice-logo.png";
+import notoRegularUrl from "@/assets/NotoSans-Regular.ttf";
+import notoBoldUrl from "@/assets/NotoSans-Bold.ttf";
 
-function downloadInvoicePdf(invoice: Invoice, companyName: string) {
+// ---------------------------------------------------------------------------
+// Company letterhead details (from the official invoice template)
+// ---------------------------------------------------------------------------
+const COMPANY = {
+  name: "5TH ELEMENT MEDIA GROUP",
+  tin: "TIN: 23952683-0001",
+  addressLines: [
+    "SUITE C6, SANCTUARY CORT,",
+    "HORTIGRAPH ESTATE,",
+    "KARIMO, ABUJA",
+    "FEDERAL CAPITAL TERRITORY",
+  ],
+  bankAccountName: "5th Element Marketing & Media Ltd",
+  bankAccountNumber: "1849685317",
+  bankName: "Access Bank",
+};
+
+const NAIRA = "\u20A6";
+
+function fmtMoney(n: number): string {
+  return (
+    NAIRA +
+    n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  );
+}
+
+function fmtPct(n: number): string {
+  return `${n.toLocaleString("en-NG", { maximumFractionDigits: 2 })}%`;
+}
+
+function lineNet(it: InvoiceItem): number {
+  return it.quantity * it.rate * (1 - it.discountPct / 100);
+}
+
+// Totals for a saved invoice. Older invoices (created before line items
+// existed) have no items — fall back to the stored amount.
+function invoiceTotals(invoice: Invoice) {
+  if (invoice.items.length === 0) {
+    const amt = Number(invoice.amount) || 0;
+    return { net: amt, vat: 0, total: amt };
+  }
+  return computeTotals(invoice.items);
+}
+
+function computeTotals(items: InvoiceItem[]) {
+  let net = 0;
+  let vat = 0;
+  for (const it of items) {
+    const n = lineNet(it);
+    net += n;
+    vat += (n * it.vatPct) / 100;
+  }
+  return { net, vat, total: net + vat };
+}
+
+function ordinal(day: number): string {
+  if (day % 100 >= 11 && day % 100 <= 13) return `${day}th`;
+  const map: Record<number, string> = { 1: "st", 2: "nd", 3: "rd" };
+  return `${day}${map[day % 10] || "th"}`;
+}
+
+function fmtLongDate(iso: string): string {
+  const d = new Date(iso);
+  const month = d.toLocaleString("en-GB", { month: "long" });
+  return `${ordinal(d.getDate())} ${month}, ${d.getFullYear()}`;
+}
+
+function itemsSummary(items: InvoiceItem[]): string {
+  if (items.length === 0) return "";
+  const first = items[0].description.split("\n")[0];
+  return items.length > 1 ? `${first} (+${items.length - 1} more)` : first;
+}
+
+// ---------------------------------------------------------------------------
+// PDF generation (matches the printed letterhead layout)
+// ---------------------------------------------------------------------------
+let pdfAssets: { regular: string; bold: string; logo: string } | null = null;
+
+async function urlToDataUrl(url: string): Promise<string> {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to load asset: ${url}`);
+  const blob = await res.blob();
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = () => reject(new Error("Failed to read asset"));
+    r.readAsDataURL(blob);
+  });
+}
+
+async function loadPdfAssets() {
+  if (pdfAssets) return pdfAssets;
+  const [regular, bold, logo] = await Promise.all([
+    urlToDataUrl(notoRegularUrl),
+    urlToDataUrl(notoBoldUrl),
+    urlToDataUrl(logoUrl),
+  ]);
+  pdfAssets = {
+    regular: regular.split(",")[1],
+    bold: bold.split(",")[1],
+    logo,
+  };
+  return pdfAssets;
+}
+
+async function downloadInvoicePdf(invoice: Invoice) {
+  const assets = await loadPdfAssets();
   const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 48;
-  const right = pageWidth - margin;
-  let y = 64;
+  doc.addFileToVFS("NotoSans-Regular.ttf", assets.regular);
+  doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+  doc.addFileToVFS("NotoSans-Bold.ttf", assets.bold);
+  doc.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
 
-  doc.setFont("helvetica", "bold");
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 44;
+  const right = pageWidth - margin;
+  const totals = invoiceTotals(invoice);
+
+  // Header: INVOICE + meta (left), logo (right)
+  let y = 58;
+  doc.setFont("NotoSans", "bold");
   doc.setFontSize(18);
-  doc.text(companyName, margin, y);
-  doc.setFontSize(12);
-  doc.text(invoice.invoiceNumber, right, y, { align: "right" });
-  y += 18;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(110);
-  doc.text(invoice.status === "paid" ? "RECEIPT / PAID INVOICE" : "INVOICE", margin, y);
-  doc.text(`Issued ${invoice.createdAt.slice(0, 10)}`, right, y, { align: "right" });
-  y += 14;
-  if (invoice.paidAt) {
-    doc.text(`Paid ${invoice.paidAt.slice(0, 10)}`, right, y, { align: "right" });
-    y += 14;
+  doc.setTextColor(20);
+  doc.text(invoice.status === "paid" ? "INVOICE (PAID)" : "INVOICE", margin, y);
+
+  // Logo — keep aspect ratio (688 x 240 source)
+  const logoW = 150;
+  const logoH = (240 / 688) * logoW;
+  doc.addImage(assets.logo, "PNG", right - logoW, 40, logoW, logoH);
+
+  y += 20;
+  doc.setFontSize(9);
+  const meta: Array<[string, string]> = [
+    ["NUMBER:", invoice.invoiceNumber],
+    ["DATE:", fmtLongDate(invoice.createdAt)],
+    ...(invoice.paidAt
+      ? ([["PAID:", fmtLongDate(invoice.paidAt)]] as Array<[string, string]>)
+      : []),
+  ];
+  for (const [k, v] of meta) {
+    doc.setFont("NotoSans", "normal");
+    doc.setTextColor(110);
+    doc.text(k, margin, y);
+    doc.setFont("NotoSans", "bold");
+    doc.setTextColor(20);
+    doc.text(v, margin + 110, y);
+    y += 13;
   }
 
-  y += 16;
-  doc.setDrawColor(200);
-  doc.line(margin, y, right, y);
-  y += 24;
-
-  doc.setTextColor(110);
-  doc.text("Billed to", margin, y);
-  y += 14;
-  doc.setTextColor(20);
-  doc.setFont("helvetica", "bold");
-  doc.text(invoice.clientName, margin, y);
-  doc.setFont("helvetica", "normal");
-  y += 14;
+  // FROM / TO
+  y = Math.max(y + 24, 150);
+  const colTo = pageWidth / 2 + 20;
+  doc.setFont("NotoSans", "normal");
   doc.setFontSize(9);
   doc.setTextColor(110);
-  if (invoice.clientEmail) {
-    doc.text(invoice.clientEmail, margin, y);
-    y += 12;
-  }
-  if (invoice.clientPhone) {
-    doc.text(invoice.clientPhone, margin, y);
-    y += 12;
-  }
-
-  y += 20;
-  doc.setFontSize(10);
-  doc.setTextColor(110);
-  doc.text("Description", margin, y);
-  doc.text("Amount", right, y, { align: "right" });
-  y += 8;
-  doc.line(margin, y, right, y);
-  y += 18;
+  doc.text("FROM", margin, y);
+  doc.text("TO", colTo, y);
+  y += 15;
+  doc.setFont("NotoSans", "bold");
+  doc.setFontSize(11);
   doc.setTextColor(20);
-  const descLines = doc.splitTextToSize(invoice.description, right - margin - 120);
-  doc.text(descLines, margin, y);
-  doc.setFont("helvetica", "bold");
-  doc.text(invoice.amount, right, y, { align: "right" });
-  doc.setFont("helvetica", "normal");
-  y += descLines.length * 13 + 12;
-  doc.line(margin, y, right, y);
-  y += 20;
-  doc.setFont("helvetica", "bold");
-  doc.text("Total", margin, y);
-  doc.text(invoice.amount, right, y, { align: "right" });
-  doc.setFont("helvetica", "normal");
-
-  if (invoice.statusNote) {
-    y += 28;
-    doc.setFontSize(9);
+  doc.text(COMPANY.name, margin, y);
+  const clientNameLines = doc.splitTextToSize(
+    invoice.clientName.toUpperCase(),
+    right - colTo,
+  );
+  doc.text(clientNameLines, colTo, y);
+  y += 14;
+  doc.setFont("NotoSans", "normal");
+  doc.setFontSize(9);
+  doc.text(COMPANY.tin, margin, y);
+  let yFrom = y + 20;
+  doc.setTextColor(110);
+  doc.text("OFFICE ADDRESS:", margin, yFrom);
+  yFrom += 13;
+  doc.setTextColor(20);
+  for (const line of COMPANY.addressLines) {
+    doc.text(line, margin, yFrom);
+    yFrom += 12;
+  }
+  let yTo = y + (clientNameLines.length - 1) * 13 + 20;
+  if (invoice.clientAddress) {
     doc.setTextColor(110);
-    doc.text("Note", margin, y);
-    y += 12;
+    doc.text("CUSTOMER ADDRESS:", colTo, yTo);
+    yTo += 13;
     doc.setTextColor(20);
-    doc.text(doc.splitTextToSize(invoice.statusNote, right - margin), margin, y);
+    for (const line of doc.splitTextToSize(invoice.clientAddress, right - colTo)) {
+      doc.text(line, colTo, yTo);
+      yTo += 12;
+    }
+  }
+  const contact = [invoice.clientEmail, invoice.clientPhone].filter(Boolean);
+  if (contact.length) {
+    yTo += 4;
+    for (const c of contact) {
+      doc.text(String(c), colTo, yTo);
+      yTo += 12;
+    }
+  }
+  y = Math.max(yFrom, yTo) + 26;
+
+  // Items table
+  const cols = {
+    desc: margin,
+    qty: 320,
+    rate: 400,
+    disc: 445,
+    vat: 488,
+    total: right,
+  };
+  doc.setFillColor(243, 244, 246);
+  doc.rect(margin - 6, y - 12, right - margin + 12, 20, "F");
+  doc.setFont("NotoSans", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(80);
+  doc.text("Description", cols.desc, y);
+  doc.text("Qty", cols.qty, y, { align: "right" });
+  doc.text("Rate", cols.rate, y, { align: "right" });
+  doc.text("Disc %", cols.disc, y, { align: "right" });
+  doc.text("VAT %", cols.vat, y, { align: "right" });
+  doc.text("Total", cols.total, y, { align: "right" });
+  y += 22;
+
+  doc.setFont("NotoSans", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(20);
+  for (const it of invoice.items) {
+    const descLines = doc.splitTextToSize(it.description, cols.qty - margin - 30);
+    if (y + descLines.length * 12 > pageHeight - 180) {
+      doc.addPage();
+      y = 60;
+    }
+    doc.text(descLines, cols.desc, y);
+    doc.text(
+      it.quantity.toLocaleString("en-NG", { minimumFractionDigits: 2 }),
+      cols.qty,
+      y,
+      { align: "right" },
+    );
+    doc.text(fmtMoney(it.rate), cols.rate, y, { align: "right" });
+    doc.text(fmtPct(it.discountPct), cols.disc, y, { align: "right" });
+    doc.text(fmtPct(it.vatPct), cols.vat, y, { align: "right" });
+    doc.setFont("NotoSans", "bold");
+    doc.text(fmtMoney(lineNet(it)), cols.total, y, { align: "right" });
+    doc.setFont("NotoSans", "normal");
+    y += descLines.length * 12 + 12;
   }
 
-  doc.setFontSize(8);
-  doc.setTextColor(150);
-  doc.text(
-    `Generated by ${companyName}`,
-    margin,
-    doc.internal.pageSize.getHeight() - 40,
-  );
+  // Footer: bank details (left) + totals (right)
+  const footY = Math.max(y + 30, pageHeight - 170);
+  doc.setDrawColor(200);
+  doc.line(margin, footY - 16, right, footY - 16);
+  doc.setFont("NotoSans", "bold");
+  doc.setFontSize(9.5);
+  doc.text(COMPANY.bankAccountName, margin, footY);
+  doc.setFont("NotoSans", "normal");
+  doc.text(COMPANY.bankAccountNumber, margin, footY + 14);
+  doc.text(COMPANY.bankName, margin, footY + 28);
+
+  doc.setTextColor(110);
+  doc.text("Total Net:", right - 150, footY);
+  doc.text("Total VAT:", right - 150, footY + 14);
+  doc.setTextColor(20);
+  doc.setFont("NotoSans", "bold");
+  doc.text(fmtMoney(totals.net), right, footY, { align: "right" });
+  doc.text(fmtMoney(totals.vat), right, footY + 14, { align: "right" });
+
+  doc.setFontSize(9);
+  doc.setTextColor(110);
+  doc.setFont("NotoSans", "normal");
+  doc.text(invoice.status === "paid" ? "AMOUNT PAID" : "BALANCE DUE", right, footY + 48, {
+    align: "right",
+  });
+  doc.setFont("NotoSans", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(20);
+  doc.text(fmtMoney(totals.total), right, footY + 66, { align: "right" });
+
+  // Page numbers (stamped last so the total count is known)
+  const pageCount = doc.getNumberOfPages();
+  for (let p = 1; p <= pageCount; p++) {
+    doc.setPage(p);
+    doc.setFont("NotoSans", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(130);
+    doc.text(`PAGE ${p}/${pageCount}`, right, pageHeight - 24, { align: "right" });
+  }
 
   doc.save(`${invoice.invoiceNumber}.pdf`);
 }
+
+// ---------------------------------------------------------------------------
 
 const FILTERS = ["all", "unpaid", "paid", "cancelled"] as const;
 type Filter = (typeof FILTERS)[number];
@@ -142,13 +348,51 @@ function statusBadge(status: string) {
   );
 }
 
+type ItemDraft = {
+  description: string;
+  quantity: string;
+  rate: string;
+  discountPct: string;
+  vatPct: string;
+};
+
+const EMPTY_ITEM: ItemDraft = {
+  description: "",
+  quantity: "1",
+  rate: "",
+  discountPct: "0",
+  vatPct: "7.5",
+};
+
 const EMPTY_FORM = {
   clientName: "",
+  clientAddress: "",
   clientEmail: "",
   clientPhone: "",
-  description: "",
-  amount: "",
 };
+
+function parseItemDraft(d: ItemDraft): InvoiceItem | null {
+  const quantity = Number(d.quantity);
+  const rate = Number(d.rate.replace(/,/g, ""));
+  const discountPct = Number(d.discountPct || "0");
+  const vatPct = Number(d.vatPct || "0");
+  if (
+    !d.description.trim() ||
+    !Number.isFinite(quantity) ||
+    quantity <= 0 ||
+    !Number.isFinite(rate) ||
+    rate < 0 ||
+    !Number.isFinite(discountPct) ||
+    discountPct < 0 ||
+    discountPct > 100 ||
+    !Number.isFinite(vatPct) ||
+    vatPct < 0 ||
+    vatPct > 100
+  ) {
+    return null;
+  }
+  return { description: d.description.trim(), quantity, rate, discountPct, vatPct };
+}
 
 export default function InvoicesPage() {
   const queryClient = useQueryClient();
@@ -156,17 +400,18 @@ export default function InvoicesPage() {
   const createInvoice = useCreateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
   const sendReceipt = useSendInvoiceReceipt();
-  const { data: session } = useGetCurrentSession();
 
   const [filter, setFilter] = useState<Filter>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
+  const [itemDrafts, setItemDrafts] = useState<ItemDraft[]>([{ ...EMPTY_ITEM }]);
   const [detail, setDetail] = useState<Invoice | null>(null);
   const [statusTarget, setStatusTarget] = useState<{
     invoice: Invoice;
     action: "paid" | "cancelled";
   } | null>(null);
   const [statusNote, setStatusNote] = useState("");
+  const [pdfBusy, setPdfBusy] = useState(false);
 
   const filtered = invoices?.filter((i) => filter === "all" || i.status === filter) ?? [];
 
@@ -179,19 +424,36 @@ export default function InvoicesPage() {
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: getListInvoicesQueryKey() });
 
+  const draftItems = itemDrafts
+    .map(parseItemDraft)
+    .filter((i): i is InvoiceItem => i !== null);
+  const draftTotals = computeTotals(draftItems);
+
+  const updateItemDraft = (idx: number, patch: Partial<ItemDraft>) =>
+    setItemDrafts((drafts) =>
+      drafts.map((d, i) => (i === idx ? { ...d, ...patch } : d)),
+    );
+
   const submitCreate = () => {
-    if (!form.clientName.trim() || !form.description.trim() || !form.amount.trim()) {
-      toast.error("Client name, description, and amount are required.");
+    if (!form.clientName.trim()) {
+      toast.error("Client name is required.");
+      return;
+    }
+    const items = itemDrafts.map(parseItemDraft);
+    if (items.length === 0 || items.some((i) => i === null)) {
+      toast.error(
+        "Each line item needs a description, a quantity above 0, and a rate.",
+      );
       return;
     }
     createInvoice.mutate(
       {
         data: {
           clientName: form.clientName.trim(),
+          clientAddress: form.clientAddress.trim() || undefined,
           clientEmail: form.clientEmail.trim() || undefined,
           clientPhone: form.clientPhone.trim() || undefined,
-          description: form.description.trim(),
-          amount: form.amount.trim(),
+          items: items as InvoiceItem[],
         },
       },
       {
@@ -200,6 +462,7 @@ export default function InvoicesPage() {
           toast.success(`Invoice ${inv.invoiceNumber} created`);
           setCreateOpen(false);
           setForm(EMPTY_FORM);
+          setItemDrafts([{ ...EMPTY_ITEM }]);
           setDetail(inv);
         },
         onError: (error) => {
@@ -251,15 +514,18 @@ export default function InvoicesPage() {
   };
 
   const shareReceipt = async (invoice: Invoice) => {
-    const companyName = session?.company.name || "5th Element";
-    const paidDate = invoice.paidAt ? invoice.paidAt.slice(0, 10) : "";
+    const totals = invoiceTotals(invoice);
+    const paidDate = invoice.paidAt ? fmtLongDate(invoice.paidAt) : "";
     const text = [
       `Payment Receipt — ${invoice.invoiceNumber}`,
-      `From: ${companyName}`,
+      `From: ${COMPANY.name}`,
       `To: ${invoice.clientName}`,
       ``,
-      `Description: ${invoice.description}`,
-      `Amount paid: ${invoice.amount}`,
+      ...invoice.items.map(
+        (it) => `${it.description.split("\n")[0]} — ${fmtMoney(lineNet(it))}`,
+      ),
+      `VAT: ${fmtMoney(totals.vat)}`,
+      `Amount paid: ${fmtMoney(totals.total)}`,
       paidDate ? `Payment date: ${paidDate}` : "",
       ``,
       `Thank you for your payment!`,
@@ -288,6 +554,19 @@ export default function InvoicesPage() {
     }
   };
 
+  const handleDownloadPdf = async (invoice: Invoice) => {
+    setPdfBusy(true);
+    try {
+      await downloadInvoicePdf(invoice);
+    } catch {
+      toast.error("Could not generate the PDF. Please try again.");
+    } finally {
+      setPdfBusy(false);
+    }
+  };
+
+  const detailTotals = detail ? invoiceTotals(detail) : null;
+
   return (
     <div className="p-6 space-y-6">
       <style>{`
@@ -311,6 +590,7 @@ export default function InvoicesPage() {
         <Button
           onClick={() => {
             setForm(EMPTY_FORM);
+            setItemDrafts([{ ...EMPTY_ITEM }]);
             setCreateOpen(true);
           }}
         >
@@ -391,9 +671,11 @@ export default function InvoicesPage() {
                     >
                       <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
                       <TableCell>{inv.clientName}</TableCell>
-                      <TableCell>{inv.amount}</TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {fmtMoney(Number(inv.amount) || 0)}
+                      </TableCell>
                       <TableCell className="max-w-[180px] truncate">
-                        {inv.description}
+                        {itemsSummary(inv.items)}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -464,18 +746,29 @@ export default function InvoicesPage() {
 
       {/* Create invoice dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>Generate Invoice</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="inv-client">Client name *</Label>
               <Input
                 id="inv-client"
                 value={form.clientName}
                 onChange={(e) => setForm({ ...form, clientName: e.target.value })}
-                placeholder="e.g. Acme Ltd"
+                placeholder="e.g. Nigerian Television Authority"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="inv-address">Client address</Label>
+              <Textarea
+                id="inv-address"
+                value={form.clientAddress}
+                onChange={(e) => setForm({ ...form, clientAddress: e.target.value })}
+                placeholder={"e.g. Area 11, Garki,\nAbuja,\nFederal Capital Territory"}
+                className="resize-none"
+                rows={3}
               />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -486,7 +779,7 @@ export default function InvoicesPage() {
                   type="email"
                   value={form.clientEmail}
                   onChange={(e) => setForm({ ...form, clientEmail: e.target.value })}
-                  placeholder="For sending receipts"
+                  placeholder="Optional"
                 />
               </div>
               <div className="space-y-2">
@@ -499,24 +792,100 @@ export default function InvoicesPage() {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="inv-desc">Description *</Label>
-              <Textarea
-                id="inv-desc"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                placeholder="What is this invoice for? e.g. Website design — March"
-                className="resize-none"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="inv-amount">Amount *</Label>
-              <Input
-                id="inv-amount"
-                value={form.amount}
-                onChange={(e) => setForm({ ...form, amount: e.target.value })}
-                placeholder="e.g. GHS 5,000"
-              />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Line items *</Label>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setItemDrafts((d) => [...d, { ...EMPTY_ITEM }])}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Add item
+                </Button>
+              </div>
+              {itemDrafts.map((it, idx) => (
+                <div key={idx} className="border rounded-md p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Textarea
+                      value={it.description}
+                      onChange={(e) => updateItemDraft(idx, { description: e.target.value })}
+                      placeholder="What are you charging for? e.g. Production and installation of premium full vehicle branding..."
+                      className="resize-none"
+                      rows={2}
+                      aria-label={`Item ${idx + 1} description`}
+                    />
+                    {itemDrafts.length > 1 && (
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="text-red-500 hover:text-red-600 shrink-0"
+                        aria-label={`Remove item ${idx + 1}`}
+                        onClick={() =>
+                          setItemDrafts((d) => d.filter((_, i) => i !== idx))
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Quantity</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={it.quantity}
+                        onChange={(e) => updateItemDraft(idx, { quantity: e.target.value })}
+                        aria-label={`Item ${idx + 1} quantity`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Rate ({NAIRA})</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={it.rate}
+                        onChange={(e) => updateItemDraft(idx, { rate: e.target.value })}
+                        placeholder="e.g. 279069.77"
+                        aria-label={`Item ${idx + 1} rate`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Discount %</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={it.discountPct}
+                        onChange={(e) => updateItemDraft(idx, { discountPct: e.target.value })}
+                        aria-label={`Item ${idx + 1} discount percent`}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">VAT %</Label>
+                      <Input
+                        inputMode="decimal"
+                        value={it.vatPct}
+                        onChange={(e) => updateItemDraft(idx, { vatPct: e.target.value })}
+                        aria-label={`Item ${idx + 1} VAT percent`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total Net</span>
+                  <span>{fmtMoney(draftTotals.net)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Total VAT</span>
+                  <span>{fmtMoney(draftTotals.vat)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Balance Due</span>
+                  <span>{fmtMoney(draftTotals.total)}</span>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -532,59 +901,128 @@ export default function InvoicesPage() {
 
       {/* Detail / print dialog */}
       <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Invoice {detail?.invoiceNumber}</DialogTitle>
           </DialogHeader>
-          {detail && (
-            <div id="invoice-print-area" className="space-y-5 max-h-[60vh] overflow-y-auto">
-              <div className="flex items-start justify-between">
+          {detail && detailTotals && (
+            <div
+              id="invoice-print-area"
+              className="space-y-6 max-h-[65vh] overflow-y-auto bg-white text-black"
+            >
+              {/* Header */}
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-lg font-bold">{session?.company.name || "5th Element"}</p>
-                  <p className="text-xs text-muted-foreground">Invoice</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">{detail.invoiceNumber}</p>
-                  <p className="text-xs text-muted-foreground">
-                    Issued {detail.createdAt.slice(0, 10)}
-                  </p>
-                  <div className="mt-1 flex justify-end">{statusBadge(detail.status)}</div>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 text-sm border-t pt-4">
-                <div>
-                  <p className="text-muted-foreground">Billed to</p>
-                  <p className="font-medium">{detail.clientName}</p>
-                  {detail.clientEmail && (
-                    <p className="text-xs text-muted-foreground">{detail.clientEmail}</p>
-                  )}
-                  {detail.clientPhone && (
-                    <p className="text-xs text-muted-foreground">{detail.clientPhone}</p>
-                  )}
-                </div>
-                {detail.paidAt && (
-                  <div>
-                    <p className="text-muted-foreground">Paid on</p>
-                    <p className="font-medium">{detail.paidAt.slice(0, 10)}</p>
+                  <p className="text-xl font-bold italic tracking-wide">INVOICE</p>
+                  <div className="mt-2 text-xs space-y-0.5">
+                    <p>
+                      <span className="text-muted-foreground mr-2">NUMBER:</span>
+                      <span className="font-semibold">{detail.invoiceNumber}</span>
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground mr-2">DATE:</span>
+                      <span className="font-semibold">{fmtLongDate(detail.createdAt)}</span>
+                    </p>
+                    {detail.paidAt && (
+                      <p>
+                        <span className="text-muted-foreground mr-2">PAID:</span>
+                        <span className="font-semibold">{fmtLongDate(detail.paidAt)}</span>
+                      </p>
+                    )}
                   </div>
-                )}
+                  <div className="mt-1">{statusBadge(detail.status)}</div>
+                </div>
+                <img src={logoUrl} alt="Fifth Element Media Group" className="h-14 w-auto" />
               </div>
-              <div className="border rounded-md">
-                <div className="flex justify-between items-start gap-4 p-3 border-b bg-muted/40 text-xs font-medium text-muted-foreground">
-                  <span>Description</span>
-                  <span>Amount</span>
+
+              {/* From / To */}
+              <div className="grid grid-cols-2 gap-6 text-xs border-t pt-4">
+                <div>
+                  <p className="text-muted-foreground mb-1">FROM</p>
+                  <p className="font-bold text-sm">{COMPANY.name}</p>
+                  <p className="italic">{COMPANY.tin}</p>
+                  <p className="text-muted-foreground mt-2">OFFICE ADDRESS:</p>
+                  {COMPANY.addressLines.map((l) => (
+                    <p key={l}>{l}</p>
+                  ))}
                 </div>
-                <div className="flex justify-between items-start gap-4 p-3 text-sm">
-                  <p className="whitespace-pre-wrap break-words min-w-0">
-                    {detail.description}
-                  </p>
-                  <p className="font-semibold whitespace-nowrap">{detail.amount}</p>
-                </div>
-                <div className="flex justify-between items-center gap-4 p-3 border-t text-sm">
-                  <span className="font-medium">Total</span>
-                  <span className="font-bold">{detail.amount}</span>
+                <div>
+                  <p className="text-muted-foreground mb-1">TO</p>
+                  <p className="font-bold text-sm uppercase">{detail.clientName}</p>
+                  {detail.clientAddress && (
+                    <>
+                      <p className="text-muted-foreground mt-2">CUSTOMER ADDRESS:</p>
+                      <p className="whitespace-pre-wrap">{detail.clientAddress}</p>
+                    </>
+                  )}
+                  {(detail.clientEmail || detail.clientPhone) && (
+                    <div className="mt-2 space-y-0.5">
+                      {detail.clientEmail && <p>{detail.clientEmail}</p>}
+                      {detail.clientPhone && <p>{detail.clientPhone}</p>}
+                    </div>
+                  )}
                 </div>
               </div>
+
+              {/* Items */}
+              <div className="border rounded-md overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-muted/40 text-muted-foreground">
+                      <th className="text-left font-medium p-2">Description</th>
+                      <th className="text-right font-medium p-2">Qty</th>
+                      <th className="text-right font-medium p-2">Rate</th>
+                      <th className="text-right font-medium p-2">Disc %</th>
+                      <th className="text-right font-medium p-2">VAT %</th>
+                      <th className="text-right font-medium p-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.items.map((it, i) => (
+                      <tr key={i} className="border-t align-top">
+                        <td className="p-2 whitespace-pre-wrap break-words">
+                          {it.description}
+                        </td>
+                        <td className="p-2 text-right whitespace-nowrap">
+                          {it.quantity.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="p-2 text-right whitespace-nowrap">{fmtMoney(it.rate)}</td>
+                        <td className="p-2 text-right whitespace-nowrap">{fmtPct(it.discountPct)}</td>
+                        <td className="p-2 text-right whitespace-nowrap">{fmtPct(it.vatPct)}</td>
+                        <td className="p-2 text-right whitespace-nowrap font-semibold">
+                          {fmtMoney(lineNet(it))}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer: bank + totals */}
+              <div className="grid grid-cols-2 gap-6 text-xs">
+                <div>
+                  <p className="font-bold">{COMPANY.bankAccountName}</p>
+                  <p>{COMPANY.bankAccountNumber}</p>
+                  <p>{COMPANY.bankName}</p>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total Net:</span>
+                    <span className="font-semibold">{fmtMoney(detailTotals.net)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Total VAT:</span>
+                    <span className="font-semibold">{fmtMoney(detailTotals.vat)}</span>
+                  </div>
+                  <div className="pt-2 text-right">
+                    <p className="text-muted-foreground">
+                      {detail.status === "paid" ? "AMOUNT PAID" : "BALANCE DUE"}
+                    </p>
+                    <p className="text-lg font-bold">{fmtMoney(detailTotals.total)}</p>
+                  </div>
+                </div>
+              </div>
+
               {detail.statusNote && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Note</p>
@@ -604,12 +1042,11 @@ export default function InvoicesPage() {
             </Button>
             <Button
               variant="outline"
-              onClick={() =>
-                detail &&
-                downloadInvoicePdf(detail, session?.company.name || "5th Element")
-              }
+              disabled={pdfBusy}
+              onClick={() => detail && handleDownloadPdf(detail)}
             >
-              <Download className="h-4 w-4 mr-1" /> Download PDF
+              <Download className="h-4 w-4 mr-1" />
+              {pdfBusy ? "Preparing..." : "Download PDF"}
             </Button>
             {detail?.status === "unpaid" && (
               <>

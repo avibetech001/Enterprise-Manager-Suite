@@ -5,6 +5,7 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
+import type { InvoiceItem } from './invoiceItem';
 
 export interface Invoice {
   id: number;
@@ -12,10 +13,12 @@ export interface Invoice {
   invoiceNumber: string;
   clientName: string;
   /** @nullable */
+  clientAddress: string | null;
+  /** @nullable */
   clientEmail: string | null;
   /** @nullable */
   clientPhone: string | null;
-  description: string;
+  items: InvoiceItem[];
   amount: string;
   status: string;
   /** @nullable */

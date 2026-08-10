@@ -3623,23 +3623,48 @@ components:
             employeeCode:
               type: ["string", "null"]
 
+    InvoiceItem:
+      type: object
+      required: [description, quantity, rate, discountPct, vatPct]
+      properties:
+        description:
+          type: string
+          minLength: 1
+        quantity:
+          type: number
+          minimum: 0
+          maximum: 1000000
+        rate:
+          type: number
+          minimum: 0
+          maximum: 1000000000000
+        discountPct:
+          type: number
+          minimum: 0
+          maximum: 100
+        vatPct:
+          type: number
+          minimum: 0
+          maximum: 100
+
     InvoiceInput:
       type: object
-      required: [clientName, description, amount]
+      required: [clientName, items]
       properties:
         clientName:
           type: string
           minLength: 1
+        clientAddress:
+          type: string
         clientEmail:
           type: string
         clientPhone:
           type: string
-        description:
-          type: string
-          minLength: 1
-        amount:
-          type: string
-          minLength: 1
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
 
     InvoiceStatusInput:
       type: object
@@ -3659,9 +3684,10 @@ components:
           companyId,
           invoiceNumber,
           clientName,
+          clientAddress,
           clientEmail,
           clientPhone,
-          description,
+          items,
           amount,
           status,
           statusNote,
@@ -3678,12 +3704,16 @@ components:
           type: string
         clientName:
           type: string
+        clientAddress:
+          type: ["string", "null"]
         clientEmail:
           type: ["string", "null"]
         clientPhone:
           type: ["string", "null"]
-        description:
-          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/InvoiceItem"
         amount:
           type: string
         status:
