@@ -2249,6 +2249,16 @@ export const CreateInvoiceResponse = zod.object({
 
 
 /**
+ * @summary Delete an invoice (management)
+ */
+export const DeleteInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteInvoiceResponse = zod.void()
+
+
+/**
  * @summary Mark an invoice as paid or cancelled (management)
  */
 export const UpdateInvoiceStatusParams = zod.object({

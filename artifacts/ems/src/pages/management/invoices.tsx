@@ -5,6 +5,7 @@ import {
   useCreateInvoice,
   useUpdateInvoiceStatus,
   useSendInvoiceReceipt,
+  useDeleteInvoice,
   getListInvoicesQueryKey,
   Invoice,
   InvoiceItem,
@@ -400,7 +401,9 @@ export default function InvoicesPage() {
   const createInvoice = useCreateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
   const sendReceipt = useSendInvoiceReceipt();
+  const deleteInvoice = useDeleteInvoice();
 
+  const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -494,6 +497,26 @@ export default function InvoicesPage() {
         },
         onError: (error) => {
           toast.error("Failed to update invoice", {
+            description: error.data?.error || "Unknown error occurred",
+          });
+        },
+      },
+    );
+  };
+
+  const submitDelete = () => {
+    if (!deleteTarget) return;
+    deleteInvoice.mutate(
+      { id: deleteTarget.id },
+      {
+        onSuccess: () => {
+          invalidate();
+          toast.success(`Invoice ${deleteTarget.invoiceNumber} deleted`);
+          setDetail((d) => (d && d.id === deleteTarget.id ? null : d));
+          setDeleteTarget(null);
+        },
+        onError: (error) => {
+          toast.error("Failed to delete invoice", {
             description: error.data?.error || "Unknown error occurred",
           });
         },
@@ -692,42 +715,51 @@ export default function InvoicesPage() {
                         onClick={(e) => e.stopPropagation()}
                         onKeyDown={(e) => e.stopPropagation()}
                       >
-                        {inv.status === "unpaid" ? (
-                          <div className="flex gap-2 justify-end">
+                        <div className="flex gap-2 justify-end items-center">
+                          {inv.status === "unpaid" ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setStatusTarget({ invoice: inv, action: "paid" });
+                                  setStatusNote("");
+                                }}
+                              >
+                                Mark Paid
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-red-600 hover:text-red-700"
+                                onClick={() => {
+                                  setStatusTarget({ invoice: inv, action: "cancelled" });
+                                  setStatusNote("");
+                                }}
+                              >
+                                Cancel
+                              </Button>
+                            </>
+                          ) : inv.status === "paid" ? (
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => {
-                                setStatusTarget({ invoice: inv, action: "paid" });
-                                setStatusNote("");
-                              }}
+                              onClick={() => shareReceipt(inv)}
                             >
-                              Mark Paid
+                              <Share2 className="h-4 w-4 mr-1" />
+                              {inv.receiptSentAt ? "Share Again" : "Share Receipt"}
                             </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => {
-                                setStatusTarget({ invoice: inv, action: "cancelled" });
-                                setStatusNote("");
-                              }}
-                            >
-                              Cancel
-                            </Button>
-                          </div>
-                        ) : inv.status === "paid" ? (
+                          ) : null}
                           <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => shareReceipt(inv)}
+                            size="icon"
+                            variant="ghost"
+                            className="text-red-500 hover:text-red-600 h-8 w-8"
+                            aria-label={`Delete invoice ${inv.invoiceNumber}`}
+                            onClick={() => setDeleteTarget(inv)}
                           >
-                            <Share2 className="h-4 w-4 mr-1" />
-                            {inv.receiptSentAt ? "Share Again" : "Share Receipt"}
+                            <Trash2 className="h-4 w-4" />
                           </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">—</span>
-                        )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -1037,6 +1069,13 @@ export default function InvoicesPage() {
             </div>
           )}
           <DialogFooter className="flex-wrap gap-2">
+            <Button
+              variant="outline"
+              className="text-red-600 hover:text-red-700"
+              onClick={() => detail && setDeleteTarget(detail)}
+            >
+              <Trash2 className="h-4 w-4 mr-1" /> Delete
+            </Button>
             <Button variant="outline" onClick={() => window.print()}>
               <Printer className="h-4 w-4 mr-1" /> Print
             </Button>
@@ -1076,6 +1115,33 @@ export default function InvoicesPage() {
                 {detail.receiptSentAt ? "Share Again" : "Share Receipt"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirmation dialog */}
+      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Invoice {deleteTarget?.invoiceNumber}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This permanently removes the invoice for{" "}
+            <span className="font-medium text-foreground">{deleteTarget?.clientName}</span>
+            {deleteTarget ? ` (${fmtMoney(invoiceTotals(deleteTarget).total)})` : ""}. This
+            can't be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)}>
+              Back
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={submitDelete}
+              disabled={deleteInvoice.isPending}
+            >
+              Delete Invoice
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

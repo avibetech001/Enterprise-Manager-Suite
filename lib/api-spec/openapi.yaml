@@ -1688,6 +1688,27 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /invoices/{id}:
+    delete:
+      operationId: deleteInvoice
+      tags: [invoices]
+      summary: Delete an invoice (management)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /invoices/{id}/status:
     post:
       operationId: updateInvoiceStatus

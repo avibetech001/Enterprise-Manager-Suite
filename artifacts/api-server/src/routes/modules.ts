@@ -1802,6 +1802,34 @@ router.post(
   },
 );
 
+router.delete(
+  "/invoices/:id",
+  requireAuth,
+  requireManagementPermission("manage_finance", "manage_invoices"),
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    if (Number.isNaN(id)) {
+      res.status(404).json({ error: "Invoice not found." });
+      return;
+    }
+    const me = req.currentUser!;
+    const [deleted] = await db
+      .delete(invoicesTable)
+      .where(
+        and(
+          eq(invoicesTable.id, id),
+          eq(invoicesTable.companyId, me.companyId),
+        ),
+      )
+      .returning({ id: invoicesTable.id });
+    if (!deleted) {
+      res.status(404).json({ error: "Invoice not found." });
+      return;
+    }
+    res.status(204).end();
+  },
+);
+
 // (send-receipt uses the shared email helper)
 router.post(
   "/invoices/:id/send-receipt",
