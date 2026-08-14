@@ -2165,6 +2165,11 @@ export const ListInvoicesResponseItem = zod.object({
   "discountPct": zod.number().min(listInvoicesResponseItemsItemDiscountPctMin).max(listInvoicesResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(listInvoicesResponseItemsItemVatPctMin).max(listInvoicesResponseItemsItemVatPctMax)
 })),
+  "payments": zod.array(zod.object({
+  "amount": zod.number(),
+  "date": zod.string(),
+  "note": zod.string().nullable()
+})),
   "amount": zod.string(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
@@ -2239,6 +2244,11 @@ export const CreateInvoiceResponse = zod.object({
   "discountPct": zod.number().min(createInvoiceResponseItemsItemDiscountPctMin).max(createInvoiceResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(createInvoiceResponseItemsItemVatPctMin).max(createInvoiceResponseItemsItemVatPctMax)
 })),
+  "payments": zod.array(zod.object({
+  "amount": zod.number(),
+  "date": zod.string(),
+  "note": zod.string().nullable()
+})),
   "amount": zod.string(),
   "status": zod.string(),
   "statusNote": zod.string().nullable(),
@@ -2256,6 +2266,67 @@ export const DeleteInvoiceParams = zod.object({
 })
 
 export const DeleteInvoiceResponse = zod.void()
+
+
+/**
+ * @summary Record a full or part payment against an invoice (management)
+ */
+export const RecordInvoicePaymentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const recordInvoicePaymentBodyAmountMin = 0.01;
+export const recordInvoicePaymentBodyAmountMax = 10000000000000;
+
+
+
+export const RecordInvoicePaymentBody = zod.object({
+  "amount": zod.number().min(recordInvoicePaymentBodyAmountMin).max(recordInvoicePaymentBodyAmountMax),
+  "note": zod.string().optional()
+})
+
+
+export const recordInvoicePaymentResponseItemsItemQuantityMin = 0;
+export const recordInvoicePaymentResponseItemsItemQuantityMax = 1000000;
+
+export const recordInvoicePaymentResponseItemsItemRateMin = 0;
+export const recordInvoicePaymentResponseItemsItemRateMax = 1000000000000;
+
+export const recordInvoicePaymentResponseItemsItemDiscountPctMin = 0;
+export const recordInvoicePaymentResponseItemsItemDiscountPctMax = 100;
+
+export const recordInvoicePaymentResponseItemsItemVatPctMin = 0;
+export const recordInvoicePaymentResponseItemsItemVatPctMax = 100;
+
+
+
+export const RecordInvoicePaymentResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "invoiceNumber": zod.string(),
+  "clientName": zod.string(),
+  "clientAddress": zod.string().nullable(),
+  "clientEmail": zod.string().nullable(),
+  "clientPhone": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "description": zod.string().min(1),
+  "quantity": zod.number().min(recordInvoicePaymentResponseItemsItemQuantityMin).max(recordInvoicePaymentResponseItemsItemQuantityMax),
+  "rate": zod.number().min(recordInvoicePaymentResponseItemsItemRateMin).max(recordInvoicePaymentResponseItemsItemRateMax),
+  "discountPct": zod.number().min(recordInvoicePaymentResponseItemsItemDiscountPctMin).max(recordInvoicePaymentResponseItemsItemDiscountPctMax),
+  "vatPct": zod.number().min(recordInvoicePaymentResponseItemsItemVatPctMin).max(recordInvoicePaymentResponseItemsItemVatPctMax)
+})),
+  "payments": zod.array(zod.object({
+  "amount": zod.number(),
+  "date": zod.string(),
+  "note": zod.string().nullable()
+})),
+  "amount": zod.string(),
+  "status": zod.string(),
+  "statusNote": zod.string().nullable(),
+  "paidAt": zod.coerce.date().nullable(),
+  "receiptSentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**
@@ -2299,6 +2370,11 @@ export const UpdateInvoiceStatusResponse = zod.object({
   "rate": zod.number().min(updateInvoiceStatusResponseItemsItemRateMin).max(updateInvoiceStatusResponseItemsItemRateMax),
   "discountPct": zod.number().min(updateInvoiceStatusResponseItemsItemDiscountPctMin).max(updateInvoiceStatusResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(updateInvoiceStatusResponseItemsItemVatPctMin).max(updateInvoiceStatusResponseItemsItemVatPctMax)
+})),
+  "payments": zod.array(zod.object({
+  "amount": zod.number(),
+  "date": zod.string(),
+  "note": zod.string().nullable()
 })),
   "amount": zod.string(),
   "status": zod.string(),
@@ -2345,6 +2421,11 @@ export const SendInvoiceReceiptResponse = zod.object({
   "rate": zod.number().min(sendInvoiceReceiptResponseItemsItemRateMin).max(sendInvoiceReceiptResponseItemsItemRateMax),
   "discountPct": zod.number().min(sendInvoiceReceiptResponseItemsItemDiscountPctMin).max(sendInvoiceReceiptResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(sendInvoiceReceiptResponseItemsItemVatPctMin).max(sendInvoiceReceiptResponseItemsItemVatPctMax)
+})),
+  "payments": zod.array(zod.object({
+  "amount": zod.number(),
+  "date": zod.string(),
+  "note": zod.string().nullable()
 })),
   "amount": zod.string(),
   "status": zod.string(),

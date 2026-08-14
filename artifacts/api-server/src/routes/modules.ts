@@ -62,6 +62,8 @@ import {
   CreateInvoiceResponse,
   UpdateInvoiceStatusBody,
   UpdateInvoiceStatusResponse,
+  RecordInvoicePaymentBody,
+  RecordInvoicePaymentResponse,
   SendInvoiceReceiptResponse,
   ListLeaveRequestsResponse,
   ListMyAttendanceResponse,
@@ -1775,7 +1777,9 @@ router.post(
         and(
           eq(invoicesTable.id, id),
           eq(invoicesTable.companyId, me.companyId),
-          eq(invoicesTable.status, "unpaid"),
+          parsed.success && parsed.data.status === "cancelled"
+            ? inArray(invoicesTable.status, ["unpaid", "part_paid"])
+            : eq(invoicesTable.status, "unpaid"),
         ),
       )
       .returning();
@@ -1799,6 +1803,94 @@ router.post(
       return;
     }
     res.json(UpdateInvoiceStatusResponse.parse(updated));
+  },
+);
+
+router.post(
+  "/invoices/:id/payments",
+  requireAuth,
+  requireManagementPermission("manage_finance", "manage_invoices"),
+  async (req, res): Promise<void> => {
+    const parsed = RecordInvoicePaymentBody.safeParse(req.body);
+    const id = Number(req.params.id);
+    if (!parsed.success || Number.isNaN(id)) {
+      res.status(400).json({ error: "A payment amount above zero is required." });
+      return;
+    }
+    const me = req.currentUser!;
+    // Work in integer kobo to avoid floating-point drift
+    const amountKobo = Math.round(parsed.data.amount * 100);
+    const amount = amountKobo / 100;
+    if (
+      !Number.isFinite(amount) ||
+      amountKobo <= 0 ||
+      Math.abs(parsed.data.amount * 100 - amountKobo) > 1e-6
+    ) {
+      res.status(400).json({
+        error: "A payment amount above zero (up to 2 decimal places) is required.",
+      });
+      return;
+    }
+    const updated = await db.transaction(async (tx) => {
+      const [invoice] = await tx
+        .select()
+        .from(invoicesTable)
+        .where(
+          and(
+            eq(invoicesTable.id, id),
+            eq(invoicesTable.companyId, me.companyId),
+          ),
+        )
+        .for("update");
+      if (!invoice) {
+        return { error: 404 as const };
+      }
+      if (invoice.status === "cancelled") {
+        return { error: "This invoice was cancelled — payments can't be recorded." };
+      }
+      if (invoice.status === "paid") {
+        return { error: "This invoice is already fully paid." };
+      }
+      const totalKobo = Math.round((Number(invoice.amount) || 0) * 100);
+      const paidKobo = invoice.payments.reduce(
+        (s, p) => s + Math.round(p.amount * 100),
+        0,
+      );
+      const remainingKobo = Math.max(0, totalKobo - paidKobo);
+      if (amountKobo > remainingKobo) {
+        return {
+          error: `That payment is more than the balance remaining. The client still owes ${(remainingKobo / 100).toFixed(2)}.`,
+        };
+      }
+      const payments = [
+        ...invoice.payments,
+        {
+          amount,
+          date: new Date().toISOString(),
+          note: parsed.data.note?.trim() || null,
+        },
+      ];
+      const nowPaid = paidKobo + amountKobo >= totalKobo;
+      const [row] = await tx
+        .update(invoicesTable)
+        .set({
+          payments,
+          status: nowPaid ? "paid" : "part_paid",
+          paidAt: nowPaid ? new Date() : null,
+        })
+        .where(eq(invoicesTable.id, invoice.id))
+        .returning();
+      return { row };
+    });
+    if ("error" in updated) {
+      if (updated.error === 404) {
+        res.status(404).json({ error: "Invoice not found." });
+      } else {
+        res.status(400).json({ error: updated.error });
+      }
+      return;
+    }
+    res.json(RecordInvoicePaymentResponse.parse(updated.row));
   },
 );
 
@@ -1855,9 +1947,9 @@ router.post(
       res.status(404).json({ error: "Invoice not found." });
       return;
     }
-    if (invoice.status !== "paid") {
+    if (invoice.status !== "paid" && invoice.status !== "part_paid") {
       res.status(400).json({
-        error: "Receipts can only be shared for paid invoices.",
+        error: "Receipts can only be shared once a payment has been recorded.",
       });
       return;
     }

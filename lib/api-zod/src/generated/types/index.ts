@@ -68,6 +68,8 @@ export * from './holidayCreate';
 export * from './invoice';
 export * from './invoiceInput';
 export * from './invoiceItem';
+export * from './invoicePayment';
+export * from './invoicePaymentInput';
 export * from './invoiceStatusInput';
 export * from './invoiceStatusInputStatus';
 export * from './leaveBalance';

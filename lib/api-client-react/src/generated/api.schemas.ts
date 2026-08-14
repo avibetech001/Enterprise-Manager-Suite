@@ -957,6 +957,22 @@ export interface InvoiceInput {
   items: InvoiceItem[];
 }
 
+export interface InvoicePayment {
+  amount: number;
+  date: string;
+  /** @nullable */
+  note: string | null;
+}
+
+export interface InvoicePaymentInput {
+  /**
+     * @minimum 0.01
+     * @maximum 10000000000000
+     */
+  amount: number;
+  note?: string;
+}
+
 export type InvoiceStatusInputStatus = typeof InvoiceStatusInputStatus[keyof typeof InvoiceStatusInputStatus];
 
 
@@ -982,6 +998,7 @@ export interface Invoice {
   /** @nullable */
   clientPhone: string | null;
   items: InvoiceItem[];
+  payments: InvoicePayment[];
   amount: string;
   status: string;
   /** @nullable */

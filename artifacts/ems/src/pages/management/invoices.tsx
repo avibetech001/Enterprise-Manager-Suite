@@ -6,6 +6,7 @@ import {
   useUpdateInvoiceStatus,
   useSendInvoiceReceipt,
   useDeleteInvoice,
+  useRecordInvoicePayment,
   getListInvoicesQueryKey,
   Invoice,
   InvoiceItem,
@@ -81,6 +82,17 @@ function invoiceTotals(invoice: Invoice) {
     return { net: amt, vat: 0, total: amt };
   }
   return computeTotals(invoice.items);
+}
+
+// Payment position: how much has been paid and what's still owed.
+function paymentState(invoice: Invoice) {
+  const total = invoiceTotals(invoice).total;
+  const recorded = invoice.payments.reduce((s, p) => s + p.amount, 0);
+  // Legacy fully-paid invoices may have no payment entries
+  const paid =
+    invoice.status === "paid" ? total : Math.min(recorded, total);
+  const remaining = Math.max(0, total - paid);
+  return { total, paid, remaining };
 }
 
 function computeTotals(items: InvoiceItem[]) {
@@ -307,16 +319,34 @@ async function downloadInvoicePdf(invoice: Invoice) {
   doc.text(fmtMoney(totals.net), right, footY, { align: "right" });
   doc.text(fmtMoney(totals.vat), right, footY + 14, { align: "right" });
 
+  const state = paymentState(invoice);
+  let extraY = footY + 28;
+  if (state.paid > 0) {
+    extraY += 14;
+    doc.setFont("NotoSans", "normal");
+    doc.setTextColor(110);
+    doc.text("Amount Paid:", right - 150, extraY);
+    doc.setFont("NotoSans", "bold");
+    doc.setTextColor(20);
+    doc.text(fmtMoney(state.paid), right, extraY, { align: "right" });
+  }
+
   doc.setFontSize(9);
   doc.setTextColor(110);
   doc.setFont("NotoSans", "normal");
-  doc.text(invoice.status === "paid" ? "AMOUNT PAID" : "BALANCE DUE", right, footY + 48, {
-    align: "right",
-  });
+  const bigLabel =
+    invoice.status === "paid"
+      ? "AMOUNT PAID"
+      : invoice.status === "part_paid"
+        ? "BALANCE REMAINING"
+        : "BALANCE DUE";
+  const bigValue =
+    invoice.status === "part_paid" ? state.remaining : totals.total;
+  doc.text(bigLabel, right, extraY + 24, { align: "right" });
   doc.setFont("NotoSans", "bold");
   doc.setFontSize(15);
   doc.setTextColor(20);
-  doc.text(fmtMoney(totals.total), right, footY + 66, { align: "right" });
+  doc.text(fmtMoney(bigValue), right, extraY + 42, { align: "right" });
 
   // Page numbers (stamped last so the total count is known)
   const pageCount = doc.getNumberOfPages();
@@ -333,18 +363,28 @@ async function downloadInvoicePdf(invoice: Invoice) {
 
 // ---------------------------------------------------------------------------
 
-const FILTERS = ["all", "unpaid", "paid", "cancelled"] as const;
+const FILTERS = ["all", "unpaid", "part_paid", "paid", "cancelled"] as const;
 type Filter = (typeof FILTERS)[number];
+
+const FILTER_LABELS: Record<Filter, string> = {
+  all: "All",
+  unpaid: "Unpaid",
+  part_paid: "Part-paid",
+  paid: "Paid",
+  cancelled: "Cancelled",
+};
 
 function statusBadge(status: string) {
   const map: Record<string, string> = {
     paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    part_paid: "bg-blue-50 text-blue-700 border-blue-200",
     cancelled: "bg-red-50 text-red-700 border-red-200",
     unpaid: "bg-amber-50 text-amber-700 border-amber-200",
   };
+  const labels: Record<string, string> = { part_paid: "part-paid" };
   return (
     <Badge variant="outline" className={`capitalize ${map[status] || map.unpaid}`}>
-      {status}
+      {labels[status] || status}
     </Badge>
   );
 }
@@ -402,8 +442,12 @@ export default function InvoicesPage() {
   const updateStatus = useUpdateInvoiceStatus();
   const sendReceipt = useSendInvoiceReceipt();
   const deleteInvoice = useDeleteInvoice();
+  const recordPayment = useRecordInvoicePayment();
 
   const [deleteTarget, setDeleteTarget] = useState<Invoice | null>(null);
+  const [paymentTarget, setPaymentTarget] = useState<Invoice | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentNote, setPaymentNote] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -420,6 +464,7 @@ export default function InvoicesPage() {
 
   const counts = {
     unpaid: invoices?.filter((i) => i.status === "unpaid").length ?? 0,
+    partPaid: invoices?.filter((i) => i.status === "part_paid").length ?? 0,
     paid: invoices?.filter((i) => i.status === "paid").length ?? 0,
     cancelled: invoices?.filter((i) => i.status === "cancelled").length ?? 0,
   };
@@ -504,6 +549,55 @@ export default function InvoicesPage() {
     );
   };
 
+  const openPaymentDialog = (invoice: Invoice) => {
+    const { remaining } = paymentState(invoice);
+    setPaymentTarget(invoice);
+    setPaymentAmount(remaining > 0 ? String(Math.round(remaining * 100) / 100) : "");
+    setPaymentNote("");
+  };
+
+  const submitPayment = () => {
+    if (!paymentTarget) return;
+    const raw = Number(paymentAmount.replace(/,/g, ""));
+    // Normalize to 2 decimal places (kobo)
+    const amount = Math.round(raw * 100) / 100;
+    if (!Number.isFinite(amount) || amount <= 0) {
+      toast.error("Enter a payment amount above zero.");
+      return;
+    }
+    const { remaining } = paymentState(paymentTarget);
+    if (Math.round(amount * 100) > Math.round(remaining * 100)) {
+      toast.error(
+        `That's more than the balance remaining (${fmtMoney(remaining)}).`,
+      );
+      return;
+    }
+    recordPayment.mutate(
+      {
+        id: paymentTarget.id,
+        data: { amount, note: paymentNote.trim() || undefined },
+      },
+      {
+        onSuccess: (inv) => {
+          invalidate();
+          const state = paymentState(inv);
+          toast.success(
+            inv.status === "paid"
+              ? "Payment recorded — invoice fully paid"
+              : `Payment recorded — ${fmtMoney(state.remaining)} remaining`,
+          );
+          setPaymentTarget(null);
+          setDetail((d) => (d && d.id === inv.id ? inv : d));
+        },
+        onError: (error) => {
+          toast.error("Failed to record payment", {
+            description: error.data?.error || "Unknown error occurred",
+          });
+        },
+      },
+    );
+  };
+
   const submitDelete = () => {
     if (!deleteTarget) return;
     deleteInvoice.mutate(
@@ -538,7 +632,14 @@ export default function InvoicesPage() {
 
   const shareReceipt = async (invoice: Invoice) => {
     const totals = invoiceTotals(invoice);
-    const paidDate = invoice.paidAt ? fmtLongDate(invoice.paidAt) : "";
+    const state = paymentState(invoice);
+    const lastPayment = invoice.payments[invoice.payments.length - 1];
+    const paidDate = lastPayment
+      ? fmtLongDate(lastPayment.date)
+      : invoice.paidAt
+        ? fmtLongDate(invoice.paidAt)
+        : "";
+    const fullyPaid = invoice.status === "paid";
     const text = [
       `Payment Receipt — ${invoice.invoiceNumber}`,
       `From: ${COMPANY.name}`,
@@ -548,10 +649,15 @@ export default function InvoicesPage() {
         (it) => `${it.description.split("\n")[0]} — ${fmtMoney(lineNet(it))}`,
       ),
       `VAT: ${fmtMoney(totals.vat)}`,
-      `Amount paid: ${fmtMoney(totals.total)}`,
+      `Invoice total: ${fmtMoney(state.total)}`,
+      lastPayment ? `Payment received: ${fmtMoney(lastPayment.amount)}` : "",
+      `Total paid to date: ${fmtMoney(state.paid)}`,
+      fullyPaid
+        ? `Balance remaining: ${fmtMoney(0)} — PAID IN FULL`
+        : `Balance remaining: ${fmtMoney(state.remaining)}`,
       paidDate ? `Payment date: ${paidDate}` : "",
       ``,
-      `Thank you for your payment!`,
+      fullyPaid ? `Thank you for your payment!` : `Thank you for your payment. We look forward to receiving the balance.`,
     ]
       .filter((line, i, arr) => line !== "" || arr[i - 1] !== "")
       .join("\n");
@@ -621,11 +727,17 @@ export default function InvoicesPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 max-w-md">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
         <Card>
           <CardContent className="p-4">
             <p className="text-2xl font-bold text-amber-600">{counts.unpaid}</p>
             <p className="text-xs text-muted-foreground">Unpaid</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <p className="text-2xl font-bold text-blue-600">{counts.partPaid}</p>
+            <p className="text-xs text-muted-foreground">Part-paid</p>
           </CardContent>
         </Card>
         <Card>
@@ -648,10 +760,9 @@ export default function InvoicesPage() {
             key={f}
             variant={filter === f ? "default" : "outline"}
             size="sm"
-            className="capitalize"
             onClick={() => setFilter(f)}
           >
-            {f}
+            {FILTER_LABELS[f]}
           </Button>
         ))}
       </div>
@@ -716,18 +827,24 @@ export default function InvoicesPage() {
                         onKeyDown={(e) => e.stopPropagation()}
                       >
                         <div className="flex gap-2 justify-end items-center">
-                          {inv.status === "unpaid" ? (
+                          {inv.status === "unpaid" || inv.status === "part_paid" ? (
                             <>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => {
-                                  setStatusTarget({ invoice: inv, action: "paid" });
-                                  setStatusNote("");
-                                }}
+                                onClick={() => openPaymentDialog(inv)}
                               >
-                                Mark Paid
+                                Record Payment
                               </Button>
+                              {inv.status === "part_paid" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => shareReceipt(inv)}
+                                >
+                                  <Share2 className="h-4 w-4 mr-1" /> Receipt
+                                </Button>
+                              )}
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -1046,15 +1163,63 @@ export default function InvoicesPage() {
                     <span className="text-muted-foreground">Total VAT:</span>
                     <span className="font-semibold">{fmtMoney(detailTotals.vat)}</span>
                   </div>
+                  {(detail.payments.length > 0 || detail.status === "paid") && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Amount Paid:</span>
+                        <span className="font-semibold text-emerald-700">
+                          {fmtMoney(paymentState(detail).paid)}
+                        </span>
+                      </div>
+                      {detail.status !== "paid" && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Balance Remaining:</span>
+                          <span className="font-semibold text-amber-700">
+                            {fmtMoney(paymentState(detail).remaining)}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  )}
                   <div className="pt-2 text-right">
                     <p className="text-muted-foreground">
-                      {detail.status === "paid" ? "AMOUNT PAID" : "BALANCE DUE"}
+                      {detail.status === "paid"
+                        ? "AMOUNT PAID"
+                        : detail.status === "part_paid"
+                          ? "BALANCE REMAINING"
+                          : "BALANCE DUE"}
                     </p>
-                    <p className="text-lg font-bold">{fmtMoney(detailTotals.total)}</p>
+                    <p className="text-lg font-bold">
+                      {fmtMoney(
+                        detail.status === "part_paid"
+                          ? paymentState(detail).remaining
+                          : detailTotals.total,
+                      )}
+                    </p>
                   </div>
                 </div>
               </div>
 
+              {detail.payments.length > 0 && (
+                <div className="text-xs">
+                  <p className="text-muted-foreground mb-1 font-medium">Payment history</p>
+                  <div className="border rounded-md divide-y">
+                    {detail.payments.map((p, i) => (
+                      <div key={i} className="flex justify-between items-start gap-3 p-2">
+                        <div className="min-w-0">
+                          <p>{fmtLongDate(p.date)}</p>
+                          {p.note && (
+                            <p className="text-muted-foreground break-words">{p.note}</p>
+                          )}
+                        </div>
+                        <p className="font-semibold whitespace-nowrap">
+                          {fmtMoney(p.amount)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {detail.statusNote && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Note</p>
@@ -1087,7 +1252,7 @@ export default function InvoicesPage() {
               <Download className="h-4 w-4 mr-1" />
               {pdfBusy ? "Preparing..." : "Download PDF"}
             </Button>
-            {detail?.status === "unpaid" && (
+            {(detail?.status === "unpaid" || detail?.status === "part_paid") && (
               <>
                 <Button
                   variant="outline"
@@ -1099,22 +1264,80 @@ export default function InvoicesPage() {
                 >
                   Cancel Invoice
                 </Button>
-                <Button
-                  onClick={() => {
-                    setStatusTarget({ invoice: detail, action: "paid" });
-                    setStatusNote("");
-                  }}
-                >
-                  Mark Paid
+                <Button onClick={() => openPaymentDialog(detail)}>
+                  Record Payment
                 </Button>
               </>
             )}
-            {detail?.status === "paid" && (
-              <Button onClick={() => shareReceipt(detail)}>
+            {(detail?.status === "paid" || detail?.status === "part_paid") && (
+              <Button
+                variant={detail.status === "paid" ? "default" : "outline"}
+                onClick={() => shareReceipt(detail)}
+              >
                 <Share2 className="h-4 w-4 mr-1" />
                 {detail.receiptSentAt ? "Share Again" : "Share Receipt"}
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Record payment dialog */}
+      <Dialog open={!!paymentTarget} onOpenChange={(o) => !o && setPaymentTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment — {paymentTarget?.invoiceNumber}</DialogTitle>
+          </DialogHeader>
+          {paymentTarget && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Invoice total</span>
+                  <span>{fmtMoney(paymentState(paymentTarget).total)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Paid so far</span>
+                  <span>{fmtMoney(paymentState(paymentTarget).paid)}</span>
+                </div>
+                <div className="flex justify-between font-bold">
+                  <span>Balance remaining</span>
+                  <span>{fmtMoney(paymentState(paymentTarget).remaining)}</span>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment-amount">Payment amount ({NAIRA}) *</Label>
+                <Input
+                  id="payment-amount"
+                  inputMode="decimal"
+                  value={paymentAmount}
+                  onChange={(e) => setPaymentAmount(e.target.value)}
+                  placeholder="e.g. 750000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  For half payment, enter part of the balance — the invoice is marked
+                  part-paid until the full amount is received.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="payment-note">Note (optional)</Label>
+                <Textarea
+                  id="payment-note"
+                  value={paymentNote}
+                  onChange={(e) => setPaymentNote(e.target.value)}
+                  placeholder="e.g. Bank transfer — first instalment"
+                  className="resize-none"
+                  rows={2}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPaymentTarget(null)}>
+              Back
+            </Button>
+            <Button onClick={submitPayment} disabled={recordPayment.isPending}>
+              Record Payment
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

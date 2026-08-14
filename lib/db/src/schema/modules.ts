@@ -192,7 +192,12 @@ export const fundRequestsTable = pgTable("fund_requests", {
 });
 
 // Client invoices — bills the company sends to its clients.
-// status: "unpaid" | "paid" | "cancelled"
+// status: "unpaid" | "part_paid" | "paid" | "cancelled"
+export type InvoicePayment = {
+  amount: number;
+  date: string; // ISO timestamp
+  note: string | null;
+};
 export type InvoiceItem = {
   description: string;
   quantity: number;
@@ -212,6 +217,8 @@ export const invoicesTable = pgTable("invoices", {
   clientPhone: text("client_phone"),
   // Line items: [{ description, quantity, rate, discountPct, vatPct }]
   items: jsonb("items").$type<InvoiceItem[]>().notNull().default([]),
+  // Payments recorded against this invoice (supports part-payment)
+  payments: jsonb("payments").$type<InvoicePayment[]>().notNull().default([]),
   // Grand total (balance due), numeric string e.g. "1500000.00"
   amount: text("amount").notNull(),
   status: text("status").notNull().default("unpaid"),

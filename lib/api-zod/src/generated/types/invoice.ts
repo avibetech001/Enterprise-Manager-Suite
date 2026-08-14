@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { InvoiceItem } from './invoiceItem';
+import type { InvoicePayment } from './invoicePayment';
 
 export interface Invoice {
   id: number;
@@ -19,6 +20,7 @@ export interface Invoice {
   /** @nullable */
   clientPhone: string | null;
   items: InvoiceItem[];
+  payments: InvoicePayment[];
   amount: string;
   status: string;
   /** @nullable */

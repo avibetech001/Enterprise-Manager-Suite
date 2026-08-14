@@ -60,6 +60,7 @@ import type {
   HolidayCreate,
   Invoice,
   InvoiceInput,
+  InvoicePaymentInput,
   InvoiceStatusInput,
   LeaveBalance,
   LeaveCreateInput,
@@ -5591,6 +5592,78 @@ export const useDeleteInvoice = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteInvoiceMutationOptions(options));
+    }
+
+export const getRecordInvoicePaymentUrl = (id: number,) => {
+
+
+
+
+  return `/api/invoices/${id}/payments`
+}
+
+/**
+ * @summary Record a full or part payment against an invoice (management)
+ */
+export const recordInvoicePayment = async (id: number,
+    invoicePaymentInput: InvoicePaymentInput, options?: RequestInit): Promise<Invoice> => {
+
+  return customFetch<Invoice>(getRecordInvoicePaymentUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(invoicePaymentInput)
+  }
+);}
+
+
+
+
+
+export const getRecordInvoicePaymentMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordInvoicePayment>>, TError,{id: number;data: BodyType<InvoicePaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof recordInvoicePayment>>, TError,{id: number;data: BodyType<InvoicePaymentInput>}, TContext> => {
+
+const mutationKey = ['recordInvoicePayment'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof recordInvoicePayment>>, {id: number;data: BodyType<InvoicePaymentInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  recordInvoicePayment(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RecordInvoicePaymentMutationResult = NonNullable<Awaited<ReturnType<typeof recordInvoicePayment>>>
+    export type RecordInvoicePaymentMutationBody = BodyType<InvoicePaymentInput>
+    export type RecordInvoicePaymentMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record a full or part payment against an invoice (management)
+ */
+export const useRecordInvoicePayment = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof recordInvoicePayment>>, TError,{id: number;data: BodyType<InvoicePaymentInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof recordInvoicePayment>>,
+        TError,
+        {id: number;data: BodyType<InvoicePaymentInput>},
+        TContext
+      > => {
+      return useMutation(getRecordInvoicePaymentMutationOptions(options));
     }
 
 export const getUpdateInvoiceStatusUrl = (id: number,) => {
