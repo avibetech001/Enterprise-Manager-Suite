@@ -2142,9 +2142,6 @@ export const listInvoicesResponseItemsItemQuantityMax = 1000000;
 export const listInvoicesResponseItemsItemRateMin = 0;
 export const listInvoicesResponseItemsItemRateMax = 1000000000000;
 
-export const listInvoicesResponseItemsItemDiscountPctMin = 0;
-export const listInvoicesResponseItemsItemDiscountPctMax = 100;
-
 export const listInvoicesResponseItemsItemVatPctMin = 0;
 export const listInvoicesResponseItemsItemVatPctMax = 100;
 
@@ -2162,7 +2159,6 @@ export const ListInvoicesResponseItem = zod.object({
   "description": zod.string().min(1),
   "quantity": zod.number().min(listInvoicesResponseItemsItemQuantityMin).max(listInvoicesResponseItemsItemQuantityMax),
   "rate": zod.number().min(listInvoicesResponseItemsItemRateMin).max(listInvoicesResponseItemsItemRateMax),
-  "discountPct": zod.number().min(listInvoicesResponseItemsItemDiscountPctMin).max(listInvoicesResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(listInvoicesResponseItemsItemVatPctMin).max(listInvoicesResponseItemsItemVatPctMax)
 })),
   "payments": zod.array(zod.object({
@@ -2191,9 +2187,6 @@ export const createInvoiceBodyItemsItemQuantityMax = 1000000;
 export const createInvoiceBodyItemsItemRateMin = 0;
 export const createInvoiceBodyItemsItemRateMax = 1000000000000;
 
-export const createInvoiceBodyItemsItemDiscountPctMin = 0;
-export const createInvoiceBodyItemsItemDiscountPctMax = 100;
-
 export const createInvoiceBodyItemsItemVatPctMin = 0;
 export const createInvoiceBodyItemsItemVatPctMax = 100;
 
@@ -2209,7 +2202,6 @@ export const CreateInvoiceBody = zod.object({
   "description": zod.string().min(1),
   "quantity": zod.number().min(createInvoiceBodyItemsItemQuantityMin).max(createInvoiceBodyItemsItemQuantityMax),
   "rate": zod.number().min(createInvoiceBodyItemsItemRateMin).max(createInvoiceBodyItemsItemRateMax),
-  "discountPct": zod.number().min(createInvoiceBodyItemsItemDiscountPctMin).max(createInvoiceBodyItemsItemDiscountPctMax),
   "vatPct": zod.number().min(createInvoiceBodyItemsItemVatPctMin).max(createInvoiceBodyItemsItemVatPctMax)
 })).min(1)
 })
@@ -2220,9 +2212,6 @@ export const createInvoiceResponseItemsItemQuantityMax = 1000000;
 
 export const createInvoiceResponseItemsItemRateMin = 0;
 export const createInvoiceResponseItemsItemRateMax = 1000000000000;
-
-export const createInvoiceResponseItemsItemDiscountPctMin = 0;
-export const createInvoiceResponseItemsItemDiscountPctMax = 100;
 
 export const createInvoiceResponseItemsItemVatPctMin = 0;
 export const createInvoiceResponseItemsItemVatPctMax = 100;
@@ -2241,7 +2230,6 @@ export const CreateInvoiceResponse = zod.object({
   "description": zod.string().min(1),
   "quantity": zod.number().min(createInvoiceResponseItemsItemQuantityMin).max(createInvoiceResponseItemsItemQuantityMax),
   "rate": zod.number().min(createInvoiceResponseItemsItemRateMin).max(createInvoiceResponseItemsItemRateMax),
-  "discountPct": zod.number().min(createInvoiceResponseItemsItemDiscountPctMin).max(createInvoiceResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(createInvoiceResponseItemsItemVatPctMin).max(createInvoiceResponseItemsItemVatPctMax)
 })),
   "payments": zod.array(zod.object({
@@ -2292,9 +2280,6 @@ export const recordInvoicePaymentResponseItemsItemQuantityMax = 1000000;
 export const recordInvoicePaymentResponseItemsItemRateMin = 0;
 export const recordInvoicePaymentResponseItemsItemRateMax = 1000000000000;
 
-export const recordInvoicePaymentResponseItemsItemDiscountPctMin = 0;
-export const recordInvoicePaymentResponseItemsItemDiscountPctMax = 100;
-
 export const recordInvoicePaymentResponseItemsItemVatPctMin = 0;
 export const recordInvoicePaymentResponseItemsItemVatPctMax = 100;
 
@@ -2312,7 +2297,6 @@ export const RecordInvoicePaymentResponse = zod.object({
   "description": zod.string().min(1),
   "quantity": zod.number().min(recordInvoicePaymentResponseItemsItemQuantityMin).max(recordInvoicePaymentResponseItemsItemQuantityMax),
   "rate": zod.number().min(recordInvoicePaymentResponseItemsItemRateMin).max(recordInvoicePaymentResponseItemsItemRateMax),
-  "discountPct": zod.number().min(recordInvoicePaymentResponseItemsItemDiscountPctMin).max(recordInvoicePaymentResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(recordInvoicePaymentResponseItemsItemVatPctMin).max(recordInvoicePaymentResponseItemsItemVatPctMax)
 })),
   "payments": zod.array(zod.object({
@@ -2348,9 +2332,6 @@ export const updateInvoiceStatusResponseItemsItemQuantityMax = 1000000;
 export const updateInvoiceStatusResponseItemsItemRateMin = 0;
 export const updateInvoiceStatusResponseItemsItemRateMax = 1000000000000;
 
-export const updateInvoiceStatusResponseItemsItemDiscountPctMin = 0;
-export const updateInvoiceStatusResponseItemsItemDiscountPctMax = 100;
-
 export const updateInvoiceStatusResponseItemsItemVatPctMin = 0;
 export const updateInvoiceStatusResponseItemsItemVatPctMax = 100;
 
@@ -2368,7 +2349,6 @@ export const UpdateInvoiceStatusResponse = zod.object({
   "description": zod.string().min(1),
   "quantity": zod.number().min(updateInvoiceStatusResponseItemsItemQuantityMin).max(updateInvoiceStatusResponseItemsItemQuantityMax),
   "rate": zod.number().min(updateInvoiceStatusResponseItemsItemRateMin).max(updateInvoiceStatusResponseItemsItemRateMax),
-  "discountPct": zod.number().min(updateInvoiceStatusResponseItemsItemDiscountPctMin).max(updateInvoiceStatusResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(updateInvoiceStatusResponseItemsItemVatPctMin).max(updateInvoiceStatusResponseItemsItemVatPctMax)
 })),
   "payments": zod.array(zod.object({
@@ -2399,9 +2379,6 @@ export const sendInvoiceReceiptResponseItemsItemQuantityMax = 1000000;
 export const sendInvoiceReceiptResponseItemsItemRateMin = 0;
 export const sendInvoiceReceiptResponseItemsItemRateMax = 1000000000000;
 
-export const sendInvoiceReceiptResponseItemsItemDiscountPctMin = 0;
-export const sendInvoiceReceiptResponseItemsItemDiscountPctMax = 100;
-
 export const sendInvoiceReceiptResponseItemsItemVatPctMin = 0;
 export const sendInvoiceReceiptResponseItemsItemVatPctMax = 100;
 
@@ -2419,7 +2396,6 @@ export const SendInvoiceReceiptResponse = zod.object({
   "description": zod.string().min(1),
   "quantity": zod.number().min(sendInvoiceReceiptResponseItemsItemQuantityMin).max(sendInvoiceReceiptResponseItemsItemQuantityMax),
   "rate": zod.number().min(sendInvoiceReceiptResponseItemsItemRateMin).max(sendInvoiceReceiptResponseItemsItemRateMax),
-  "discountPct": zod.number().min(sendInvoiceReceiptResponseItemsItemDiscountPctMin).max(sendInvoiceReceiptResponseItemsItemDiscountPctMax),
   "vatPct": zod.number().min(sendInvoiceReceiptResponseItemsItemVatPctMin).max(sendInvoiceReceiptResponseItemsItemVatPctMax)
 })),
   "payments": zod.array(zod.object({

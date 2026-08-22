@@ -1659,6 +1659,31 @@ router.post(
 // Client invoices — bills the company sends to its clients
 // ---------------------------------------------------------------------------
 
+// Older invoices may still contain discountPct inside their JSON line items.
+// Keep their historic totals intact by folding that discount into the effective
+// rate before the response is parsed by the current no-discount API schema.
+function normalizeInvoiceForResponse(
+  invoice: typeof invoicesTable.$inferSelect,
+) {
+  return {
+    ...invoice,
+    items: invoice.items.map((item) => {
+      const legacyItem = item as typeof item & { discountPct?: number };
+      const discountPct = Number(legacyItem.discountPct ?? 0);
+      const effectiveRate =
+        Number.isFinite(discountPct) && discountPct > 0
+          ? item.rate * (1 - Math.min(discountPct, 100) / 100)
+          : item.rate;
+      return {
+        description: item.description,
+        quantity: item.quantity,
+        rate: effectiveRate,
+        vatPct: item.vatPct,
+      };
+    }),
+  };
+}
+
 router.get(
   "/invoices",
   requireAuth,
@@ -1669,7 +1694,7 @@ router.get(
       .from(invoicesTable)
       .where(eq(invoicesTable.companyId, req.currentUser!.companyId))
       .orderBy(desc(invoicesTable.createdAt));
-    res.json(ListInvoicesResponse.parse(rows));
+    res.json(ListInvoicesResponse.parse(rows.map(normalizeInvoiceForResponse)));
   },
 );
 
@@ -1691,7 +1716,6 @@ router.post(
       description: it.description.trim(),
       quantity: it.quantity,
       rate: it.rate,
-      discountPct: it.discountPct,
       vatPct: it.vatPct,
     }));
     for (const it of items) {
@@ -1703,16 +1727,13 @@ router.post(
         !Number.isFinite(it.rate) ||
         it.rate < 0 ||
         it.rate > 1_000_000_000_000 ||
-        !Number.isFinite(it.discountPct) ||
-        it.discountPct < 0 ||
-        it.discountPct > 100 ||
         !Number.isFinite(it.vatPct) ||
         it.vatPct < 0 ||
         it.vatPct > 100
       ) {
         res.status(400).json({
           error:
-            "Each line item needs a description, a quantity above 0, a rate of 0 or more, and discount/VAT between 0 and 100.",
+            "Each line item needs a description, a quantity above 0, a rate of 0 or more, and VAT between 0 and 100.",
         });
         return;
       }
@@ -1720,7 +1741,7 @@ router.post(
     const total = items.reduce(
       (sum, it) =>
         sum +
-        it.quantity * it.rate * (1 - it.discountPct / 100) * (1 + it.vatPct / 100),
+        it.quantity * it.rate * (1 + it.vatPct / 100),
       0,
     );
     if (!Number.isFinite(total) || total < 0 || total > 10_000_000_000_000) {
@@ -1750,7 +1771,9 @@ router.post(
         .returning();
       return finalized;
     });
-    res.status(201).json(CreateInvoiceResponse.parse(withNumber));
+    res
+      .status(201)
+      .json(CreateInvoiceResponse.parse(normalizeInvoiceForResponse(withNumber)));
   },
 );
 
@@ -1802,7 +1825,9 @@ router.post(
       }
       return;
     }
-    res.json(UpdateInvoiceStatusResponse.parse(updated));
+    res.json(
+      UpdateInvoiceStatusResponse.parse(normalizeInvoiceForResponse(updated)),
+    );
   },
 );
 
@@ -1890,7 +1915,11 @@ router.post(
       }
       return;
     }
-    res.json(RecordInvoicePaymentResponse.parse(updated.row));
+    res.json(
+      RecordInvoicePaymentResponse.parse(
+        normalizeInvoiceForResponse(updated.row),
+      ),
+    );
   },
 );
 
@@ -1960,7 +1989,9 @@ router.post(
       .set({ receiptSentAt: new Date() })
       .where(eq(invoicesTable.id, invoice.id))
       .returning();
-    res.json(SendInvoiceReceiptResponse.parse(updated));
+    res.json(
+      SendInvoiceReceiptResponse.parse(normalizeInvoiceForResponse(updated)),
+    );
   },
 );
 

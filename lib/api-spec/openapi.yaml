@@ -3683,7 +3683,7 @@ components:
 
     InvoiceItem:
       type: object
-      required: [description, quantity, rate, discountPct, vatPct]
+      required: [description, quantity, rate, vatPct]
       properties:
         description:
           type: string
@@ -3696,10 +3696,6 @@ components:
           type: number
           minimum: 0
           maximum: 1000000000000
-        discountPct:
-          type: number
-          minimum: 0
-          maximum: 100
         vatPct:
           type: number
           minimum: 0

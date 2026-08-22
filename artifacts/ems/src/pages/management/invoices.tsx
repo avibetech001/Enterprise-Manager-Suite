@@ -71,17 +71,24 @@ function fmtPct(n: number): string {
 }
 
 function lineNet(it: InvoiceItem): number {
-  return it.quantity * it.rate * (1 - it.discountPct / 100);
+  return it.quantity * it.rate;
 }
 
 // Totals for a saved invoice. Older invoices (created before line items
 // existed) have no items — fall back to the stored amount.
 function invoiceTotals(invoice: Invoice) {
+  const storedTotal = Number(invoice.amount);
   if (invoice.items.length === 0) {
-    const amt = Number(invoice.amount) || 0;
+    const amt = Number.isFinite(storedTotal) ? storedTotal : 0;
     return { net: amt, vat: 0, total: amt };
   }
-  return computeTotals(invoice.items);
+  const computed = computeTotals(invoice.items);
+  if (!Number.isFinite(storedTotal)) return computed;
+  return {
+    net: computed.net,
+    vat: Math.max(0, storedTotal - computed.net),
+    total: storedTotal,
+  };
 }
 
 // Payment position: how much has been paid and what's still owed.
@@ -256,10 +263,9 @@ async function downloadInvoicePdf(invoice: Invoice) {
   // Items table
   const cols = {
     desc: margin,
-    qty: 320,
-    rate: 400,
-    disc: 445,
-    vat: 488,
+    qty: 350,
+    rate: 440,
+    vat: 495,
     total: right,
   };
   doc.setFillColor(243, 244, 246);
@@ -270,7 +276,6 @@ async function downloadInvoicePdf(invoice: Invoice) {
   doc.text("Description", cols.desc, y);
   doc.text("Qty", cols.qty, y, { align: "right" });
   doc.text("Rate", cols.rate, y, { align: "right" });
-  doc.text("Disc %", cols.disc, y, { align: "right" });
   doc.text("VAT %", cols.vat, y, { align: "right" });
   doc.text("Total", cols.total, y, { align: "right" });
   y += 22;
@@ -292,7 +297,6 @@ async function downloadInvoicePdf(invoice: Invoice) {
       { align: "right" },
     );
     doc.text(fmtMoney(it.rate), cols.rate, y, { align: "right" });
-    doc.text(fmtPct(it.discountPct), cols.disc, y, { align: "right" });
     doc.text(fmtPct(it.vatPct), cols.vat, y, { align: "right" });
     doc.setFont("NotoSans", "bold");
     doc.text(fmtMoney(lineNet(it)), cols.total, y, { align: "right" });
@@ -393,7 +397,6 @@ type ItemDraft = {
   description: string;
   quantity: string;
   rate: string;
-  discountPct: string;
   vatPct: string;
 };
 
@@ -401,7 +404,6 @@ const EMPTY_ITEM: ItemDraft = {
   description: "",
   quantity: "1",
   rate: "",
-  discountPct: "0",
   vatPct: "7.5",
 };
 
@@ -415,7 +417,6 @@ const EMPTY_FORM = {
 function parseItemDraft(d: ItemDraft): InvoiceItem | null {
   const quantity = Number(d.quantity);
   const rate = Number(d.rate.replace(/,/g, ""));
-  const discountPct = Number(d.discountPct || "0");
   const vatPct = Number(d.vatPct || "0");
   if (
     !d.description.trim() ||
@@ -423,16 +424,13 @@ function parseItemDraft(d: ItemDraft): InvoiceItem | null {
     quantity <= 0 ||
     !Number.isFinite(rate) ||
     rate < 0 ||
-    !Number.isFinite(discountPct) ||
-    discountPct < 0 ||
-    discountPct > 100 ||
     !Number.isFinite(vatPct) ||
     vatPct < 0 ||
     vatPct > 100
   ) {
     return null;
   }
-  return { description: d.description.trim(), quantity, rate, discountPct, vatPct };
+  return { description: d.description.trim(), quantity, rate, vatPct };
 }
 
 export default function InvoicesPage() {
@@ -980,7 +978,7 @@ export default function InvoicesPage() {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Quantity</Label>
                       <Input
@@ -998,15 +996,6 @@ export default function InvoicesPage() {
                         onChange={(e) => updateItemDraft(idx, { rate: e.target.value })}
                         placeholder="e.g. 279069.77"
                         aria-label={`Item ${idx + 1} rate`}
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">Discount %</Label>
-                      <Input
-                        inputMode="decimal"
-                        value={it.discountPct}
-                        onChange={(e) => updateItemDraft(idx, { discountPct: e.target.value })}
-                        aria-label={`Item ${idx + 1} discount percent`}
                       />
                     </div>
                     <div className="space-y-1">
@@ -1121,7 +1110,6 @@ export default function InvoicesPage() {
                       <th className="text-left font-medium p-2">Description</th>
                       <th className="text-right font-medium p-2">Qty</th>
                       <th className="text-right font-medium p-2">Rate</th>
-                      <th className="text-right font-medium p-2">Disc %</th>
                       <th className="text-right font-medium p-2">VAT %</th>
                       <th className="text-right font-medium p-2">Total</th>
                     </tr>
@@ -1136,7 +1124,6 @@ export default function InvoicesPage() {
                           {it.quantity.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
                         </td>
                         <td className="p-2 text-right whitespace-nowrap">{fmtMoney(it.rate)}</td>
-                        <td className="p-2 text-right whitespace-nowrap">{fmtPct(it.discountPct)}</td>
                         <td className="p-2 text-right whitespace-nowrap">{fmtPct(it.vatPct)}</td>
                         <td className="p-2 text-right whitespace-nowrap font-semibold">
                           {fmtMoney(lineNet(it))}

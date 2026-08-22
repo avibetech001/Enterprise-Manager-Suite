@@ -23,10 +23,5 @@ export interface InvoiceItem {
      * @minimum 0
      * @maximum 100
      */
-  discountPct: number;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
   vatPct: number;
 }
