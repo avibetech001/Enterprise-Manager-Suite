@@ -2,7 +2,7 @@
 name: Invoice letterhead & naira PDFs
 description: Client invoices follow the official 5th Element letterhead; jsPDF needs embedded fonts for ₦.
 ---
-- Invoices are itemized without discounts: description, quantity, rate, and VAT. Historic discounted items are returned using their effective final rate so old totals remain unchanged while discount stays hidden.
+- Invoice item rows show description, quantity, and rate only. VAT is fixed at 7.5% per item and appears only in totals; legacy discount/VAT values are normalized into an equivalent effective rate so old grand totals remain unchanged.
 - **Legacy invoices** created before line items have `items: []` — always fall back to the stored `amount` for totals or they display ₦0.00.
 - jsPDF's built-in Helvetica has no ₦ (U+20A6) glyph. Noto Sans Regular/Bold TTFs live in ems `src/assets` and are fetched + embedded via `addFileToVFS`/`addFont` at download time. Logo PNG cropped from the user's official invoice PDF is also in assets.
 - Letterhead constants (company name, TIN, office address, Access Bank details) are hardcoded in the invoices page — update there if the company details change.

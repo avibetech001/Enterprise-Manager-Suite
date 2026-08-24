@@ -5,7 +5,7 @@
  * 5th Element Enterprise Management System API
  * OpenAPI spec version: 0.1.0
  */
-import type { InvoiceItem } from './invoiceItem';
+import type { InvoiceItemInput } from './invoiceItemInput';
 
 export interface InvoiceInput {
   /** @minLength 1 */
@@ -14,5 +14,5 @@ export interface InvoiceInput {
   clientEmail?: string;
   clientPhone?: string;
   /** @minItems 1 */
-  items: InvoiceItem[];
+  items: InvoiceItemInput[];
 }

@@ -922,7 +922,7 @@ export type FundRequestWithUser = FundRequest & ({
   employeeCode: string | null;
 });
 
-export interface InvoiceItem {
+export interface InvoiceItemInput {
   /** @minLength 1 */
   description: string;
   /**
@@ -935,11 +935,21 @@ export interface InvoiceItem {
      * @maximum 1000000000000
      */
   rate: number;
+}
+
+export interface InvoiceItem {
+  /** @minLength 1 */
+  description: string;
   /**
      * @minimum 0
-     * @maximum 100
+     * @maximum 1000000
      */
-  vatPct: number;
+  quantity: number;
+  /**
+     * @minimum 0
+     * @maximum 2000000000000
+     */
+  rate: number;
 }
 
 export interface InvoiceInput {
@@ -949,7 +959,7 @@ export interface InvoiceInput {
   clientEmail?: string;
   clientPhone?: string;
   /** @minItems 1 */
-  items: InvoiceItem[];
+  items: InvoiceItemInput[];
 }
 
 export interface InvoicePayment {

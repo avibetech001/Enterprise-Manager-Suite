@@ -16,12 +16,7 @@ export interface InvoiceItem {
   quantity: number;
   /**
      * @minimum 0
-     * @maximum 1000000000000
+     * @maximum 2000000000000
      */
   rate: number;
-  /**
-     * @minimum 0
-     * @maximum 100
-     */
-  vatPct: number;
 }

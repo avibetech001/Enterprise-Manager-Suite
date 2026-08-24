@@ -3681,9 +3681,9 @@ components:
             employeeCode:
               type: ["string", "null"]
 
-    InvoiceItem:
+    InvoiceItemInput:
       type: object
-      required: [description, quantity, rate, vatPct]
+      required: [description, quantity, rate]
       properties:
         description:
           type: string
@@ -3696,10 +3696,22 @@ components:
           type: number
           minimum: 0
           maximum: 1000000000000
-        vatPct:
+
+    InvoiceItem:
+      type: object
+      required: [description, quantity, rate]
+      properties:
+        description:
+          type: string
+          minLength: 1
+        quantity:
           type: number
           minimum: 0
-          maximum: 100
+          maximum: 1000000
+        rate:
+          type: number
+          minimum: 0
+          maximum: 2000000000000
 
     InvoiceInput:
       type: object
@@ -3718,7 +3730,7 @@ components:
           type: array
           minItems: 1
           items:
-            $ref: "#/components/schemas/InvoiceItem"
+            $ref: "#/components/schemas/InvoiceItemInput"
 
     InvoicePayment:
       type: object

@@ -58,16 +58,13 @@ const COMPANY = {
 };
 
 const NAIRA = "\u20A6";
+const VAT_PERCENT = 7.5;
 
 function fmtMoney(n: number): string {
   return (
     NAIRA +
     n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
   );
-}
-
-function fmtPct(n: number): string {
-  return `${n.toLocaleString("en-NG", { maximumFractionDigits: 2 })}%`;
 }
 
 function lineNet(it: InvoiceItem): number {
@@ -108,7 +105,7 @@ function computeTotals(items: InvoiceItem[]) {
   for (const it of items) {
     const n = lineNet(it);
     net += n;
-    vat += (n * it.vatPct) / 100;
+    vat += (n * VAT_PERCENT) / 100;
   }
   return { net, vat, total: net + vat };
 }
@@ -263,9 +260,8 @@ async function downloadInvoicePdf(invoice: Invoice) {
   // Items table
   const cols = {
     desc: margin,
-    qty: 350,
-    rate: 440,
-    vat: 495,
+    qty: 385,
+    rate: 475,
     total: right,
   };
   doc.setFillColor(243, 244, 246);
@@ -276,7 +272,6 @@ async function downloadInvoicePdf(invoice: Invoice) {
   doc.text("Description", cols.desc, y);
   doc.text("Qty", cols.qty, y, { align: "right" });
   doc.text("Rate", cols.rate, y, { align: "right" });
-  doc.text("VAT %", cols.vat, y, { align: "right" });
   doc.text("Total", cols.total, y, { align: "right" });
   y += 22;
 
@@ -297,7 +292,6 @@ async function downloadInvoicePdf(invoice: Invoice) {
       { align: "right" },
     );
     doc.text(fmtMoney(it.rate), cols.rate, y, { align: "right" });
-    doc.text(fmtPct(it.vatPct), cols.vat, y, { align: "right" });
     doc.setFont("NotoSans", "bold");
     doc.text(fmtMoney(lineNet(it)), cols.total, y, { align: "right" });
     doc.setFont("NotoSans", "normal");
@@ -317,7 +311,7 @@ async function downloadInvoicePdf(invoice: Invoice) {
 
   doc.setTextColor(110);
   doc.text("Total Net:", right - 150, footY);
-  doc.text("Total VAT:", right - 150, footY + 14);
+  doc.text(`Total VAT (${VAT_PERCENT}%):`, right - 150, footY + 14);
   doc.setTextColor(20);
   doc.setFont("NotoSans", "bold");
   doc.text(fmtMoney(totals.net), right, footY, { align: "right" });
@@ -397,14 +391,12 @@ type ItemDraft = {
   description: string;
   quantity: string;
   rate: string;
-  vatPct: string;
 };
 
 const EMPTY_ITEM: ItemDraft = {
   description: "",
   quantity: "1",
   rate: "",
-  vatPct: "7.5",
 };
 
 const EMPTY_FORM = {
@@ -417,20 +409,16 @@ const EMPTY_FORM = {
 function parseItemDraft(d: ItemDraft): InvoiceItem | null {
   const quantity = Number(d.quantity);
   const rate = Number(d.rate.replace(/,/g, ""));
-  const vatPct = Number(d.vatPct || "0");
   if (
     !d.description.trim() ||
     !Number.isFinite(quantity) ||
     quantity <= 0 ||
     !Number.isFinite(rate) ||
-    rate < 0 ||
-    !Number.isFinite(vatPct) ||
-    vatPct < 0 ||
-    vatPct > 100
+    rate < 0
   ) {
     return null;
   }
-  return { description: d.description.trim(), quantity, rate, vatPct };
+  return { description: d.description.trim(), quantity, rate };
 }
 
 export default function InvoicesPage() {
@@ -978,7 +966,7 @@ export default function InvoicesPage() {
                       </Button>
                     )}
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
                       <Label className="text-xs">Quantity</Label>
                       <Input
@@ -998,15 +986,6 @@ export default function InvoicesPage() {
                         aria-label={`Item ${idx + 1} rate`}
                       />
                     </div>
-                    <div className="space-y-1">
-                      <Label className="text-xs">VAT %</Label>
-                      <Input
-                        inputMode="decimal"
-                        value={it.vatPct}
-                        onChange={(e) => updateItemDraft(idx, { vatPct: e.target.value })}
-                        aria-label={`Item ${idx + 1} VAT percent`}
-                      />
-                    </div>
                   </div>
                 </div>
               ))}
@@ -1016,7 +995,7 @@ export default function InvoicesPage() {
                   <span>{fmtMoney(draftTotals.net)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total VAT</span>
+                  <span className="text-muted-foreground">Total VAT ({VAT_PERCENT}%)</span>
                   <span>{fmtMoney(draftTotals.vat)}</span>
                 </div>
                 <div className="flex justify-between font-bold">
@@ -1110,7 +1089,6 @@ export default function InvoicesPage() {
                       <th className="text-left font-medium p-2">Description</th>
                       <th className="text-right font-medium p-2">Qty</th>
                       <th className="text-right font-medium p-2">Rate</th>
-                      <th className="text-right font-medium p-2">VAT %</th>
                       <th className="text-right font-medium p-2">Total</th>
                     </tr>
                   </thead>
@@ -1124,7 +1102,6 @@ export default function InvoicesPage() {
                           {it.quantity.toLocaleString("en-NG", { minimumFractionDigits: 2 })}
                         </td>
                         <td className="p-2 text-right whitespace-nowrap">{fmtMoney(it.rate)}</td>
-                        <td className="p-2 text-right whitespace-nowrap">{fmtPct(it.vatPct)}</td>
                         <td className="p-2 text-right whitespace-nowrap font-semibold">
                           {fmtMoney(lineNet(it))}
                         </td>
@@ -1147,7 +1124,7 @@ export default function InvoicesPage() {
                     <span className="font-semibold">{fmtMoney(detailTotals.net)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Total VAT:</span>
+                    <span className="text-muted-foreground">Total VAT ({VAT_PERCENT}%):</span>
                     <span className="font-semibold">{fmtMoney(detailTotals.vat)}</span>
                   </div>
                   {(detail.payments.length > 0 || detail.status === "paid") && (

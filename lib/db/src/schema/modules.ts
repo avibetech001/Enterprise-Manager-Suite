@@ -202,7 +202,6 @@ export type InvoiceItem = {
   description: string;
   quantity: number;
   rate: number; // unit price in naira
-  vatPct: number;
 };
 export const invoicesTable = pgTable("invoices", {
   id: serial("id").primaryKey(),
@@ -214,7 +213,7 @@ export const invoicesTable = pgTable("invoices", {
   clientAddress: text("client_address"),
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),
-  // Line items: [{ description, quantity, rate, vatPct }]
+  // Line items: [{ description, quantity, rate }]
   items: jsonb("items").$type<InvoiceItem[]>().notNull().default([]),
   // Payments recorded against this invoice (supports part-payment)
   payments: jsonb("payments").$type<InvoicePayment[]>().notNull().default([]),

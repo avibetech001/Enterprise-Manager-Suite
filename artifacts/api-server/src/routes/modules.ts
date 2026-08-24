@@ -1659,26 +1659,40 @@ router.post(
 // Client invoices — bills the company sends to its clients
 // ---------------------------------------------------------------------------
 
-// Older invoices may still contain discountPct inside their JSON line items.
-// Keep their historic totals intact by folding that discount into the effective
-// rate before the response is parsed by the current no-discount API schema.
+const INVOICE_VAT_PERCENT = 7.5;
+
+// Older invoices may still contain discountPct and vatPct inside JSON items.
+// Convert them to the equivalent pre-VAT rate under today's fixed 7.5% model,
+// preserving the historic grand total while keeping current invoices truthful.
 function normalizeInvoiceForResponse(
   invoice: typeof invoicesTable.$inferSelect,
 ) {
   return {
     ...invoice,
     items: invoice.items.map((item) => {
-      const legacyItem = item as typeof item & { discountPct?: number };
+      const legacyItem = item as typeof item & {
+        discountPct?: number;
+        vatPct?: number;
+      };
       const discountPct = Number(legacyItem.discountPct ?? 0);
-      const effectiveRate =
+      const legacyVatPct = Number(
+        legacyItem.vatPct ?? INVOICE_VAT_PERCENT,
+      );
+      const discountFactor =
         Number.isFinite(discountPct) && discountPct > 0
-          ? item.rate * (1 - Math.min(discountPct, 100) / 100)
-          : item.rate;
+          ? 1 - Math.min(discountPct, 100) / 100
+          : 1;
+      const legacyVatFactor =
+        Number.isFinite(legacyVatPct) && legacyVatPct >= 0
+          ? 1 + legacyVatPct / 100
+          : 1 + INVOICE_VAT_PERCENT / 100;
+      const effectiveRate =
+        (item.rate * discountFactor * legacyVatFactor) /
+        (1 + INVOICE_VAT_PERCENT / 100);
       return {
         description: item.description,
         quantity: item.quantity,
         rate: effectiveRate,
-        vatPct: item.vatPct,
       };
     }),
   };
@@ -1716,7 +1730,6 @@ router.post(
       description: it.description.trim(),
       quantity: it.quantity,
       rate: it.rate,
-      vatPct: it.vatPct,
     }));
     for (const it of items) {
       if (
@@ -1726,14 +1739,11 @@ router.post(
         it.quantity > 1_000_000 ||
         !Number.isFinite(it.rate) ||
         it.rate < 0 ||
-        it.rate > 1_000_000_000_000 ||
-        !Number.isFinite(it.vatPct) ||
-        it.vatPct < 0 ||
-        it.vatPct > 100
+        it.rate > 1_000_000_000_000
       ) {
         res.status(400).json({
           error:
-            "Each line item needs a description, a quantity above 0, a rate of 0 or more, and VAT between 0 and 100.",
+            "Each line item needs a description, a quantity above 0, and a rate of 0 or more.",
         });
         return;
       }
@@ -1741,7 +1751,7 @@ router.post(
     const total = items.reduce(
       (sum, it) =>
         sum +
-        it.quantity * it.rate * (1 + it.vatPct / 100),
+        it.quantity * it.rate * (1 + INVOICE_VAT_PERCENT / 100),
       0,
     );
     if (!Number.isFinite(total) || total < 0 || total > 10_000_000_000_000) {
