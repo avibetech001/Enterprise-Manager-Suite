@@ -218,7 +218,7 @@ async function downloadTwistInvoicePdf(
     doc.setFont("NotoSans", "bold");
     doc.setFontSize(9);
     return doc.splitTextToSize(
-      invoice.projectName?.trim() || "—",
+      invoice.projectName?.trim() || " ",
       right - margin - 82,
     ) as string[];
   }
@@ -227,7 +227,7 @@ async function downloadTwistInvoicePdf(
     doc.setTextColor(25);
     doc.setFont("NotoSans", "normal");
     doc.setFontSize(9);
-    doc.text("Project Name:", margin, projectY);
+    doc.text("PROJECT NAME:", margin, projectY);
     doc.setFont("NotoSans", "bold");
     const nameLines = projectNameLines();
     doc.text(nameLines, margin + 82, projectY);
@@ -585,11 +585,11 @@ async function downloadInvoicePdf(invoice: Invoice) {
   doc.setFont("NotoSans", "normal");
   doc.setFontSize(9);
   doc.setTextColor(80);
-  doc.text("Project Name:", margin, y);
+  doc.text("PROJECT NAME:", margin, y);
   doc.setFont("NotoSans", "bold");
   doc.setTextColor(20);
   const projectLines = doc.splitTextToSize(
-    invoice.projectName?.trim() || "—",
+    invoice.projectName?.trim() || " ",
     right - margin - 82,
   );
   doc.text(projectLines, margin + 82, y);
@@ -731,8 +731,8 @@ function TwistInvoicePreview({ invoice }: { invoice: Invoice }) {
       </div>
 
       <p className="text-sm">
-        <span className="font-normal">Project Name: </span>
-        <span className="font-bold">{invoice.projectName || "—"}</span>
+        <span className="font-normal">PROJECT NAME: </span>
+        <span className="font-bold">{invoice.projectName || ""}</span>
       </p>
 
       <div className="overflow-x-auto">
@@ -1596,8 +1596,8 @@ export default function InvoicesPage() {
 
               {/* Items */}
               <p className="text-sm">
-                <span>Project Name: </span>
-                <span className="font-bold">{detail.projectName || "—"}</span>
+                <span>PROJECT NAME: </span>
+                <span className="font-bold">{detail.projectName || ""}</span>
               </p>
               <div className="border rounded-md overflow-x-auto">
                 <table className="w-full text-xs">
