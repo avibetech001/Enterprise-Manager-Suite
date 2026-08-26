@@ -6,11 +6,13 @@ import {
   useListAttendanceRecords,
   useGetAttendanceSettings,
   useUpdateAttendanceSettings,
+  listAttendanceRecords,
   getListAttendanceRecordsQueryKey,
   getGetAttendanceSettingsQueryKey,
   type WeeklySchedule,
   type DaySchedule,
 } from "@workspace/api-client-react";
+import ExcelJS from "exceljs";
 import {
   Select,
   SelectContent,
@@ -43,7 +45,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QrCode, Printer, MapPin, Settings2 } from "lucide-react";
+import { Download, QrCode, Printer, MapPin, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -51,6 +53,23 @@ function todayStr() {
   const d = new Date();
   const off = d.getTimezoneOffset();
   return new Date(d.getTime() - off * 60000).toISOString().slice(0, 10);
+}
+
+function monthBounds(month: string) {
+  const [year, monthNumber] = month.split("-").map(Number);
+  const lastDay = new Date(Date.UTC(year, monthNumber, 0))
+    .toISOString()
+    .slice(0, 10);
+  return { from: `${month}-01`, to: lastDay };
+}
+
+function formatExportTime(iso: string | null) {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("en-NG", {
+    timeZone: "Africa/Lagos",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function formatTime(iso: string | null) {
@@ -257,6 +276,8 @@ function AttendanceSettingsCard() {
 
 export default function AttendancePage() {
   const [date, setDate] = useState(todayStr());
+  const [month, setMonth] = useState(todayStr().slice(0, 7));
+  const [exporting, setExporting] = useState(false);
   const { data: codeData, isLoading: codeLoading } = useGetAttendanceCode();
   const params = { date };
   const { data, isLoading: recordsLoading } = useListAttendanceRecords(params, {
@@ -291,6 +312,82 @@ export default function AttendancePage() {
       <script>window.onload = () => { window.print(); };<\/script>
       </body></html>`);
     win.document.close();
+  };
+
+  const handleMonthDownload = async () => {
+    setExporting(true);
+    try {
+      const { from, to } = monthBounds(month);
+      const monthly = await listAttendanceRecords({ from, to });
+      if (monthly.records.length === 0) {
+        toast.info("No attendance records found for the selected month.");
+        return;
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      workbook.creator = "5th Element EMS";
+      const sheet = workbook.addWorksheet("Monthly Attendance");
+      sheet.columns = [
+        { header: "Date", key: "date", width: 14 },
+        { header: "Employee Code", key: "employeeCode", width: 18 },
+        { header: "Employee Name", key: "employeeName", width: 30 },
+        { header: "Check In", key: "checkIn", width: 14 },
+        { header: "Check Out", key: "checkOut", width: 14 },
+        { header: "Hours", key: "hours", width: 12 },
+        { header: "Check-In Status", key: "checkInStatus", width: 18 },
+        { header: "Check-Out Status", key: "checkOutStatus", width: 18 },
+        { header: "Check-In Distance (m)", key: "checkInDistance", width: 23 },
+        { header: "Check-Out Distance (m)", key: "checkOutDistance", width: 24 },
+      ];
+      for (const record of monthly.records) {
+        sheet.addRow({
+          date: record.forDate,
+          employeeCode: record.employeeCode ?? "",
+          employeeName: record.employeeName,
+          checkIn: formatExportTime(record.checkInAt),
+          checkOut: formatExportTime(record.checkOutAt),
+          hours: computeHours(record.checkInAt, record.checkOutAt),
+          checkInStatus:
+            record.checkInStatus === "late" ? "Late" : "On time",
+          checkOutStatus:
+            record.checkOutStatus === "early"
+              ? "Left early"
+              : record.checkOutStatus === "on_time"
+                ? "On time"
+                : "",
+          checkInDistance: record.checkInDistanceM ?? "",
+          checkOutDistance: record.checkOutDistanceM ?? "",
+        });
+      }
+      sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+      sheet.getRow(1).fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FF1F2937" },
+      };
+      sheet.getRow(1).alignment = { vertical: "middle" };
+      sheet.views = [{ state: "frozen", ySplit: 1 }];
+      sheet.autoFilter = { from: "A1", to: "J1" };
+
+      const buffer = await workbook.xlsx.writeBuffer();
+      const blob = new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `attendance_${month}.xlsx`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success("Monthly attendance downloaded.");
+    } catch (error) {
+      toast.error("Could not download monthly attendance", {
+        description:
+          error instanceof Error ? error.message : "Unknown error occurred",
+      });
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -347,15 +444,40 @@ export default function AttendancePage() {
                   <CardTitle>Attendance Records</CardTitle>
                   <CardDescription>Check-ins for the selected date.</CardDescription>
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="date-filter" className="text-xs">Date</Label>
-                  <Input
-                    id="date-filter"
-                    type="date"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="w-[180px]"
-                  />
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                  <div className="space-y-1">
+                    <Label htmlFor="date-filter" className="text-xs">Date</Label>
+                    <Input
+                      id="date-filter"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                      className="w-[180px]"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="month-export" className="text-xs">
+                      Download month
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="month-export"
+                        type="month"
+                        value={month}
+                        onChange={(e) => setMonth(e.target.value)}
+                        className="w-[160px]"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleMonthDownload}
+                        disabled={exporting || !month}
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        {exporting ? "Downloading..." : "Download"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </CardHeader>

@@ -1131,6 +1131,16 @@ paths:
           required: false
           schema:
             type: string
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: Attendance records with employee info

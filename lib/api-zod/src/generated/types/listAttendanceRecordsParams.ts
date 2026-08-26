@@ -8,4 +8,6 @@
 
 export type ListAttendanceRecordsParams = {
 date?: string;
+from?: string;
+to?: string;
 };

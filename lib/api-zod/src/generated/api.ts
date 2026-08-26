@@ -1259,7 +1259,9 @@ export const ListMyAttendanceResponse = zod.array(ListMyAttendanceResponseItem)
  * @summary List attendance records for the company (management)
  */
 export const ListAttendanceRecordsQueryParams = zod.object({
-  "date": zod.coerce.string().optional()
+  "date": zod.coerce.string().optional(),
+  "from": zod.coerce.string().optional(),
+  "to": zod.coerce.string().optional()
 })
 
 export const ListAttendanceRecordsResponse = zod.object({

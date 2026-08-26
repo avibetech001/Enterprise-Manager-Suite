@@ -1234,6 +1234,8 @@ to?: string;
 
 export type ListAttendanceRecordsParams = {
 date?: string;
+from?: string;
+to?: string;
 };
 
 export type ListAttendanceRecords200 = {

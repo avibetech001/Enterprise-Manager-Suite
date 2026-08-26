@@ -753,9 +753,38 @@ router.get(
   async (req, res): Promise<void> => {
     const companyId = req.currentUser!.companyId;
     const date = typeof req.query.date === "string" ? req.query.date : null;
+    const from = typeof req.query.from === "string" ? req.query.from : null;
+    const to = typeof req.query.to === "string" ? req.query.to : null;
+    if ((from && !to) || (!from && to)) {
+      res.status(400).json({ error: "Both from and to dates are required." });
+      return;
+    }
+    if (from && to) {
+      const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+      const fromMs = Date.parse(`${from}T00:00:00Z`);
+      const toMs = Date.parse(`${to}T00:00:00Z`);
+      const rangeDays = (toMs - fromMs) / 86_400_000 + 1;
+      if (
+        !datePattern.test(from) ||
+        !datePattern.test(to) ||
+        !Number.isFinite(rangeDays) ||
+        rangeDays < 1 ||
+        rangeDays > 31
+      ) {
+        res.status(400).json({
+          error: "Attendance date ranges must be valid and no longer than 31 days.",
+        });
+        return;
+      }
+    }
     const conditions = [eq(attendanceRecordsTable.companyId, companyId)];
-    if (date) conditions.push(eq(attendanceRecordsTable.forDate, date));
-    const rows = await db
+    if (date) {
+      conditions.push(eq(attendanceRecordsTable.forDate, date));
+    } else {
+      if (from) conditions.push(gte(attendanceRecordsTable.forDate, from));
+      if (to) conditions.push(lte(attendanceRecordsTable.forDate, to));
+    }
+    const query = db
       .select({
         record: attendanceRecordsTable,
         employeeName: usersTable.fullName,
@@ -764,8 +793,8 @@ router.get(
       .from(attendanceRecordsTable)
       .innerJoin(usersTable, eq(attendanceRecordsTable.userId, usersTable.id))
       .where(and(...conditions))
-      .orderBy(desc(attendanceRecordsTable.checkInAt))
-      .limit(500);
+      .orderBy(desc(attendanceRecordsTable.checkInAt));
+    const rows = from && to ? await query : await query.limit(500);
 
     // When a specific date is requested, list employees with no record that
     // day as absent.
