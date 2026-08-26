@@ -16,8 +16,11 @@ for block in page.get_text("dict")["blocks"]:
 
 images = page.get_images(full=True)
 if len(images) >= 3:
-    logo = doc.extract_image(images[2][0])
-    logo_path = f"artifacts/ems/src/assets/twist-logo.{logo['ext']}"
-    with open(logo_path, "wb") as output_file:
-        output_file.write(logo["image"])
+    logo_xref, mask_xref = images[2][0], images[2][1]
+    logo_pixmap = fitz.Pixmap(doc, logo_xref)
+    if mask_xref:
+        mask_pixmap = fitz.Pixmap(doc, mask_xref)
+        logo_pixmap = fitz.Pixmap(logo_pixmap, mask_pixmap)
+    logo_path = "artifacts/ems/src/assets/twist-logo.png"
+    logo_pixmap.save(logo_path)
     print(f"logo={logo_path}")
