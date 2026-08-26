@@ -976,6 +976,21 @@ export interface InvoiceInput {
   items: InvoiceItemInput[];
 }
 
+export interface InvoiceUpdateInput {
+  /** @minLength 1 */
+  clientName: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  projectName: string;
+  clientAddress?: string;
+  clientEmail?: string;
+  clientPhone?: string;
+  /** @minItems 1 */
+  items: InvoiceItemInput[];
+}
+
 export interface InvoicePayment {
   amount: number;
   date: string;

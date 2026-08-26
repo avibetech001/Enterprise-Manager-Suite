@@ -1699,6 +1699,41 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
 
   /invoices/{id}:
+    put:
+      operationId: updateInvoice
+      tags: [invoices]
+      summary: Edit an open invoice (management)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InvoiceUpdateInput"
+      responses:
+        "200":
+          description: Updated invoice
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Invoice"
+        "400":
+          description: Invalid input or invoice cannot be edited
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       operationId: deleteInvoice
       tags: [invoices]
@@ -3730,6 +3765,29 @@ components:
         issuer:
           type: string
           enum: [fifth_element, twist_entertainment]
+        clientName:
+          type: string
+          minLength: 1
+        projectName:
+          type: string
+          minLength: 1
+          maxLength: 200
+        clientAddress:
+          type: string
+        clientEmail:
+          type: string
+        clientPhone:
+          type: string
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/InvoiceItemInput"
+
+    InvoiceUpdateInput:
+      type: object
+      required: [clientName, projectName, items]
+      properties:
         clientName:
           type: string
           minLength: 1

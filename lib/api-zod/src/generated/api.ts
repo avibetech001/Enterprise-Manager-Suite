@@ -2245,6 +2245,77 @@ export const CreateInvoiceResponse = zod.object({
 
 
 /**
+ * @summary Edit an open invoice (management)
+ */
+export const UpdateInvoiceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateInvoiceBodyProjectNameMax = 200;
+
+
+export const updateInvoiceBodyItemsItemQuantityMin = 0;
+export const updateInvoiceBodyItemsItemQuantityMax = 1000000;
+
+export const updateInvoiceBodyItemsItemRateMin = 0;
+export const updateInvoiceBodyItemsItemRateMax = 1000000000000;
+
+
+
+
+export const UpdateInvoiceBody = zod.object({
+  "clientName": zod.string().min(1),
+  "projectName": zod.string().min(1).max(updateInvoiceBodyProjectNameMax),
+  "clientAddress": zod.string().optional(),
+  "clientEmail": zod.string().optional(),
+  "clientPhone": zod.string().optional(),
+  "items": zod.array(zod.object({
+  "description": zod.string().min(1),
+  "quantity": zod.number().min(updateInvoiceBodyItemsItemQuantityMin).max(updateInvoiceBodyItemsItemQuantityMax),
+  "rate": zod.number().min(updateInvoiceBodyItemsItemRateMin).max(updateInvoiceBodyItemsItemRateMax)
+})).min(1)
+})
+
+
+export const updateInvoiceResponseItemsItemQuantityMin = 0;
+export const updateInvoiceResponseItemsItemQuantityMax = 1000000;
+
+export const updateInvoiceResponseItemsItemRateMin = 0;
+export const updateInvoiceResponseItemsItemRateMax = 2000000000000;
+
+
+
+export const UpdateInvoiceResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
+  "invoiceNumber": zod.string(),
+  "clientName": zod.string(),
+  "projectName": zod.string().nullable(),
+  "clientAddress": zod.string().nullable(),
+  "clientEmail": zod.string().nullable(),
+  "clientPhone": zod.string().nullable(),
+  "items": zod.array(zod.object({
+  "description": zod.string().min(1),
+  "quantity": zod.number().min(updateInvoiceResponseItemsItemQuantityMin).max(updateInvoiceResponseItemsItemQuantityMax),
+  "rate": zod.number().min(updateInvoiceResponseItemsItemRateMin).max(updateInvoiceResponseItemsItemRateMax)
+})),
+  "payments": zod.array(zod.object({
+  "amount": zod.number(),
+  "date": zod.string(),
+  "note": zod.string().nullable()
+})),
+  "amount": zod.string(),
+  "status": zod.string(),
+  "statusNote": zod.string().nullable(),
+  "paidAt": zod.coerce.date().nullable(),
+  "receiptSentAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Delete an invoice (management)
  */
 export const DeleteInvoiceParams = zod.object({

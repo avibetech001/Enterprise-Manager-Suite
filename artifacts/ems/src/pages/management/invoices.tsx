@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListInvoices,
   useCreateInvoice,
+  useUpdateInvoice,
   useUpdateInvoiceStatus,
   useSendInvoiceReceipt,
   useDeleteInvoice,
@@ -40,7 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Printer, Plus, Mail, Download, Share2, Trash2 } from "lucide-react";
+import { Printer, Plus, Mail, Download, Share2, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import logoUrl from "@/assets/invoice-logo.png";
@@ -888,6 +889,7 @@ export default function InvoicesPage() {
   const queryClient = useQueryClient();
   const { data: invoices, isLoading } = useListInvoices();
   const createInvoice = useCreateInvoice();
+  const updateInvoice = useUpdateInvoice();
   const updateStatus = useUpdateInvoiceStatus();
   const sendReceipt = useSendInvoiceReceipt();
   const deleteInvoice = useDeleteInvoice();
@@ -898,7 +900,8 @@ export default function InvoicesPage() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [paymentNote, setPaymentNote] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
-  const [createOpen, setCreateOpen] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Invoice | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [itemDrafts, setItemDrafts] = useState<ItemDraft[]>([{ ...EMPTY_ITEM }]);
   const [detail, setDetail] = useState<Invoice | null>(null);
@@ -931,7 +934,35 @@ export default function InvoicesPage() {
       drafts.map((d, i) => (i === idx ? { ...d, ...patch } : d)),
     );
 
-  const submitCreate = () => {
+  const openCreateDialog = () => {
+    setEditTarget(null);
+    setForm(EMPTY_FORM);
+    setItemDrafts([{ ...EMPTY_ITEM }]);
+    setFormOpen(true);
+  };
+
+  const openEditDialog = (invoice: Invoice) => {
+    setEditTarget(invoice);
+    setForm({
+      issuer: invoice.issuer,
+      clientName: invoice.clientName,
+      projectName: invoice.projectName ?? "",
+      clientAddress: invoice.clientAddress ?? "",
+      clientEmail: invoice.clientEmail ?? "",
+      clientPhone: invoice.clientPhone ?? "",
+    });
+    setItemDrafts(
+      invoice.items.map((item) => ({
+        description: item.description,
+        quantity: String(item.quantity),
+        rate: String(item.rate),
+      })),
+    );
+    setDetail(null);
+    setFormOpen(true);
+  };
+
+  const submitInvoice = () => {
     if (!form.clientName.trim()) {
       toast.error("Client name is required.");
       return;
@@ -947,23 +978,46 @@ export default function InvoicesPage() {
       );
       return;
     }
+    const data = {
+      clientName: form.clientName.trim(),
+      projectName: form.projectName.trim(),
+      clientAddress: form.clientAddress.trim() || undefined,
+      clientEmail: form.clientEmail.trim() || undefined,
+      clientPhone: form.clientPhone.trim() || undefined,
+      items: items as InvoiceItem[],
+    };
+    if (editTarget) {
+      updateInvoice.mutate(
+        { id: editTarget.id, data },
+        {
+          onSuccess: (inv) => {
+            invalidate();
+            toast.success(`Invoice ${inv.invoiceNumber} updated`);
+            setFormOpen(false);
+            setEditTarget(null);
+            setDetail(inv);
+          },
+          onError: (error) => {
+            toast.error("Failed to update invoice", {
+              description: error.data?.error || "Unknown error occurred",
+            });
+          },
+        },
+      );
+      return;
+    }
     createInvoice.mutate(
       {
         data: {
           issuer: form.issuer,
-          clientName: form.clientName.trim(),
-          projectName: form.projectName.trim(),
-          clientAddress: form.clientAddress.trim() || undefined,
-          clientEmail: form.clientEmail.trim() || undefined,
-          clientPhone: form.clientPhone.trim() || undefined,
-          items: items as InvoiceItem[],
+          ...data,
         },
       },
       {
         onSuccess: (inv) => {
           invalidate();
           toast.success(`Invoice ${inv.invoiceNumber} created`);
-          setCreateOpen(false);
+          setFormOpen(false);
           setForm(EMPTY_FORM);
           setItemDrafts([{ ...EMPTY_ITEM }]);
           setDetail(inv);
@@ -1176,7 +1230,7 @@ export default function InvoicesPage() {
           onClick={() => {
             setForm(EMPTY_FORM);
             setItemDrafts([{ ...EMPTY_ITEM }]);
-            setCreateOpen(true);
+            openCreateDialog();
           }}
         >
           <Plus className="h-4 w-4 mr-1" /> Generate Invoice
@@ -1325,6 +1379,17 @@ export default function InvoicesPage() {
                               {inv.receiptSentAt ? "Share Again" : "Share Receipt"}
                             </Button>
                           ) : null}
+                          {(inv.status === "unpaid" || inv.status === "part_paid") && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8"
+                              aria-label={`Edit invoice ${inv.invoiceNumber}`}
+                              onClick={() => openEditDialog(inv)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Button
                             size="icon"
                             variant="ghost"
@@ -1352,16 +1417,25 @@ export default function InvoicesPage() {
       </Card>
 
       {/* Create invoice dialog */}
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+      <Dialog
+        open={formOpen}
+        onOpenChange={(open) => {
+          setFormOpen(open);
+          if (!open) setEditTarget(null);
+        }}
+      >
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Generate Invoice</DialogTitle>
+            <DialogTitle>
+              {editTarget ? `Edit Invoice ${editTarget.invoiceNumber}` : "Generate Invoice"}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
             <div className="space-y-2">
               <Label htmlFor="inv-issuer">Issuing company *</Label>
               <Select
                 value={form.issuer}
+                disabled={!!editTarget}
                 onValueChange={(value: IssuerKey) =>
                   setForm({ ...form, issuer: value })
                 }
@@ -1379,8 +1453,9 @@ export default function InvoicesPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                The selected company’s logo, invoice format, and bank details
-                will be used.
+                {editTarget
+                  ? "The issuing company and invoice number cannot be changed."
+                  : "The selected company’s logo, invoice format, and bank details will be used."}
               </p>
             </div>
             <div className="space-y-2">
@@ -1515,11 +1590,14 @@ export default function InvoicesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button variant="outline" onClick={() => setFormOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={submitCreate} disabled={createInvoice.isPending}>
-              Generate Invoice
+            <Button
+              onClick={submitInvoice}
+              disabled={createInvoice.isPending || updateInvoice.isPending}
+            >
+              {editTarget ? "Save Changes" : "Generate Invoice"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1717,6 +1795,14 @@ export default function InvoicesPage() {
             </div>
           )}
           <DialogFooter className="flex-wrap gap-2">
+            {(detail?.status === "unpaid" || detail?.status === "part_paid") && (
+              <Button
+                variant="outline"
+                onClick={() => detail && openEditDialog(detail)}
+              >
+                <Pencil className="h-4 w-4 mr-1" /> Edit
+              </Button>
+            )}
             <Button
               variant="outline"
               className="text-red-600 hover:text-red-700"

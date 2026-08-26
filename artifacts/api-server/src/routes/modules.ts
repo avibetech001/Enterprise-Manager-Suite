@@ -60,6 +60,8 @@ import {
   ListInvoicesResponse,
   CreateInvoiceBody,
   CreateInvoiceResponse,
+  UpdateInvoiceBody,
+  UpdateInvoiceResponse,
   UpdateInvoiceStatusBody,
   UpdateInvoiceStatusResponse,
   RecordInvoicePaymentBody,
@@ -594,6 +596,114 @@ router.put(
       })
       .returning();
     res.json(UpdateAttendanceSettingsResponse.parse(settingsToJson(row)));
+  },
+);
+
+router.put(
+  "/invoices/:id",
+  requireAuth,
+  requireManagementPermission("manage_finance", "manage_invoices"),
+  async (req, res): Promise<void> => {
+    const parsed = UpdateInvoiceBody.safeParse(req.body);
+    const id = Number(req.params.id);
+    if (!parsed.success || Number.isNaN(id)) {
+      res.status(400).json({
+        error:
+          "Client name, project name, and at least one valid line item are required.",
+      });
+      return;
+    }
+    const me = req.currentUser!;
+    const data = parsed.data;
+    const items = data.items.map((it) => ({
+      description: it.description.trim(),
+      quantity: it.quantity,
+      rate: it.rate,
+    }));
+    for (const item of items) {
+      if (
+        !item.description ||
+        !Number.isFinite(item.quantity) ||
+        item.quantity <= 0 ||
+        item.quantity > 1_000_000 ||
+        !Number.isFinite(item.rate) ||
+        item.rate < 0 ||
+        item.rate > 1_000_000_000_000
+      ) {
+        res.status(400).json({
+          error:
+            "Each line item needs a description, a quantity above 0, and a rate of 0 or more.",
+        });
+        return;
+      }
+    }
+    const total = items.reduce(
+      (sum, item) =>
+        sum +
+        item.quantity * item.rate * (1 + INVOICE_VAT_PERCENT / 100),
+      0,
+    );
+    if (!Number.isFinite(total) || total < 0 || total > 10_000_000_000_000) {
+      res.status(400).json({ error: "The invoice total is too large or invalid." });
+      return;
+    }
+
+    const result = await db.transaction(async (tx) => {
+      const [invoice] = await tx
+        .select()
+        .from(invoicesTable)
+        .where(
+          and(
+            eq(invoicesTable.id, id),
+            eq(invoicesTable.companyId, me.companyId),
+          ),
+        )
+        .for("update");
+      if (!invoice) return { error: 404 as const };
+      if (invoice.status === "paid" || invoice.status === "cancelled") {
+        return {
+          error: `A ${invoice.status} invoice can no longer be edited.`,
+        };
+      }
+      const paidKobo = invoice.payments.reduce(
+        (sum, payment) => sum + Math.round(payment.amount * 100),
+        0,
+      );
+      const totalKobo = Math.round(total * 100);
+      if (totalKobo < paidKobo) {
+        return {
+          error: `The revised total cannot be less than the amount already paid (${(paidKobo / 100).toFixed(2)}).`,
+        };
+      }
+      const nowPaid = paidKobo > 0 && paidKobo >= totalKobo;
+      const [updated] = await tx
+        .update(invoicesTable)
+        .set({
+          clientName: data.clientName.trim(),
+          projectName: data.projectName.trim(),
+          clientAddress: data.clientAddress?.trim() || null,
+          clientEmail: data.clientEmail?.trim() || null,
+          clientPhone: data.clientPhone?.trim() || null,
+          items,
+          amount: total.toFixed(2),
+          status: nowPaid ? "paid" : paidKobo > 0 ? "part_paid" : "unpaid",
+          paidAt: nowPaid ? new Date() : null,
+        })
+        .where(eq(invoicesTable.id, invoice.id))
+        .returning();
+      return { row: updated };
+    });
+    if ("error" in result) {
+      if (result.error === 404) {
+        res.status(404).json({ error: "Invoice not found." });
+      } else {
+        res.status(400).json({ error: result.error });
+      }
+      return;
+    }
+    res.json(
+      UpdateInvoiceResponse.parse(normalizeInvoiceForResponse(result.row)),
+    );
   },
 );
 

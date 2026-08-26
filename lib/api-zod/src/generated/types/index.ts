@@ -75,6 +75,7 @@ export * from './invoicePayment';
 export * from './invoicePaymentInput';
 export * from './invoiceStatusInput';
 export * from './invoiceStatusInputStatus';
+export * from './invoiceUpdateInput';
 export * from './leaveBalance';
 export * from './leaveCreateInput';
 export * from './leaveCreateInputType';
