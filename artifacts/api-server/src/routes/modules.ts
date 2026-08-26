@@ -1720,7 +1720,8 @@ router.post(
     const parsed = CreateInvoiceBody.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({
-        error: "Client name and at least one line item are required.",
+        error:
+          "Client name, project name, and at least one line item are required.",
       });
       return;
     }
@@ -1767,6 +1768,7 @@ router.post(
           issuer,
           invoiceNumber: "PENDING",
           clientName: data.clientName.trim(),
+          projectName: data.projectName.trim(),
           clientAddress: data.clientAddress?.trim() || null,
           clientEmail: data.clientEmail?.trim() || null,
           clientPhone: data.clientPhone?.trim() || null,

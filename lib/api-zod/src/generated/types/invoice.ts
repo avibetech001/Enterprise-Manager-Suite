@@ -16,6 +16,8 @@ export interface Invoice {
   invoiceNumber: string;
   clientName: string;
   /** @nullable */
+  projectName: string | null;
+  /** @nullable */
   clientAddress: string | null;
   /** @nullable */
   clientEmail: string | null;

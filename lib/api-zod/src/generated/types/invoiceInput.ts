@@ -12,6 +12,11 @@ export interface InvoiceInput {
   issuer?: InvoiceInputIssuer;
   /** @minLength 1 */
   clientName: string;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  projectName: string;
   clientAddress?: string;
   clientEmail?: string;
   clientPhone?: string;

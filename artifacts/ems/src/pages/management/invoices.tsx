@@ -214,7 +214,25 @@ async function downloadTwistInvoicePdf(
   const footerTop = pageHeight - 46;
   const closingSectionHeight = 225;
 
-  function drawTableHeader(headerY: number): number {
+  function projectNameLines(): string[] {
+    doc.setFont("NotoSans", "bold");
+    doc.setFontSize(9);
+    return doc.splitTextToSize(
+      invoice.projectName?.trim() || "—",
+      right - margin - 82,
+    ) as string[];
+  }
+
+  function drawTableHeader(projectY: number): number {
+    doc.setTextColor(25);
+    doc.setFont("NotoSans", "normal");
+    doc.setFontSize(9);
+    doc.text("Project Name:", margin, projectY);
+    doc.setFont("NotoSans", "bold");
+    const nameLines = projectNameLines();
+    doc.text(nameLines, margin + 82, projectY);
+    const headerY = projectY + nameLines.length * 11 + 16;
+
     doc.setFillColor(229, 31, 39);
     doc.rect(margin, headerY - 16, right - margin, 30, "F");
     doc.setTextColor(255);
@@ -334,7 +352,8 @@ async function downloadTwistInvoicePdf(
       doc.getNumberOfPages() === 1
         ? Math.max(contextY + 16, 275)
         : contextY + 16;
-    const minimumTableSpace = 28 + rowLineHeight + rowGap;
+    const minimumTableSpace =
+      projectNameLines().length * 11 + 44 + rowLineHeight + rowGap;
     if (tableHeaderY + minimumTableSpace > footerTop) {
       return addContinuationPage();
     }
@@ -563,6 +582,19 @@ async function downloadInvoicePdf(invoice: Invoice) {
   }
   y = Math.max(yFrom, yTo) + 26;
 
+  doc.setFont("NotoSans", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(80);
+  doc.text("Project Name:", margin, y);
+  doc.setFont("NotoSans", "bold");
+  doc.setTextColor(20);
+  const projectLines = doc.splitTextToSize(
+    invoice.projectName?.trim() || "—",
+    right - margin - 82,
+  );
+  doc.text(projectLines, margin + 82, y);
+  y += projectLines.length * 12 + 18;
+
   // Items table
   const cols = {
     desc: margin,
@@ -698,6 +730,11 @@ function TwistInvoicePreview({ invoice }: { invoice: Invoice }) {
         </div>
       </div>
 
+      <p className="text-sm">
+        <span className="font-normal">Project Name: </span>
+        <span className="font-bold">{invoice.projectName || "—"}</span>
+      </p>
+
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
@@ -826,6 +863,7 @@ const EMPTY_ITEM: ItemDraft = {
 const EMPTY_FORM = {
   issuer: "fifth_element" as IssuerKey,
   clientName: "",
+  projectName: "",
   clientAddress: "",
   clientEmail: "",
   clientPhone: "",
@@ -898,6 +936,10 @@ export default function InvoicesPage() {
       toast.error("Client name is required.");
       return;
     }
+    if (!form.projectName.trim()) {
+      toast.error("Project name is required.");
+      return;
+    }
     const items = itemDrafts.map(parseItemDraft);
     if (items.length === 0 || items.some((i) => i === null)) {
       toast.error(
@@ -910,6 +952,7 @@ export default function InvoicesPage() {
         data: {
           issuer: form.issuer,
           clientName: form.clientName.trim(),
+          projectName: form.projectName.trim(),
           clientAddress: form.clientAddress.trim() || undefined,
           clientEmail: form.clientEmail.trim() || undefined,
           clientPhone: form.clientPhone.trim() || undefined,
@@ -1350,6 +1393,18 @@ export default function InvoicesPage() {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="inv-project">Project name *</Label>
+              <Input
+                id="inv-project"
+                value={form.projectName}
+                onChange={(e) =>
+                  setForm({ ...form, projectName: e.target.value })
+                }
+                placeholder="e.g. Changan Eado Plus Vehicle Branding"
+                maxLength={200}
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="inv-address">Client address</Label>
               <Textarea
                 id="inv-address"
@@ -1540,6 +1595,10 @@ export default function InvoicesPage() {
               </div>
 
               {/* Items */}
+              <p className="text-sm">
+                <span>Project Name: </span>
+                <span className="font-bold">{detail.projectName || "—"}</span>
+              </p>
               <div className="border rounded-md overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead>

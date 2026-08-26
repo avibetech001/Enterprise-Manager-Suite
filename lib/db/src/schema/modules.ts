@@ -212,6 +212,7 @@ export const invoicesTable = pgTable("invoices", {
   issuer: text("issuer").notNull().default("fifth_element"),
   invoiceNumber: text("invoice_number").notNull(),
   clientName: text("client_name").notNull(),
+  projectName: text("project_name"),
   clientAddress: text("client_address"),
   clientEmail: text("client_email"),
   clientPhone: text("client_phone"),

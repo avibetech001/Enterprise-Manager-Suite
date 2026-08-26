@@ -2150,6 +2150,7 @@ export const ListInvoicesResponseItem = zod.object({
   "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
+  "projectName": zod.string().nullable(),
   "clientAddress": zod.string().nullable(),
   "clientEmail": zod.string().nullable(),
   "clientPhone": zod.string().nullable(),
@@ -2177,6 +2178,8 @@ export const ListInvoicesResponse = zod.array(ListInvoicesResponseItem)
  * @summary Generate an invoice for a client (management)
  */
 
+export const createInvoiceBodyProjectNameMax = 200;
+
 
 export const createInvoiceBodyItemsItemQuantityMin = 0;
 export const createInvoiceBodyItemsItemQuantityMax = 1000000;
@@ -2190,6 +2193,7 @@ export const createInvoiceBodyItemsItemRateMax = 1000000000000;
 export const CreateInvoiceBody = zod.object({
   "issuer": zod.enum(['fifth_element', 'twist_entertainment']).optional(),
   "clientName": zod.string().min(1),
+  "projectName": zod.string().min(1).max(createInvoiceBodyProjectNameMax),
   "clientAddress": zod.string().optional(),
   "clientEmail": zod.string().optional(),
   "clientPhone": zod.string().optional(),
@@ -2215,6 +2219,7 @@ export const CreateInvoiceResponse = zod.object({
   "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
+  "projectName": zod.string().nullable(),
   "clientAddress": zod.string().nullable(),
   "clientEmail": zod.string().nullable(),
   "clientPhone": zod.string().nullable(),
@@ -2279,6 +2284,7 @@ export const RecordInvoicePaymentResponse = zod.object({
   "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
+  "projectName": zod.string().nullable(),
   "clientAddress": zod.string().nullable(),
   "clientEmail": zod.string().nullable(),
   "clientPhone": zod.string().nullable(),
@@ -2328,6 +2334,7 @@ export const UpdateInvoiceStatusResponse = zod.object({
   "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
+  "projectName": zod.string().nullable(),
   "clientAddress": zod.string().nullable(),
   "clientEmail": zod.string().nullable(),
   "clientPhone": zod.string().nullable(),
@@ -2372,6 +2379,7 @@ export const SendInvoiceReceiptResponse = zod.object({
   "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
+  "projectName": zod.string().nullable(),
   "clientAddress": zod.string().nullable(),
   "clientEmail": zod.string().nullable(),
   "clientPhone": zod.string().nullable(),
