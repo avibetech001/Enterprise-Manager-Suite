@@ -952,7 +952,16 @@ export interface InvoiceItem {
   rate: number;
 }
 
+export type InvoiceInputIssuer = typeof InvoiceInputIssuer[keyof typeof InvoiceInputIssuer];
+
+
+export const InvoiceInputIssuer = {
+  fifth_element: 'fifth_element',
+  twist_entertainment: 'twist_entertainment',
+} as const;
+
 export interface InvoiceInput {
+  issuer?: InvoiceInputIssuer;
   /** @minLength 1 */
   clientName: string;
   clientAddress?: string;
@@ -991,9 +1000,18 @@ export interface InvoiceStatusInput {
   note?: string;
 }
 
+export type InvoiceIssuer = typeof InvoiceIssuer[keyof typeof InvoiceIssuer];
+
+
+export const InvoiceIssuer = {
+  fifth_element: 'fifth_element',
+  twist_entertainment: 'twist_entertainment',
+} as const;
+
 export interface Invoice {
   id: number;
   companyId: number;
+  issuer: InvoiceIssuer;
   invoiceNumber: string;
   clientName: string;
   /** @nullable */

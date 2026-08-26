@@ -3717,6 +3717,9 @@ components:
       type: object
       required: [clientName, items]
       properties:
+        issuer:
+          type: string
+          enum: [fifth_element, twist_entertainment]
         clientName:
           type: string
           minLength: 1
@@ -3770,6 +3773,7 @@ components:
         [
           id,
           companyId,
+          issuer,
           invoiceNumber,
           clientName,
           clientAddress,
@@ -3789,6 +3793,9 @@ components:
           type: integer
         companyId:
           type: integer
+        issuer:
+          type: string
+          enum: [fifth_element, twist_entertainment]
         invoiceNumber:
           type: string
         clientName:

@@ -32,11 +32,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Printer, Plus, Mail, Download, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { jsPDF } from "jspdf";
 import logoUrl from "@/assets/invoice-logo.png";
+import twistLogoUrl from "@/assets/twist-logo.png";
 import notoRegularUrl from "@/assets/NotoSans-Regular.ttf";
 import notoBoldUrl from "@/assets/NotoSans-Bold.ttf";
 
@@ -44,6 +52,8 @@ import notoBoldUrl from "@/assets/NotoSans-Bold.ttf";
 // Company letterhead details (from the official invoice template)
 // ---------------------------------------------------------------------------
 const COMPANY = {
+  key: "fifth_element",
+  label: "5th Element Media Group",
   name: "5TH ELEMENT MEDIA GROUP",
   tin: "TIN: 23952683-0001",
   addressLines: [
@@ -56,6 +66,21 @@ const COMPANY = {
   bankAccountNumber: "1849685317",
   bankName: "Access Bank",
 };
+
+const TWIST_COMPANY = {
+  key: "twist_entertainment",
+  label: "Twist Entertainment",
+  name: "TWIST ENTERTAINMENT",
+  bankAccountName: "Twist Afro Media",
+  bankAccountNumber: "1015628403",
+  bankName: "Zenith Bank",
+};
+
+type IssuerKey = "fifth_element" | "twist_entertainment";
+
+function issuerProfile(issuer: Invoice["issuer"]) {
+  return issuer === "twist_entertainment" ? TWIST_COMPANY : COMPANY;
+}
 
 const NAIRA = "\u20A6";
 const VAT_PERCENT = 7.5;
@@ -131,7 +156,12 @@ function itemsSummary(items: InvoiceItem[]): string {
 // ---------------------------------------------------------------------------
 // PDF generation (matches the printed letterhead layout)
 // ---------------------------------------------------------------------------
-let pdfAssets: { regular: string; bold: string; logo: string } | null = null;
+let pdfAssets: {
+  regular: string;
+  bold: string;
+  logo: string;
+  twistLogo: string;
+} | null = null;
 
 async function urlToDataUrl(url: string): Promise<string> {
   const res = await fetch(url);
@@ -147,21 +177,297 @@ async function urlToDataUrl(url: string): Promise<string> {
 
 async function loadPdfAssets() {
   if (pdfAssets) return pdfAssets;
-  const [regular, bold, logo] = await Promise.all([
+  const [regular, bold, logo, twistLogo] = await Promise.all([
     urlToDataUrl(notoRegularUrl),
     urlToDataUrl(notoBoldUrl),
     urlToDataUrl(logoUrl),
+    urlToDataUrl(twistLogoUrl),
   ]);
   pdfAssets = {
     regular: regular.split(",")[1],
     bold: bold.split(",")[1],
     logo,
+    twistLogo,
   };
   return pdfAssets;
 }
 
+async function downloadTwistInvoicePdf(
+  invoice: Invoice,
+  assets: NonNullable<typeof pdfAssets>,
+) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  doc.addFileToVFS("NotoSans-Regular.ttf", assets.regular);
+  doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
+  doc.addFileToVFS("NotoSans-Bold.ttf", assets.bold);
+  doc.addFont("NotoSans-Bold.ttf", "NotoSans", "bold");
+
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 48;
+  const right = pageWidth - margin;
+  const totals = invoiceTotals(invoice);
+  const payment = paymentState(invoice);
+  const cols = { number: margin + 10, desc: margin + 32, qty: 390, rate: 475, total: right };
+  const rowLineHeight = 12;
+  const rowGap = 18;
+  const footerTop = pageHeight - 46;
+  const closingSectionHeight = 225;
+
+  function drawTableHeader(headerY: number): number {
+    doc.setFillColor(229, 31, 39);
+    doc.rect(margin, headerY - 16, right - margin, 30, "F");
+    doc.setTextColor(255);
+    doc.setFont("NotoSans", "bold");
+    doc.setFontSize(8.5);
+    doc.text("#", cols.number, headerY);
+    doc.text("Item & Description", cols.desc, headerY);
+    doc.text("Qty", cols.qty, headerY, { align: "right" });
+    doc.text("Rate", cols.rate, headerY, { align: "right" });
+    doc.text("Amount", cols.total, headerY, { align: "right" });
+    return headerY + 28;
+  }
+
+  function continuationClientNameLines(): string[] {
+    doc.setFont("NotoSans", "bold");
+    doc.setFontSize(9);
+    const maxWidth = right - margin;
+    const lines = doc.splitTextToSize(
+      invoice.clientName.toUpperCase(),
+      maxWidth,
+    ) as string[];
+    if (lines.length <= 2) return lines;
+
+    let lastLine = lines[1];
+    while (
+      lastLine.length > 0 &&
+      doc.getTextWidth(`${lastLine}...`) > maxWidth
+    ) {
+      lastLine = lastLine.slice(0, -1);
+    }
+    return [lines[0], `${lastLine}...`];
+  }
+
+  function addContinuationPage(withTableHeader = true): number {
+    doc.addPage();
+    doc.addImage(assets.twistLogo, "PNG", margin, 28, 110, 49);
+    doc.setTextColor(25);
+    doc.setFont("NotoSans", "bold");
+    doc.setFontSize(9);
+    doc.text(`Reference No: ${invoice.invoiceNumber}`, right, 43, {
+      align: "right",
+    });
+    doc.setFont("NotoSans", "normal");
+    doc.text("Bill To", margin, 92);
+    doc.text(fmtLongDate(invoice.createdAt), right, 92, { align: "right" });
+
+    const nameLines = continuationClientNameLines();
+    doc.setFont("NotoSans", "bold");
+    doc.text(nameLines, margin, 108);
+    const identityBottom = 108 + nameLines.length * 11;
+    return withTableHeader
+      ? drawTableHeader(identityBottom + 18)
+      : identityBottom + 12;
+  }
+
+  function drawFirstPageContext(): number {
+    doc.addImage(assets.twistLogo, "PNG", margin, 38, 165, 74);
+    doc.setFont("NotoSans", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(25);
+    doc.text(`Reference No: ${invoice.invoiceNumber}`, margin, 145);
+
+    doc.setFont("NotoSans", "normal");
+    doc.setFontSize(9);
+    doc.text("Bill To", margin, 176);
+    doc.setFont("NotoSans", "bold");
+    doc.text("Invoice Date:", right - 170, 176);
+    doc.setFont("NotoSans", "normal");
+    doc.text(fmtLongDate(invoice.createdAt), right, 176, { align: "right" });
+
+    const contextWidth = 300;
+    const contextBlocks: Array<{
+      lines: string[];
+      bold: boolean;
+      gapAfter: number;
+    }> = [
+      {
+        lines: doc.splitTextToSize(
+          invoice.clientName.toUpperCase(),
+          contextWidth,
+        ) as string[],
+        bold: true,
+        gapAfter: 8,
+      },
+    ];
+    if (invoice.clientAddress) {
+      contextBlocks.push({
+        lines: doc.splitTextToSize(invoice.clientAddress, contextWidth) as string[],
+        bold: false,
+        gapAfter: 4,
+      });
+    }
+    for (const value of [invoice.clientEmail, invoice.clientPhone].filter(Boolean)) {
+      contextBlocks.push({
+        lines: doc.splitTextToSize(String(value), contextWidth) as string[],
+        bold: false,
+        gapAfter: 2,
+      });
+    }
+
+    const contextBottomLimit = footerTop - 44;
+    let contextY = 194;
+    for (const block of contextBlocks) {
+      doc.setFont("NotoSans", block.bold ? "bold" : "normal");
+      for (const line of block.lines) {
+        if (contextY > contextBottomLimit) {
+          contextY = addContinuationPage(false);
+          doc.setFont("NotoSans", block.bold ? "bold" : "normal");
+        }
+        doc.text(line, margin, contextY);
+        contextY += 11;
+      }
+      contextY += block.gapAfter;
+    }
+
+    const tableHeaderY =
+      doc.getNumberOfPages() === 1
+        ? Math.max(contextY + 16, 275)
+        : contextY + 16;
+    const minimumTableSpace = 28 + rowLineHeight + rowGap;
+    if (tableHeaderY + minimumTableSpace > footerTop) {
+      return addContinuationPage();
+    }
+    return drawTableHeader(tableHeaderY);
+  }
+
+  let y = drawFirstPageContext();
+
+  doc.setTextColor(20);
+  doc.setFontSize(9);
+  invoice.items.forEach((item, index) => {
+    const splitLines = doc.splitTextToSize(
+      item.description || " ",
+      cols.qty - cols.desc - 22,
+    ) as string[];
+    const descriptionLines = splitLines.length > 0 ? splitLines : [" "];
+    let lineIndex = 0;
+    let isFirstChunk = true;
+
+    while (lineIndex < descriptionLines.length) {
+      const availableLines = Math.floor(
+        (footerTop - y - rowGap) / rowLineHeight,
+      );
+      if (availableLines < 1) {
+        y = addContinuationPage();
+        continue;
+      }
+
+      const chunk = descriptionLines.slice(
+        lineIndex,
+        lineIndex + availableLines,
+      );
+      doc.setFont("NotoSans", "normal");
+      if (isFirstChunk) {
+        doc.text(`${index + 1}.`, cols.number, y);
+      }
+      doc.setFont("NotoSans", "bold");
+      doc.text(chunk, cols.desc, y);
+
+      if (isFirstChunk) {
+        doc.setFont("NotoSans", "normal");
+        doc.text(item.quantity.toFixed(2), cols.qty, y, { align: "right" });
+        doc.text(fmtMoney(item.rate), cols.rate, y, { align: "right" });
+        doc.text(fmtMoney(lineNet(item)), cols.total, y, { align: "right" });
+      }
+
+      lineIndex += chunk.length;
+      y += chunk.length * rowLineHeight + rowGap;
+      isFirstChunk = false;
+
+      if (lineIndex < descriptionLines.length) {
+        y = addContinuationPage();
+      }
+    }
+  });
+
+  if (y + closingSectionHeight > footerTop) {
+    y = addContinuationPage();
+  }
+
+  doc.setDrawColor(205);
+  doc.line(margin, y, right, y);
+  y += 32;
+
+  const totalsX = right - 190;
+  doc.setFillColor(248, 248, 248);
+  doc.rect(totalsX, y - 16, right - totalsX, 72, "F");
+  doc.setFont("NotoSans", "normal");
+  doc.setTextColor(80);
+  doc.text("Total Net", totalsX + 14, y);
+  doc.text(`VAT (${VAT_PERCENT}%)`, totalsX + 14, y + 18);
+  doc.setFont("NotoSans", "bold");
+  doc.setTextColor(20);
+  doc.text(fmtMoney(totals.net), right - 14, y, { align: "right" });
+  doc.text(fmtMoney(totals.vat), right - 14, y + 18, { align: "right" });
+  doc.text("TOTAL", totalsX + 14, y + 42);
+  doc.text(`NGN ${totals.total.toLocaleString("en-NG", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`, right - 14, y + 42, { align: "right" });
+
+  let notesY = y + 82;
+  if (payment.paid > 0) {
+    doc.setFont("NotoSans", "normal");
+    doc.text("Amount Paid", totalsX + 14, notesY);
+    doc.setFont("NotoSans", "bold");
+    doc.text(fmtMoney(payment.paid), right - 14, notesY, { align: "right" });
+    notesY += 18;
+    doc.setFont("NotoSans", "normal");
+    doc.text("Balance Remaining", totalsX + 14, notesY);
+    doc.setFont("NotoSans", "bold");
+    doc.text(fmtMoney(payment.remaining), right - 14, notesY, { align: "right" });
+  }
+
+  doc.setTextColor(20);
+  doc.setFont("NotoSans", "bold");
+  doc.setFontSize(10);
+  doc.text("Notes", margin, y + 82);
+  doc.setFont("NotoSans", "normal");
+  doc.setFontSize(9);
+  doc.text("Thank you for your patronage", margin, y + 97);
+  doc.setFont("NotoSans", "bold");
+  doc.setFontSize(10);
+  doc.text("Terms & Conditions", margin, y + 137);
+  doc.setFontSize(9);
+  doc.text("ALL PAYMENTS TO BE MADE TO:", margin, y + 154);
+  doc.setFont("NotoSans", "normal");
+  doc.text(TWIST_COMPANY.bankAccountName, margin, y + 169);
+  doc.text(TWIST_COMPANY.bankAccountNumber, margin, y + 181);
+  doc.text(TWIST_COMPANY.bankName, margin, y + 193);
+
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page++) {
+    doc.setPage(page);
+    doc.setDrawColor(165);
+    doc.line(margin, pageHeight - 30, right, pageHeight - 30);
+    doc.setFont("NotoSans", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(130);
+    doc.text(`PAGE ${page}/${pageCount}`, right, pageHeight - 16, {
+      align: "right",
+    });
+  }
+
+  doc.save(`${invoice.invoiceNumber}-Twist.pdf`);
+}
+
 async function downloadInvoicePdf(invoice: Invoice) {
   const assets = await loadPdfAssets();
+  if (invoice.issuer === "twist_entertainment") {
+    await downloadTwistInvoicePdf(invoice, assets);
+    return;
+  }
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   doc.addFileToVFS("NotoSans-Regular.ttf", assets.regular);
   doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
@@ -359,6 +665,124 @@ async function downloadInvoicePdf(invoice: Invoice) {
   doc.save(`${invoice.invoiceNumber}.pdf`);
 }
 
+function TwistInvoicePreview({ invoice }: { invoice: Invoice }) {
+  const totals = invoiceTotals(invoice);
+  const payment = paymentState(invoice);
+
+  return (
+    <div className="space-y-6">
+      <img
+        src={twistLogoUrl}
+        alt="Twist Entertainment"
+        className="h-24 w-auto"
+      />
+      <p className="text-sm font-bold">
+        Reference No: {invoice.invoiceNumber}
+      </p>
+      <div className="grid grid-cols-2 gap-6 text-xs">
+        <div>
+          <p className="mb-1">Bill To</p>
+          <p className="font-bold uppercase">{invoice.clientName}</p>
+          {invoice.clientAddress && (
+            <p className="mt-3 whitespace-pre-wrap">{invoice.clientAddress}</p>
+          )}
+          {invoice.clientEmail && <p className="mt-1">{invoice.clientEmail}</p>}
+          {invoice.clientPhone && <p>{invoice.clientPhone}</p>}
+        </div>
+        <div className="text-right">
+          <span className="font-bold">Invoice Date: </span>
+          {fmtLongDate(invoice.createdAt)}
+          <div className="mt-2 flex justify-end">
+            {statusBadge(invoice.status)}
+          </div>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-[#e51f27] text-white">
+              <th className="p-3 text-left">#</th>
+              <th className="p-3 text-left">Item &amp; Description</th>
+              <th className="p-3 text-right">Qty</th>
+              <th className="p-3 text-right">Rate</th>
+              <th className="p-3 text-right">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {invoice.items.map((item, index) => (
+              <tr key={index} className="border-b align-top">
+                <td className="p-3">{index + 1}.</td>
+                <td className="p-3 whitespace-pre-wrap font-semibold">
+                  {item.description}
+                </td>
+                <td className="p-3 text-right">{item.quantity.toFixed(2)}</td>
+                <td className="p-3 text-right whitespace-nowrap">
+                  {fmtMoney(item.rate)}
+                </td>
+                <td className="p-3 text-right whitespace-nowrap">
+                  {fmtMoney(lineNet(item))}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="grid grid-cols-2 gap-8">
+        <div className="text-xs space-y-7">
+          <div>
+            <p className="font-bold text-sm">Notes</p>
+            <p>Thank you for your patronage</p>
+          </div>
+          <div>
+            <p className="font-bold text-sm">Terms &amp; Conditions</p>
+            <p className="font-bold">ALL PAYMENTS TO BE MADE TO:</p>
+            <p>{TWIST_COMPANY.bankAccountName}</p>
+            <p>{TWIST_COMPANY.bankAccountNumber}</p>
+            <p>{TWIST_COMPANY.bankName}</p>
+          </div>
+        </div>
+        <div className="text-xs space-y-1 bg-muted/30 p-4 self-start">
+          <div className="flex justify-between">
+            <span>Total Net</span>
+            <span className="font-semibold">{fmtMoney(totals.net)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>VAT ({VAT_PERCENT}%)</span>
+            <span className="font-semibold">{fmtMoney(totals.vat)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-bold border-t pt-2 mt-2">
+            <span>TOTAL</span>
+            <span>
+              NGN {totals.total.toLocaleString("en-NG", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </span>
+          </div>
+          {payment.paid > 0 && (
+            <>
+              <div className="flex justify-between pt-2">
+                <span>Amount Paid</span>
+                <span className="font-semibold text-emerald-700">
+                  {fmtMoney(payment.paid)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Balance Remaining</span>
+                <span className="font-semibold text-amber-700">
+                  {fmtMoney(payment.remaining)}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 
 const FILTERS = ["all", "unpaid", "part_paid", "paid", "cancelled"] as const;
@@ -400,6 +824,7 @@ const EMPTY_ITEM: ItemDraft = {
 };
 
 const EMPTY_FORM = {
+  issuer: "fifth_element" as IssuerKey,
   clientName: "",
   clientAddress: "",
   clientEmail: "",
@@ -483,6 +908,7 @@ export default function InvoicesPage() {
     createInvoice.mutate(
       {
         data: {
+          issuer: form.issuer,
           clientName: form.clientName.trim(),
           clientAddress: form.clientAddress.trim() || undefined,
           clientEmail: form.clientEmail.trim() || undefined,
@@ -617,6 +1043,7 @@ export default function InvoicesPage() {
   };
 
   const shareReceipt = async (invoice: Invoice) => {
+    const issuer = issuerProfile(invoice.issuer);
     const totals = invoiceTotals(invoice);
     const state = paymentState(invoice);
     const lastPayment = invoice.payments[invoice.payments.length - 1];
@@ -628,7 +1055,7 @@ export default function InvoicesPage() {
     const fullyPaid = invoice.status === "paid";
     const text = [
       `Payment Receipt — ${invoice.invoiceNumber}`,
-      `From: ${COMPANY.name}`,
+      `From: ${issuer.name}`,
       `To: ${invoice.clientName}`,
       ``,
       ...invoice.items.map(
@@ -766,6 +1193,7 @@ export default function InvoicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
+                  <TableHead>Issuing company</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Description</TableHead>
@@ -790,6 +1218,7 @@ export default function InvoicesPage() {
                       }}
                     >
                       <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
+                      <TableCell>{issuerProfile(inv.issuer).label}</TableCell>
                       <TableCell>{inv.clientName}</TableCell>
                       <TableCell className="whitespace-nowrap">
                         {fmtMoney(Number(inv.amount) || 0)}
@@ -868,7 +1297,7 @@ export default function InvoicesPage() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       No invoices yet. Generate one for a client to get started.
                     </TableCell>
                   </TableRow>
@@ -886,6 +1315,31 @@ export default function InvoicesPage() {
             <DialogTitle>Generate Invoice</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[65vh] overflow-y-auto pr-1">
+            <div className="space-y-2">
+              <Label htmlFor="inv-issuer">Issuing company *</Label>
+              <Select
+                value={form.issuer}
+                onValueChange={(value: IssuerKey) =>
+                  setForm({ ...form, issuer: value })
+                }
+              >
+                <SelectTrigger id="inv-issuer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fifth_element">
+                    5th Element Media Group
+                  </SelectItem>
+                  <SelectItem value="twist_entertainment">
+                    Twist Entertainment
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                The selected company’s logo, invoice format, and bank details
+                will be used.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="inv-client">Client name *</Label>
               <Input
@@ -1027,6 +1481,10 @@ export default function InvoicesPage() {
               id="invoice-print-area"
               className="space-y-6 max-h-[65vh] overflow-y-auto bg-white text-black"
             >
+              {detail.issuer === "twist_entertainment" ? (
+                <TwistInvoicePreview invoice={detail} />
+              ) : (
+                <>
               {/* Header */}
               <div className="flex items-start justify-between gap-4">
                 <div>
@@ -1163,6 +1621,8 @@ export default function InvoicesPage() {
                   </div>
                 </div>
               </div>
+                </>
+              )}
 
               {detail.payments.length > 0 && (
                 <div className="text-xs">

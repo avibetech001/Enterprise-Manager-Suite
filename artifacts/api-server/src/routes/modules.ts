@@ -1726,6 +1726,7 @@ router.post(
     }
     const me = req.currentUser!;
     const data = parsed.data;
+    const issuer = data.issuer ?? "fifth_element";
     const items = data.items.map((it) => ({
       description: it.description.trim(),
       quantity: it.quantity,
@@ -1763,6 +1764,7 @@ router.post(
         .insert(invoicesTable)
         .values({
           companyId: me.companyId,
+          issuer,
           invoiceNumber: "PENDING",
           clientName: data.clientName.trim(),
           clientAddress: data.clientAddress?.trim() || null,
@@ -1773,7 +1775,10 @@ router.post(
           createdBy: me.id,
         })
         .returning();
-      const invoiceNumber = `INV-${String(created.id).padStart(4, "0")}`;
+      const invoiceNumber =
+        issuer === "twist_entertainment"
+          ? `INV${String(created.id).padStart(6, "0")}`
+          : `INV-${String(created.id).padStart(4, "0")}`;
       const [finalized] = await tx
         .update(invoicesTable)
         .set({ invoiceNumber })

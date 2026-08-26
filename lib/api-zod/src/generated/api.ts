@@ -2147,6 +2147,7 @@ export const listInvoicesResponseItemsItemRateMax = 2000000000000;
 export const ListInvoicesResponseItem = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
   "clientAddress": zod.string().nullable(),
@@ -2187,6 +2188,7 @@ export const createInvoiceBodyItemsItemRateMax = 1000000000000;
 
 
 export const CreateInvoiceBody = zod.object({
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']).optional(),
   "clientName": zod.string().min(1),
   "clientAddress": zod.string().optional(),
   "clientEmail": zod.string().optional(),
@@ -2210,6 +2212,7 @@ export const createInvoiceResponseItemsItemRateMax = 2000000000000;
 export const CreateInvoiceResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
   "clientAddress": zod.string().nullable(),
@@ -2273,6 +2276,7 @@ export const recordInvoicePaymentResponseItemsItemRateMax = 2000000000000;
 export const RecordInvoicePaymentResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
   "clientAddress": zod.string().nullable(),
@@ -2321,6 +2325,7 @@ export const updateInvoiceStatusResponseItemsItemRateMax = 2000000000000;
 export const UpdateInvoiceStatusResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
   "clientAddress": zod.string().nullable(),
@@ -2364,6 +2369,7 @@ export const sendInvoiceReceiptResponseItemsItemRateMax = 2000000000000;
 export const SendInvoiceReceiptResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
+  "issuer": zod.enum(['fifth_element', 'twist_entertainment']),
   "invoiceNumber": zod.string(),
   "clientName": zod.string(),
   "clientAddress": zod.string().nullable(),

@@ -208,6 +208,8 @@ export const invoicesTable = pgTable("invoices", {
   companyId: integer("company_id")
     .notNull()
     .references(() => companiesTable.id, { onDelete: "cascade" }),
+  // Brand/sub-company issuing the invoice.
+  issuer: text("issuer").notNull().default("fifth_element"),
   invoiceNumber: text("invoice_number").notNull(),
   clientName: text("client_name").notNull(),
   clientAddress: text("client_address"),
