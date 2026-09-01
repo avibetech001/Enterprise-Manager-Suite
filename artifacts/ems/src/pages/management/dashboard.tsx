@@ -230,11 +230,11 @@ export default function ManagementDashboard() {
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold tracking-tight">Operations Hub</h2>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
           {modules.map((module, i) => (
-            <Link key={i} href={module.href} className="group relative flex min-h-36 flex-col justify-between rounded-xl border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:p-5">
-              <div className="flex items-start justify-between mb-4">
-                <div className={"p-2.5 rounded-xl transition-colors " + (
+            <Link key={i} href={module.href} className="group relative flex min-h-24 flex-col justify-between rounded-xl border bg-card p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:min-h-36 sm:p-5">
+              <div className="mb-3 flex items-start justify-between sm:mb-4">
+                <div className={"rounded-xl p-2 transition-colors sm:p-2.5 " + (
                   module.pending && module.count ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/60"
                   : module.active && module.count ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/60"
                   : "bg-primary/5 text-primary group-hover:bg-primary/10"
@@ -246,16 +246,17 @@ export default function ManagementDashboard() {
                     module.pending ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
                     : "bg-secondary text-secondary-foreground"
                   )}>
-                    {module.count} {module.pending ? 'Action Required' : ''}
+                    {module.count}
+                    {module.pending && <span className="hidden sm:inline"> Action Required</span>}
                   </span>
                 )}
               </div>
               <div>
-                <h3 className="font-semibold text-base mb-1.5 group-hover:text-primary transition-colors flex items-center gap-1.5">
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold leading-tight transition-colors group-hover:text-primary sm:mb-1.5 sm:text-base">
                   {module.title}
-                  <ChevronRight className="w-4 h-4 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
+                  <ChevronRight className="hidden h-4 w-4 -translate-x-2 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block" />
                 </h3>
-                <p className="text-sm text-muted-foreground leading-snug">{module.description}</p>
+                <p className="hidden text-sm leading-snug text-muted-foreground sm:block">{module.description}</p>
               </div>
             </Link>
           ))}
