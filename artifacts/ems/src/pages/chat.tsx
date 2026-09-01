@@ -14,7 +14,7 @@ import {
 import { useUpload } from "@workspace/object-storage-web";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -37,6 +37,7 @@ import {
   Trash2,
   Mic,
   Square,
+  CornerDownLeft,
 } from "lucide-react";
 
 // Render message text with clickable links.
@@ -376,6 +377,7 @@ function GroupChat({
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { uploadFile, isUploading } = useUpload({
     onError: (err) => toast.error("Upload failed", { description: err.message }),
@@ -416,6 +418,21 @@ function GroupChat({
     if (!member) return;
     if (!mentionIds.includes(userId)) setMentionIds((ids) => [...ids, userId]);
     setText((t) => (t ? `${t.replace(/\s$/, "")} @${member.fullName} ` : `@${member.fullName} `));
+  };
+
+  const insertLineBreak = () => {
+    const input = messageInputRef.current;
+    if (!input) {
+      setText((current) => `${current}\n`);
+      return;
+    }
+    const start = input.selectionStart;
+    const end = input.selectionEnd;
+    setText((current) => `${current.slice(0, start)}\n${current.slice(end)}`);
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(start + 1, start + 1);
+    });
   };
 
   const doSend = (
@@ -675,7 +692,9 @@ function GroupChat({
               </div>
             </PopoverContent>
           </Popover>
-          <Input
+          <Textarea
+            ref={messageInputRef}
+            rows={1}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
@@ -685,8 +704,20 @@ function GroupChat({
               }
             }}
             placeholder={isUploading ? "Uploading file..." : "Type a message..."}
-            className="flex-1 min-w-0"
+            className="flex-1 min-w-0 min-h-9 max-h-28 resize-none py-2"
           />
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            className="shrink-0"
+            onClick={insertLineBreak}
+            disabled={isUploading || isRecording}
+            title="New line (Shift + Enter)"
+            aria-label="Insert a new line"
+          >
+            <CornerDownLeft className="h-4 w-4" />
+          </Button>
           <Button
             type="button"
             size="icon"
