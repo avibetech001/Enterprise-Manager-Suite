@@ -25,10 +25,7 @@ import {
   MessagesSquare,
   NotebookPen,
   ReceiptText,
-  Megaphone,
   CalendarClock,
-  ClipboardCheck,
-  BookOpen,
   ChevronRight,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -47,7 +44,6 @@ export default function ManagementDashboard() {
   const canManageFinance = hasPerm("manage_finance");
   const canViewReports = hasPerm("view_reports");
   const canManageInvoices = hasPerm("manage_invoices") || canManageFinance;
-  const canManageContent = hasPerm("manage_content");
 
   const { data: employees } = useListEmployees(
     {},
@@ -158,34 +154,6 @@ export default function ManagementDashboard() {
       count: pendingInvoices,
       pending: true,
       show: canManageInvoices
-    },
-    {
-      title: "Attendance",
-      description: "Monitor daily check-ins and schedules.",
-      icon: CalendarClock,
-      href: "/attendance",
-      show: hasPerm("manage_attendance_settings")
-    },
-    {
-      title: "Appraisals",
-      description: "Manage performance and evaluations.",
-      icon: ClipboardCheck,
-      href: "/appraisals",
-      show: canManageEmployees
-    },
-    {
-      title: "Announcements",
-      description: "Publish company-wide updates.",
-      icon: Megaphone,
-      href: "/announcements",
-      show: canManageContent
-    },
-    {
-      title: "Knowledge Base",
-      description: "Maintain company policies and documents.",
-      icon: BookOpen,
-      href: "/knowledge-base",
-      show: canManageContent
     },
     {
       title: "Employees",
