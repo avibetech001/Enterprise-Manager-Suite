@@ -5,9 +5,19 @@ import {
   useListChatGroups,
   useListChatMessages,
   useListChatGroupMembers,
+  getListChatGroupMembersQueryKey,
   useSendChatMessage,
   useDeleteChatMessage,
   getListChatMessagesQueryKey,
+  useListPrivateChatEmployees,
+  getListPrivateChatEmployeesQueryKey,
+  useListPrivateConversations,
+  useCreatePrivateConversation,
+  getListPrivateConversationsQueryKey,
+  useListPrivateMessages,
+  getListPrivateMessagesQueryKey,
+  useSendPrivateMessage,
+  useDeletePrivateMessage,
   useGetCurrentSession,
   type ChatMessage,
 } from "@workspace/api-client-react";
@@ -38,6 +48,7 @@ import {
   Mic,
   Square,
   CornerDownLeft,
+  MessageCircle,
 } from "lucide-react";
 
 // Render message text with clickable links.
@@ -71,38 +82,69 @@ function Linkify({ text }: { text: string }) {
 export default function TeamChatPage() {
   const { data: session } = useGetCurrentSession();
   const { data: groups } = useListChatGroups();
+  const { data: privateConversations } = useListPrivateConversations({
+    query: {
+      queryKey: getListPrivateConversationsQueryKey(),
+      refetchInterval: 4000,
+    },
+  });
+  const isManagement = session?.user?.role !== "employee";
+  const { data: privateEmployees } = useListPrivateChatEmployees({
+    query: {
+      queryKey: getListPrivateChatEmployeesQueryKey(),
+      enabled: isManagement,
+    },
+  });
+  const createPrivateConversation = useCreatePrivateConversation();
+  const queryClient = useQueryClient();
   const search = useSearch();
   const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
     // Support deep links from notifications: ...chat?group=dept-3
     return new URLSearchParams(window.location.search).get("group");
   });
+  const [activeConversationId, setActiveConversationId] = useState<number | null>(() => {
+    const value = Number(new URLSearchParams(window.location.search).get("conversation"));
+    return Number.isInteger(value) && value > 0 ? value : null;
+  });
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
 
   // Stay in sync with the URL: opening another chat notification while
   // already on this page must switch to the newly linked group.
   useEffect(() => {
     const linked = new URLSearchParams(search).get("group");
     if (linked) setActiveGroupId(linked);
+    const linkedConversation = Number(new URLSearchParams(search).get("conversation"));
+    if (Number.isInteger(linkedConversation) && linkedConversation > 0) {
+      setActiveConversationId(linkedConversation);
+      setActiveGroupId(null);
+    }
   }, [search]);
 
   const activeGroup = groups?.find((g) => g.id === activeGroupId) || null;
+  const activeConversation =
+    privateConversations?.find((conversation) => conversation.id === activeConversationId) || null;
 
   // Chat view: full-width conversation with a back button.
-  if (activeGroup) {
+  if (activeGroup || activeConversation) {
     return (
       <div className="flex h-full min-h-0 flex-col gap-2 p-3 sm:p-4">
         <Button
           variant="ghost"
           size="sm"
           className="-ml-2 self-start shrink-0"
-          onClick={() => setActiveGroupId(null)}
+          onClick={() => {
+            setActiveGroupId(null);
+            setActiveConversationId(null);
+          }}
         >
           <ArrowLeft className="h-4 w-4 mr-1.5" />
           All chats
         </Button>
         <GroupChat
-          key={activeGroup.id}
-          groupId={activeGroup.id}
-          groupName={activeGroup.name}
+          key={activeGroup?.id || `dm-${activeConversation!.id}`}
+          groupId={activeGroup?.id}
+          privateConversationId={activeConversation?.id}
+          groupName={activeGroup?.name || activeConversation!.otherUserName}
           myUserId={session?.user?.id}
           isManagement={session?.user?.role !== "employee"}
         />
@@ -153,6 +195,74 @@ export default function TeamChatPage() {
             </div>
           </button>
         ))}
+      </div>
+
+      <div className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold">Private messages</h2>
+          <p className="text-sm text-muted-foreground">
+            Conversations are visible only to their two participants.
+          </p>
+        </div>
+        {isManagement && (
+          <Card>
+            <CardContent className="flex flex-col gap-2 py-4 sm:flex-row">
+              <select
+                className="h-10 flex-1 rounded-md border bg-background px-3 text-sm"
+                value={selectedEmployeeId}
+                onChange={(event) => setSelectedEmployeeId(event.target.value)}
+                aria-label="Choose an active employee"
+              >
+                <option value="">Choose an active employee</option>
+                {(privateEmployees || []).map((employee) => (
+                  <option key={employee.id} value={employee.id}>{employee.fullName}</option>
+                ))}
+              </select>
+              <Button
+                disabled={!selectedEmployeeId || createPrivateConversation.isPending}
+                onClick={() => createPrivateConversation.mutate(
+                  { data: { employeeId: Number(selectedEmployeeId) } },
+                  {
+                    onSuccess: (conversation) => {
+                      queryClient.invalidateQueries({
+                        queryKey: getListPrivateConversationsQueryKey(),
+                      });
+                      setActiveConversationId(conversation.id);
+                      setSelectedEmployeeId("");
+                    },
+                    onError: () => toast.error("Could not start private conversation"),
+                  },
+                )}
+              >
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Start conversation
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+        {(privateConversations || []).length === 0 ? (
+          <p className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
+            No private conversations yet.
+          </p>
+        ) : (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {(privateConversations || []).map((conversation) => (
+              <button
+                key={conversation.id}
+                onClick={() => {
+                  setActiveGroupId(null);
+                  setActiveConversationId(conversation.id);
+                }}
+                className="rounded-lg border bg-card p-4 text-left transition-all hover:border-primary hover:shadow-sm"
+              >
+                <div className="flex items-center gap-3">
+                  <MessageCircle className="h-5 w-5 text-primary" />
+                  <span className="font-medium">{conversation.otherUserName}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -345,25 +455,43 @@ function ActionButtons({
 
 function GroupChat({
   groupId,
+  privateConversationId,
   groupName,
   myUserId,
   isManagement,
 }: {
-  groupId: string;
+  groupId?: string;
+  privateConversationId?: number;
   groupName: string;
   myUserId?: number;
   isManagement: boolean;
 }) {
   const queryClient = useQueryClient();
-  const { data: messages } = useListChatMessages(groupId, {
+  const groupMessages = useListChatMessages(groupId || "", {
     query: {
-      queryKey: getListChatMessagesQueryKey(groupId),
+      queryKey: getListChatMessagesQueryKey(groupId || ""),
       refetchInterval: 4000,
+      enabled: Boolean(groupId),
     },
   });
-  const { data: members } = useListChatGroupMembers(groupId);
+  const privateMessages = useListPrivateMessages(privateConversationId || 0, {
+    query: {
+      queryKey: getListPrivateMessagesQueryKey(privateConversationId || 0),
+      refetchInterval: 4000,
+      enabled: Boolean(privateConversationId),
+    },
+  });
+  const messages = privateConversationId ? privateMessages.data : groupMessages.data;
+  const { data: members } = useListChatGroupMembers(groupId || "", {
+    query: {
+      queryKey: getListChatGroupMembersQueryKey(groupId || ""),
+      enabled: Boolean(groupId),
+    },
+  });
   const sendMessage = useSendChatMessage();
+  const sendPrivateMessage = useSendPrivateMessage();
   const deleteMessage = useDeleteChatMessage();
+  const deletePrivateMessage = useDeletePrivateMessage();
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<{
     objectPath: string;
@@ -394,10 +522,11 @@ function GroupChat({
     };
   }, []);
 
-  const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: getListChatMessagesQueryKey(groupId),
-    });
+  const invalidate = () => queryClient.invalidateQueries({
+    queryKey: privateConversationId
+      ? getListPrivateMessagesQueryKey(privateConversationId)
+      : getListChatMessagesQueryKey(groupId || ""),
+  });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -444,17 +573,15 @@ function GroupChat({
     },
     onDone?: () => void,
   ) => {
-    sendMessage.mutate(
-      {
-        groupId,
-        data: {
+    const variables = {
+      data: {
           ...payload,
-          mentionUserIds: mentionIds.length ? mentionIds : undefined,
-          mentionAll: mentionAll || undefined,
+          mentionUserIds: privateConversationId ? undefined : (mentionIds.length ? mentionIds : undefined),
+          mentionAll: privateConversationId ? undefined : (mentionAll || undefined),
           replyToId: replyTo?.id,
-        },
       },
-      {
+    };
+    const callbacks = {
         onSuccess: () => {
           setText("");
           setAttachment(null);
@@ -469,8 +596,15 @@ function GroupChat({
             description: err?.data?.error || "Unknown error",
           });
         },
-      },
-    );
+      };
+    if (privateConversationId) {
+      sendPrivateMessage.mutate(
+        { conversationId: privateConversationId, ...variables },
+        callbacks,
+      );
+    } else {
+      sendMessage.mutate({ groupId: groupId!, ...variables }, callbacks);
+    }
   };
 
   const handleSend = () => {
@@ -530,13 +664,18 @@ function GroupChat({
 
   const handleDelete = (m: ChatMessage) => {
     if (!window.confirm("Delete this message?")) return;
-    deleteMessage.mutate(
-      { groupId, messageId: m.id },
-      {
+    const callbacks = {
         onSuccess: () => invalidate(),
         onError: () => toast.error("Failed to delete message"),
-      },
-    );
+      };
+    if (privateConversationId) {
+      deletePrivateMessage.mutate(
+        { conversationId: privateConversationId, messageId: m.id },
+        callbacks,
+      );
+    } else {
+      deleteMessage.mutate({ groupId: groupId!, messageId: m.id }, callbacks);
+    }
   };
 
   const memberOptions = useMemo(() => members || [], [members]);
@@ -548,7 +687,9 @@ function GroupChat({
           <MessagesSquare className="h-4 w-4" />
           {groupName}
           <span className="text-xs text-muted-foreground font-normal">
-            {memberOptions.length} {memberOptions.length === 1 ? "member" : "members"}
+            {privateConversationId
+              ? "Private conversation"
+              : `${memberOptions.length} ${memberOptions.length === 1 ? "member" : "members"}`}
           </span>
         </p>
       </div>
@@ -576,7 +717,7 @@ function GroupChat({
                 <MessageBubble
                   m={m}
                   mine={mine}
-                  canDelete={mine || isManagement}
+                   canDelete={mine || (isManagement && !privateConversationId)}
                   onReply={() => setReplyTo(m)}
                   onDelete={() => handleDelete(m)}
                 />
@@ -646,7 +787,7 @@ function GroupChat({
           >
             {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-          <Popover open={tagOpen} onOpenChange={setTagOpen}>
+          {!privateConversationId && <Popover open={tagOpen} onOpenChange={setTagOpen}>
             <PopoverTrigger asChild>
               <Button
                 type="button"
@@ -691,7 +832,7 @@ function GroupChat({
                 ))}
               </div>
             </PopoverContent>
-          </Popover>
+          </Popover>}
           <Textarea
             ref={messageInputRef}
             rows={1}
@@ -723,7 +864,7 @@ function GroupChat({
             size="icon"
             className="shrink-0"
             onClick={handleSend}
-            disabled={sendMessage.isPending || isUploading || isRecording || (!text.trim() && !attachment)}
+            disabled={sendMessage.isPending || sendPrivateMessage.isPending || isUploading || isRecording || (!text.trim() && !attachment)}
             title="Send"
           >
             <Send className="h-4 w-4" />

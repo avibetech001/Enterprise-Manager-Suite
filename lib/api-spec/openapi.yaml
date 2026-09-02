@@ -2282,6 +2282,163 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /chat/private/employees:
+    get:
+      operationId: listPrivateChatEmployees
+      tags: [chat]
+      summary: List active employees management may message
+      responses:
+        "200":
+          description: Employees
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMember"
+        "403":
+          description: Management only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/private/conversations:
+    get:
+      operationId: listPrivateConversations
+      tags: [chat]
+      summary: List private conversations in which the current user participates
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PrivateConversation"
+    post:
+      operationId: createPrivateConversation
+      tags: [chat]
+      summary: Start or retrieve a private conversation with an active employee
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrivateConversationInput"
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrivateConversation"
+        "400":
+          description: Invalid employee
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Management only
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/private/conversations/{conversationId}/messages:
+    get:
+      operationId: listPrivateMessages
+      tags: [chat]
+      summary: List messages in a private conversation
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: sendPrivateMessage
+      tags: [chat]
+      summary: Send a private message
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatMessageInput"
+      responses:
+        "200":
+          description: Created message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessage"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/private/conversations/{conversationId}/messages/{messageId}:
+    delete:
+      operationId: deletePrivateMessage
+      tags: [chat]
+      summary: Delete one's own private message
+      parameters:
+        - name: conversationId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: messageId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatMessageDeleteResult"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /appraisals:
     get:
       operationId: listAppraisals
@@ -2444,6 +2601,27 @@ components:
           type: integer
         fullName:
           type: string
+
+    PrivateConversation:
+      type: object
+      required: [id, otherUserId, otherUserName, createdAt]
+      properties:
+        id:
+          type: integer
+        otherUserId:
+          type: integer
+        otherUserName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+
+    PrivateConversationInput:
+      type: object
+      required: [employeeId]
+      properties:
+        employeeId:
+          type: integer
 
     ChatMessage:
       type: object

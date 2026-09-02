@@ -2929,6 +2929,119 @@ export const DeleteChatMessageResponse = zod.object({
 
 
 /**
+ * @summary List active employees management may message
+ */
+export const ListPrivateChatEmployeesResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string()
+})
+export const ListPrivateChatEmployeesResponse = zod.array(ListPrivateChatEmployeesResponseItem)
+
+
+/**
+ * @summary List private conversations in which the current user participates
+ */
+export const ListPrivateConversationsResponseItem = zod.object({
+  "id": zod.number(),
+  "otherUserId": zod.number(),
+  "otherUserName": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListPrivateConversationsResponse = zod.array(ListPrivateConversationsResponseItem)
+
+
+/**
+ * @summary Start or retrieve a private conversation with an active employee
+ */
+export const CreatePrivateConversationBody = zod.object({
+  "employeeId": zod.number()
+})
+
+export const CreatePrivateConversationResponse = zod.object({
+  "id": zod.number(),
+  "otherUserId": zod.number(),
+  "otherUserName": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary List messages in a private conversation
+ */
+export const ListPrivateMessagesParams = zod.object({
+  "conversationId": zod.coerce.number()
+})
+
+export const ListPrivateMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "groupId": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "body": zod.string(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "mentionUserIds": zod.array(zod.number()),
+  "kind": zod.string().optional(),
+  "replyToId": zod.number().nullish(),
+  "replyToBody": zod.string().nullish(),
+  "replyToUserName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListPrivateMessagesResponse = zod.array(ListPrivateMessagesResponseItem)
+
+
+/**
+ * @summary Send a private message
+ */
+export const SendPrivateMessageParams = zod.object({
+  "conversationId": zod.coerce.number()
+})
+
+
+
+
+
+export const SendPrivateMessageBody = zod.object({
+  "body": zod.string().optional(),
+  "objectPath": zod.string().min(1).optional(),
+  "fileName": zod.string().min(1).optional(),
+  "mentionUserIds": zod.array(zod.number()).optional(),
+  "mentionAll": zod.boolean().optional(),
+  "replyToId": zod.number().optional(),
+  "kind": zod.enum(['text', 'voice']).optional()
+})
+
+export const SendPrivateMessageResponse = zod.object({
+  "id": zod.number(),
+  "groupId": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "body": zod.string(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "mentionUserIds": zod.array(zod.number()),
+  "kind": zod.string().optional(),
+  "replyToId": zod.number().nullish(),
+  "replyToBody": zod.string().nullish(),
+  "replyToUserName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete one's own private message
+ */
+export const DeletePrivateMessageParams = zod.object({
+  "conversationId": zod.coerce.number(),
+  "messageId": zod.coerce.number()
+})
+
+export const DeletePrivateMessageResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
  * @summary List all appraisals for the company (management)
  */
 

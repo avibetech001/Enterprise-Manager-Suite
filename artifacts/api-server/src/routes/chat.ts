@@ -3,6 +3,9 @@ import { and, asc, desc, eq, inArray, isNull } from "drizzle-orm";
 import {
   db,
   chatMessagesTable,
+  chatConversationsTable,
+  chatConversationParticipantsTable,
+  directChatMessagesTable,
   departmentsTable,
   employmentInfoTable,
   usersTable,
@@ -12,6 +15,9 @@ import {
   ListChatGroupsResponseItem as ChatGroup,
   ListChatGroupMembersResponseItem as ChatMember,
   ListChatMessagesResponseItem as ChatMessage,
+  ListPrivateChatEmployeesResponseItem as PrivateEmployee,
+  ListPrivateConversationsResponseItem as PrivateConversation,
+  CreatePrivateConversationBody,
 } from "@workspace/api-zod";
 import {
   DeleteChatMessageResponse,
@@ -392,6 +398,335 @@ router.delete(
       return;
     }
     await db.delete(chatMessagesTable).where(eq(chatMessagesTable.id, msg.id));
+    res.json(DeleteChatMessageResponse.parse({ ok: true }));
+  },
+);
+
+async function privateConversationFor(
+  me: CurrentUser,
+  conversationId: number,
+) {
+  const [participant] = await db
+    .select({ conversationId: chatConversationParticipantsTable.conversationId })
+    .from(chatConversationParticipantsTable)
+    .innerJoin(
+      chatConversationsTable,
+      eq(chatConversationsTable.id, chatConversationParticipantsTable.conversationId),
+    )
+    .where(
+      and(
+        eq(chatConversationParticipantsTable.conversationId, conversationId),
+        eq(chatConversationParticipantsTable.userId, me.id),
+        eq(chatConversationsTable.companyId, me.companyId),
+      ),
+    );
+  return participant ?? null;
+}
+
+router.get(
+  "/chat/private/employees",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    if (me.role === "employee") {
+      res.status(403).json({ error: "Management access required." });
+      return;
+    }
+    const employees = await db
+      .select({ id: usersTable.id, fullName: usersTable.fullName })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.companyId, me.companyId),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      )
+      .orderBy(asc(usersTable.fullName));
+    res.json(employees.map((employee) => PrivateEmployee.parse(employee)));
+  },
+);
+
+router.get(
+  "/chat/private/conversations",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const mine = await db
+      .select({ conversationId: chatConversationParticipantsTable.conversationId })
+      .from(chatConversationParticipantsTable)
+      .where(eq(chatConversationParticipantsTable.userId, me.id));
+    if (mine.length === 0) {
+      res.json([]);
+      return;
+    }
+    const conversations = await db
+      .select()
+      .from(chatConversationsTable)
+      .where(
+        and(
+          eq(chatConversationsTable.companyId, me.companyId),
+          inArray(chatConversationsTable.id, mine.map((row) => row.conversationId)),
+        ),
+      )
+      .orderBy(desc(chatConversationsTable.createdAt));
+    const participantRows = await db
+      .select({
+        conversationId: chatConversationParticipantsTable.conversationId,
+        userId: usersTable.id,
+        fullName: usersTable.fullName,
+      })
+      .from(chatConversationParticipantsTable)
+      .innerJoin(usersTable, eq(usersTable.id, chatConversationParticipantsTable.userId))
+      .where(inArray(chatConversationParticipantsTable.conversationId, conversations.map((c) => c.id)));
+    res.json(
+      conversations.map((conversation) => {
+        const other = participantRows.find(
+          (row) => row.conversationId === conversation.id && row.userId !== me.id,
+        );
+        return PrivateConversation.parse({
+          id: conversation.id,
+          otherUserId: other!.userId,
+          otherUserName: other!.fullName,
+          createdAt: conversation.createdAt.toISOString(),
+        });
+      }),
+    );
+  },
+);
+
+router.post(
+  "/chat/private/conversations",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    if (me.role === "employee") {
+      res.status(403).json({ error: "Employees cannot start private conversations." });
+      return;
+    }
+    const parsed = CreatePrivateConversationBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid employee." });
+      return;
+    }
+    const [employee] = await db
+      .select({ id: usersTable.id, fullName: usersTable.fullName })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.id, parsed.data.employeeId),
+          eq(usersTable.companyId, me.companyId),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      );
+    if (!employee) {
+      res.status(400).json({ error: "Active employee not found." });
+      return;
+    }
+    let [conversation] = await db
+      .select()
+      .from(chatConversationsTable)
+      .where(
+        and(
+          eq(chatConversationsTable.companyId, me.companyId),
+          eq(chatConversationsTable.initiatedByUserId, me.id),
+          eq(chatConversationsTable.employeeUserId, employee.id),
+        ),
+      );
+    if (!conversation) {
+      conversation = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(chatConversationsTable)
+          .values({
+            companyId: me.companyId,
+            initiatedByUserId: me.id,
+            employeeUserId: employee.id,
+          })
+          .returning();
+        await tx.insert(chatConversationParticipantsTable).values([
+          { conversationId: created.id, userId: me.id },
+          { conversationId: created.id, userId: employee.id },
+        ]);
+        return created;
+      });
+    }
+    res.json(PrivateConversation.parse({
+      id: conversation.id,
+      otherUserId: employee.id,
+      otherUserName: employee.fullName,
+      createdAt: conversation.createdAt.toISOString(),
+    }));
+  },
+);
+
+async function privateMessageRows(conversationId: number) {
+  const replyMsg = alias(directChatMessagesTable, "direct_reply_msg");
+  const replyUser = alias(usersTable, "direct_reply_user");
+  const rows = await db
+    .select({
+      id: directChatMessagesTable.id,
+      userId: directChatMessagesTable.userId,
+      body: directChatMessagesTable.body,
+      filePath: directChatMessagesTable.filePath,
+      fileName: directChatMessagesTable.fileName,
+      kind: directChatMessagesTable.kind,
+      replyToId: directChatMessagesTable.replyToId,
+      replyToBody: replyMsg.body,
+      replyToFileName: replyMsg.fileName,
+      replyToUserName: replyUser.fullName,
+      createdAt: directChatMessagesTable.createdAt,
+      userName: usersTable.fullName,
+    })
+    .from(directChatMessagesTable)
+    .innerJoin(usersTable, eq(usersTable.id, directChatMessagesTable.userId))
+    .leftJoin(replyMsg, eq(replyMsg.id, directChatMessagesTable.replyToId))
+    .leftJoin(replyUser, eq(replyUser.id, replyMsg.userId))
+    .where(eq(directChatMessagesTable.conversationId, conversationId))
+    .orderBy(desc(directChatMessagesTable.createdAt))
+    .limit(200);
+  return rows.reverse();
+}
+
+router.get(
+  "/chat/private/conversations/:conversationId/messages",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const conversationId = Number(req.params.conversationId);
+    if (!Number.isInteger(conversationId) || !(await privateConversationFor(me, conversationId))) {
+      res.status(404).json({ error: "Conversation not found." });
+      return;
+    }
+    const rows = await privateMessageRows(conversationId);
+    res.json(rows.map((row) => ChatMessage.parse({
+      ...row,
+      groupId: `dm-${conversationId}`,
+      mentionUserIds: [],
+      replyToBody: row.replyToId != null ? row.replyToBody || row.replyToFileName || "" : null,
+      replyToUserName: row.replyToId != null ? row.replyToUserName : null,
+      createdAt: row.createdAt.toISOString(),
+    })));
+  },
+);
+
+router.post(
+  "/chat/private/conversations/:conversationId/messages",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const conversationId = Number(req.params.conversationId);
+    if (!Number.isInteger(conversationId) || !(await privateConversationFor(me, conversationId))) {
+      res.status(404).json({ error: "Conversation not found." });
+      return;
+    }
+    const parsed = SendChatMessageBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid message." });
+      return;
+    }
+    const body = parsed.data.body?.trim() || "";
+    const objectPath = parsed.data.objectPath || null;
+    if (!body && !objectPath) {
+      res.status(400).json({ error: "Message needs text or a file." });
+      return;
+    }
+    if (objectPath && !objectPath.startsWith("/objects/")) {
+      res.status(400).json({ error: "Invalid uploaded file path." });
+      return;
+    }
+    let replyToId: number | null = null;
+    let replyPreview: { body: string; userName: string } | null = null;
+    if (parsed.data.replyToId != null) {
+      const [reply] = await db
+        .select({
+          id: directChatMessagesTable.id,
+          body: directChatMessagesTable.body,
+          fileName: directChatMessagesTable.fileName,
+          userName: usersTable.fullName,
+        })
+        .from(directChatMessagesTable)
+        .innerJoin(usersTable, eq(usersTable.id, directChatMessagesTable.userId))
+        .where(and(
+          eq(directChatMessagesTable.id, parsed.data.replyToId),
+          eq(directChatMessagesTable.conversationId, conversationId),
+        ));
+      if (!reply) {
+        res.status(400).json({ error: "Replied-to message not found." });
+        return;
+      }
+      replyToId = reply.id;
+      replyPreview = { body: reply.body || reply.fileName || "", userName: reply.userName };
+    }
+    const [inserted] = await db.insert(directChatMessagesTable).values({
+      conversationId,
+      userId: me.id,
+      body,
+      filePath: objectPath,
+      fileName: objectPath ? parsed.data.fileName || "file" : null,
+      replyToId,
+      kind: parsed.data.kind === "voice" ? "voice" : "text",
+    }).returning();
+    const participants = await db
+      .select({ userId: chatConversationParticipantsTable.userId })
+      .from(chatConversationParticipantsTable)
+      .where(eq(chatConversationParticipantsTable.conversationId, conversationId));
+    const recipient = participants.find((row) => row.userId !== me.id);
+    const preview = body || (inserted.kind === "voice" ? "Voice note" : inserted.fileName || "Attachment");
+    if (recipient) {
+      void notify(
+        me.companyId,
+        "chat_direct",
+        `${me.fullName} sent you a private message: ${preview}`,
+        recipient.userId,
+        `chat?conversation=${conversationId}`,
+      );
+      void sendPush(me.companyId, `${me.fullName}: ${preview}`, recipient.userId);
+    }
+    res.json(ChatMessage.parse({
+      id: inserted.id,
+      groupId: `dm-${conversationId}`,
+      userId: me.id,
+      userName: me.fullName,
+      body: inserted.body,
+      filePath: inserted.filePath,
+      fileName: inserted.fileName,
+      mentionUserIds: [],
+      kind: inserted.kind,
+      replyToId,
+      replyToBody: replyPreview?.body ?? null,
+      replyToUserName: replyPreview?.userName ?? null,
+      createdAt: inserted.createdAt.toISOString(),
+    }));
+  },
+);
+
+router.delete(
+  "/chat/private/conversations/:conversationId/messages/:messageId",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const conversationId = Number(req.params.conversationId);
+    const messageId = Number(req.params.messageId);
+    if (!Number.isInteger(conversationId) || !(await privateConversationFor(me, conversationId))) {
+      res.status(404).json({ error: "Conversation not found." });
+      return;
+    }
+    const [message] = await db
+      .select({ id: directChatMessagesTable.id })
+      .from(directChatMessagesTable)
+      .where(and(
+        eq(directChatMessagesTable.id, messageId),
+        eq(directChatMessagesTable.conversationId, conversationId),
+        eq(directChatMessagesTable.userId, me.id),
+      ));
+    if (!message) {
+      res.status(404).json({ error: "Message not found." });
+      return;
+    }
+    await db.delete(directChatMessagesTable).where(eq(directChatMessagesTable.id, message.id));
     res.json(DeleteChatMessageResponse.parse({ ok: true }));
   },
 );

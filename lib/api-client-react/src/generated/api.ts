@@ -81,6 +81,8 @@ import type {
   Notification,
   PendingCounts,
   PermissionDef,
+  PrivateConversation,
+  PrivateConversationInput,
   ProjectDetail,
   ProjectInput,
   ProjectProgressUpdateInput,
@@ -7456,6 +7458,453 @@ export const useDeleteChatMessage = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getDeleteChatMessageMutationOptions(options));
+    }
+
+export const getListPrivateChatEmployeesUrl = () => {
+
+
+
+
+  return `/api/chat/private/employees`
+}
+
+/**
+ * @summary List active employees management may message
+ */
+export const listPrivateChatEmployees = async ( options?: RequestInit): Promise<ChatMember[]> => {
+
+  return customFetch<ChatMember[]>(getListPrivateChatEmployeesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPrivateChatEmployeesQueryKey = () => {
+    return [
+    `/api/chat/private/employees`
+    ] as const;
+    }
+
+
+export const getListPrivateChatEmployeesQueryOptions = <TData = Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPrivateChatEmployeesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPrivateChatEmployees>>> = ({ signal }) => listPrivateChatEmployees({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPrivateChatEmployeesQueryResult = NonNullable<Awaited<ReturnType<typeof listPrivateChatEmployees>>>
+export type ListPrivateChatEmployeesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List active employees management may message
+ */
+
+export function useListPrivateChatEmployees<TData = Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPrivateChatEmployeesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListPrivateConversationsUrl = () => {
+
+
+
+
+  return `/api/chat/private/conversations`
+}
+
+/**
+ * @summary List private conversations in which the current user participates
+ */
+export const listPrivateConversations = async ( options?: RequestInit): Promise<PrivateConversation[]> => {
+
+  return customFetch<PrivateConversation[]>(getListPrivateConversationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPrivateConversationsQueryKey = () => {
+    return [
+    `/api/chat/private/conversations`
+    ] as const;
+    }
+
+
+export const getListPrivateConversationsQueryOptions = <TData = Awaited<ReturnType<typeof listPrivateConversations>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPrivateConversationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPrivateConversations>>> = ({ signal }) => listPrivateConversations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPrivateConversations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPrivateConversationsQueryResult = NonNullable<Awaited<ReturnType<typeof listPrivateConversations>>>
+export type ListPrivateConversationsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List private conversations in which the current user participates
+ */
+
+export function useListPrivateConversations<TData = Awaited<ReturnType<typeof listPrivateConversations>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateConversations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPrivateConversationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreatePrivateConversationUrl = () => {
+
+
+
+
+  return `/api/chat/private/conversations`
+}
+
+/**
+ * @summary Start or retrieve a private conversation with an active employee
+ */
+export const createPrivateConversation = async (privateConversationInput: PrivateConversationInput, options?: RequestInit): Promise<PrivateConversation> => {
+
+  return customFetch<PrivateConversation>(getCreatePrivateConversationUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(privateConversationInput)
+  }
+);}
+
+
+
+
+
+export const getCreatePrivateConversationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrivateConversation>>, TError,{data: BodyType<PrivateConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPrivateConversation>>, TError,{data: BodyType<PrivateConversationInput>}, TContext> => {
+
+const mutationKey = ['createPrivateConversation'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPrivateConversation>>, {data: BodyType<PrivateConversationInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPrivateConversation(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePrivateConversationMutationResult = NonNullable<Awaited<ReturnType<typeof createPrivateConversation>>>
+    export type CreatePrivateConversationMutationBody = BodyType<PrivateConversationInput>
+    export type CreatePrivateConversationMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Start or retrieve a private conversation with an active employee
+ */
+export const useCreatePrivateConversation = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrivateConversation>>, TError,{data: BodyType<PrivateConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPrivateConversation>>,
+        TError,
+        {data: BodyType<PrivateConversationInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePrivateConversationMutationOptions(options));
+    }
+
+export const getListPrivateMessagesUrl = (conversationId: number,) => {
+
+
+
+
+  return `/api/chat/private/conversations/${conversationId}/messages`
+}
+
+/**
+ * @summary List messages in a private conversation
+ */
+export const listPrivateMessages = async (conversationId: number, options?: RequestInit): Promise<ChatMessage[]> => {
+
+  return customFetch<ChatMessage[]>(getListPrivateMessagesUrl(conversationId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPrivateMessagesQueryKey = (conversationId: number,) => {
+    return [
+    `/api/chat/private/conversations/${conversationId}/messages`
+    ] as const;
+    }
+
+
+export const getListPrivateMessagesQueryOptions = <TData = Awaited<ReturnType<typeof listPrivateMessages>>, TError = ErrorType<ErrorResponse>>(conversationId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPrivateMessagesQueryKey(conversationId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPrivateMessages>>> = ({ signal }) => listPrivateMessages(conversationId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: conversationId !== null && conversationId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPrivateMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPrivateMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof listPrivateMessages>>>
+export type ListPrivateMessagesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List messages in a private conversation
+ */
+
+export function useListPrivateMessages<TData = Awaited<ReturnType<typeof listPrivateMessages>>, TError = ErrorType<ErrorResponse>>(
+ conversationId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPrivateMessagesQueryOptions(conversationId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getSendPrivateMessageUrl = (conversationId: number,) => {
+
+
+
+
+  return `/api/chat/private/conversations/${conversationId}/messages`
+}
+
+/**
+ * @summary Send a private message
+ */
+export const sendPrivateMessage = async (conversationId: number,
+    chatMessageInput: ChatMessageInput, options?: RequestInit): Promise<ChatMessage> => {
+
+  return customFetch<ChatMessage>(getSendPrivateMessageUrl(conversationId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(chatMessageInput)
+  }
+);}
+
+
+
+
+
+export const getSendPrivateMessageMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendPrivateMessage>>, TError,{conversationId: number;data: BodyType<ChatMessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendPrivateMessage>>, TError,{conversationId: number;data: BodyType<ChatMessageInput>}, TContext> => {
+
+const mutationKey = ['sendPrivateMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendPrivateMessage>>, {conversationId: number;data: BodyType<ChatMessageInput>}> = (props) => {
+          const {conversationId,data} = props ?? {};
+
+          return  sendPrivateMessage(conversationId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendPrivateMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendPrivateMessage>>>
+    export type SendPrivateMessageMutationBody = BodyType<ChatMessageInput>
+    export type SendPrivateMessageMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Send a private message
+ */
+export const useSendPrivateMessage = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendPrivateMessage>>, TError,{conversationId: number;data: BodyType<ChatMessageInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendPrivateMessage>>,
+        TError,
+        {conversationId: number;data: BodyType<ChatMessageInput>},
+        TContext
+      > => {
+      return useMutation(getSendPrivateMessageMutationOptions(options));
+    }
+
+export const getDeletePrivateMessageUrl = (conversationId: number,
+    messageId: number,) => {
+
+
+
+
+  return `/api/chat/private/conversations/${conversationId}/messages/${messageId}`
+}
+
+/**
+ * @summary Delete one's own private message
+ */
+export const deletePrivateMessage = async (conversationId: number,
+    messageId: number, options?: RequestInit): Promise<ChatMessageDeleteResult> => {
+
+  return customFetch<ChatMessageDeleteResult>(getDeletePrivateMessageUrl(conversationId,messageId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeletePrivateMessageMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePrivateMessage>>, TError,{conversationId: number;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePrivateMessage>>, TError,{conversationId: number;messageId: number}, TContext> => {
+
+const mutationKey = ['deletePrivateMessage'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePrivateMessage>>, {conversationId: number;messageId: number}> = (props) => {
+          const {conversationId,messageId} = props ?? {};
+
+          return  deletePrivateMessage(conversationId,messageId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePrivateMessageMutationResult = NonNullable<Awaited<ReturnType<typeof deletePrivateMessage>>>
+
+    export type DeletePrivateMessageMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete one's own private message
+ */
+export const useDeletePrivateMessage = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePrivateMessage>>, TError,{conversationId: number;messageId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePrivateMessage>>,
+        TError,
+        {conversationId: number;messageId: number},
+        TContext
+      > => {
+      return useMutation(getDeletePrivateMessageMutationOptions(options));
     }
 
 export const getListAppraisalsUrl = () => {

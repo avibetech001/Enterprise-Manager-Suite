@@ -9,6 +9,9 @@ import {
   db,
   projectsTable,
   chatMessagesTable,
+  directChatMessagesTable,
+  chatConversationsTable,
+  chatConversationParticipantsTable,
   employmentInfoTable,
   employeeProfilesTable,
   usersTable,
@@ -168,6 +171,33 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
             .where(eq(employmentInfoTable.userId, me.id));
           allowed = emp?.departmentId === chatMsg.departmentId;
         }
+      }
+    }
+    if (!allowed) {
+      const [directMessage] = await db
+        .select({ conversationId: directChatMessagesTable.conversationId })
+        .from(directChatMessagesTable)
+        .innerJoin(
+          chatConversationsTable,
+          eq(chatConversationsTable.id, directChatMessagesTable.conversationId),
+        )
+        .where(
+          and(
+            eq(directChatMessagesTable.filePath, objectPath),
+            eq(chatConversationsTable.companyId, me.companyId),
+          ),
+        );
+      if (directMessage) {
+        const [participant] = await db
+          .select({ id: chatConversationParticipantsTable.id })
+          .from(chatConversationParticipantsTable)
+          .where(
+            and(
+              eq(chatConversationParticipantsTable.conversationId, directMessage.conversationId),
+              eq(chatConversationParticipantsTable.userId, me.id),
+            ),
+          );
+        allowed = Boolean(participant);
       }
     }
     if (!allowed) {

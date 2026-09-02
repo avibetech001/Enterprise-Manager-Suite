@@ -58,6 +58,17 @@ export interface ChatMember {
   fullName: string;
 }
 
+export interface PrivateConversation {
+  id: number;
+  otherUserId: number;
+  otherUserName: string;
+  createdAt: string;
+}
+
+export interface PrivateConversationInput {
+  employeeId: number;
+}
+
 export interface ChatMessage {
   id: number;
   groupId: string;

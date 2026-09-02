@@ -1,4 +1,4 @@
-import { integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { integer, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import { companiesTable } from "./companies";
 import { departmentsTable } from "./departments";
 import { usersTable } from "./users";
@@ -29,3 +29,64 @@ export const chatMessagesTable = pgTable("chat_messages", {
 });
 
 export type ChatMessageRow = typeof chatMessagesTable.$inferSelect;
+
+// Direct messages deliberately use their own conversation/participant/message
+// model so they can never be confused with company or department groups.
+export const chatConversationsTable = pgTable(
+  "chat_conversations",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    initiatedByUserId: integer("initiated_by_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    employeeUserId: integer("employee_user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("chat_conversations_initiator_employee_unique").on(
+      table.companyId,
+      table.initiatedByUserId,
+      table.employeeUserId,
+    ),
+  ],
+);
+
+export const chatConversationParticipantsTable = pgTable(
+  "chat_conversation_participants",
+  {
+    id: serial("id").primaryKey(),
+    conversationId: integer("conversation_id")
+      .notNull()
+      .references(() => chatConversationsTable.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    uniqueIndex("chat_conversation_participant_unique").on(
+      table.conversationId,
+      table.userId,
+    ),
+  ],
+);
+
+export const directChatMessagesTable = pgTable("direct_chat_messages", {
+  id: serial("id").primaryKey(),
+  conversationId: integer("conversation_id")
+    .notNull()
+    .references(() => chatConversationsTable.id, { onDelete: "cascade" }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  body: text("body").notNull().default(""),
+  filePath: text("file_path"),
+  fileName: text("file_name"),
+  replyToId: integer("reply_to_id"),
+  kind: text("kind").notNull().default("text"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

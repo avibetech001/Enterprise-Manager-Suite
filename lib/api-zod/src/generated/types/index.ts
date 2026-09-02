@@ -99,6 +99,8 @@ export * from './notification';
 export * from './pendingCounts';
 export * from './permissionDef';
 export * from './permissionKey';
+export * from './privateConversation';
+export * from './privateConversationInput';
 export * from './projectDeliverable';
 export * from './projectDeliverableInput';
 export * from './projectDeliverableInputStatus';

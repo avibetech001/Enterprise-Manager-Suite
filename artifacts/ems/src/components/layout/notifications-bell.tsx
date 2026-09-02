@@ -19,6 +19,7 @@ import { formatDistanceToNow } from "date-fns";
 // Map notification types without an explicit link to a sensible page.
 const TYPE_FALLBACK_LINK: Record<string, string> = {
   chat_mention: "chat",
+  chat_direct: "chat",
   appraisal: "appraisals",
 };
 
