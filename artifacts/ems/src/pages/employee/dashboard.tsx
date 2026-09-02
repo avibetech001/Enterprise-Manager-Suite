@@ -3,32 +3,22 @@ import { Link } from "wouter";
 import {
   useGetMyProfile,
   useGetMySummary,
-  useListMyAppraisals,
+  useListNotifications,
 } from "@workspace/api-client-react";
-import { ScoreStars } from "@/pages/management/appraisals";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   CalendarClock,
   Palmtree,
   FolderKanban,
-  Wallet,
-  PackageOpen,
-  Megaphone,
-  ArrowRight,
+  MessagesSquare,
+  ChevronRight,
 } from "lucide-react";
 
 export default function EmployeeDashboard() {
   const { data: profile, isLoading: profileLoading } = useGetMyProfile();
   const { data: summary, isLoading: summaryLoading } = useGetMySummary();
-  const { data: appraisals } = useListMyAppraisals();
-
-  const allScores = (appraisals ?? []).flatMap((a) => a.ratings.map((r) => r.score));
-  const avgRating =
-    allScores.length > 0
-      ? allScores.reduce((sum, s) => sum + s, 0) / allScores.length
-      : null;
+  const { data: notifications } = useListNotifications();
 
   if (profileLoading || summaryLoading) {
     return (
@@ -46,64 +36,62 @@ export default function EmployeeDashboard() {
       : "Checked in"
     : "Not checked in";
 
-  const attendanceBadgeClass = summary.attendanceToday
-    ? summary.attendanceToday.checkOutAt
-      ? "bg-muted text-muted-foreground border-border"
-      : "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : "bg-muted text-muted-foreground border-border";
+  const unreadChatCount =
+    notifications?.filter(
+      (notification) =>
+        !notification.readAt &&
+        (notification.link?.startsWith("chat") ||
+          notification.link?.startsWith("/chat")),
+    ).length || 0;
 
   const cards = [
     {
       href: "/employee/attendance",
       icon: CalendarClock,
-      title: "Attendance Today",
+      title: "Attendance",
+      description: "Check in, check out, and view your attendance.",
       value: attendanceStatus,
-      badgeClass: attendanceBadgeClass,
+      highlight: Boolean(summary.attendanceToday && !summary.attendanceToday.checkOutAt),
     },
     {
       href: "/employee/leave",
       icon: Palmtree,
       title: "Leave Balance",
+      description: "Review your balance and submit leave requests.",
       value: `${summary.leaveBalance.remaining} / ${summary.leaveBalance.allocation}`,
-      sub: "days remaining",
     },
     {
       href: "/employee/projects",
       icon: FolderKanban,
-      title: "Active Projects",
+      title: "My Projects",
+      description: "View your assigned projects and deliverables.",
       value: String(summary.activeProjects),
     },
     {
-      href: "/employee/fund-requests",
-      icon: Wallet,
-      title: "Pending Fund Requests",
-      value: String(summary.pendingFundRequests),
+      href: "/employee/chat",
+      icon: MessagesSquare,
+      title: "Team Chat",
+      description: "Open group and private conversations.",
+      value: unreadChatCount > 0 ? String(unreadChatCount) : undefined,
+      pending: unreadChatCount > 0,
     },
   ];
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="mx-auto max-w-[1600px] space-y-6 p-3 sm:p-5 md:space-y-8 md:p-8">
       <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16 border-2 border-border">
+        <Avatar className="h-12 w-12 border-2 border-border sm:h-16 sm:w-16">
           <AvatarImage src={photoSrc(profile.profilePhotoUrl)} />
-          <AvatarFallback className="text-xl">
+          <AvatarFallback className="text-lg sm:text-xl">
             {profile.firstName[0]}
             {profile.lastName[0]}
           </AvatarFallback>
         </Avatar>
         <div>
-          <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">Welcome, {profile.firstName}</h1>
-            {avgRating !== null && (
-              <span className="inline-flex items-center gap-1.5">
-                <ScoreStars score={Math.round(avgRating)} />
-                <span className="text-sm font-medium text-muted-foreground">
-                  {avgRating.toFixed(1)}
-                </span>
-              </span>
-            )}
-          </div>
-          <div className="text-muted-foreground flex flex-wrap items-center gap-2 mt-1">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Welcome, {profile.firstName}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
             <Badge variant="outline">{profile.employeeCode}</Badge>
             {profile.employment.jobTitle && <span>{profile.employment.jobTitle}</span>}
             {profile.employment.employmentType && (
@@ -115,64 +103,52 @@ export default function EmployeeDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {cards.map((c) => (
-          <Link key={c.href} href={c.href}>
-            <Card className="hover:border-primary/40 transition-colors cursor-pointer h-full">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {c.title}
-                </CardTitle>
-                <c.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2">
-                  {c.badgeClass ? (
-                    <Badge variant="outline" className={c.badgeClass}>
-                      {c.value}
-                    </Badge>
-                  ) : (
-                    <span className="text-2xl font-bold">{c.value}</span>
-                  )}
-                  {c.sub && <span className="text-xs text-muted-foreground">{c.sub}</span>}
+      <section>
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">Employee Hub</h2>
+        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
+          {cards.map((card) => (
+            <Link
+              key={card.href}
+              href={card.href}
+              className="group relative flex min-h-24 flex-col justify-between rounded-xl border bg-card p-3 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md sm:min-h-36 sm:p-5"
+            >
+              <div className="mb-3 flex items-start justify-between sm:mb-4">
+                <div
+                  className={`rounded-xl p-2 transition-colors sm:p-2.5 ${
+                    card.pending
+                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                      : card.highlight
+                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                        : "bg-primary/5 text-primary group-hover:bg-primary/10"
+                  }`}
+                >
+                  <card.icon className="h-5 w-5" />
                 </div>
-                <div className="mt-3 text-xs text-primary flex items-center gap-1">
-                  View <ArrowRight className="h-3 w-3" />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Megaphone className="h-5 w-5 text-muted-foreground" />
-            Latest Announcements
-          </CardTitle>
-          <CardDescription>Company news and updates</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {summary.announcements.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic">No announcements yet.</p>
-          ) : (
-            <div className="space-y-4">
-              {summary.announcements.map((a) => (
-                <div key={a.id} className="border-b border-border pb-4 last:border-0 last:pb-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-medium">{a.title}</h3>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {new Date(a.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">{a.body}</p>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                {card.value && (
+                  <span
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      card.pending
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                        : "bg-secondary text-secondary-foreground"
+                    }`}
+                  >
+                    {card.value}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h3 className="flex items-center gap-1.5 text-sm font-semibold leading-tight transition-colors group-hover:text-primary sm:mb-1.5 sm:text-base">
+                  {card.title}
+                  <ChevronRight className="hidden h-4 w-4 -translate-x-2 opacity-0 transition-all duration-200 group-hover:translate-x-0 group-hover:opacity-100 sm:block" />
+                </h3>
+                <p className="hidden text-sm leading-snug text-muted-foreground sm:block">
+                  {card.description}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
