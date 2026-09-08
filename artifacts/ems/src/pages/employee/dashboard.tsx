@@ -34,7 +34,7 @@ export default function EmployeeDashboard() {
     ? summary.attendanceToday.checkOutAt
       ? "Checked out"
       : "Checked in"
-    : "Not checked in";
+    : "Absent";
 
   const unreadChatCount =
     notifications?.filter(
