@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Popover,
+  PopoverAnchor,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
@@ -793,6 +794,11 @@ function GroupChat({
   } | null>(null);
   const [mentionIds, setMentionIds] = useState<number[]>([]);
   const [mentionAll, setMentionAll] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState<{
+    start: number;
+    end: number;
+    query: string;
+  } | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
   const [tagOpen, setTagOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -839,16 +845,32 @@ function GroupChat({
   };
 
   const handleTag = (userIdStr: string) => {
-    if (userIdStr === "__all__") {
+    const isAll = userIdStr === "__all__";
+    const userId = isAll ? null : Number(userIdStr);
+    const member = userId === null ? null : members?.find((m) => m.id === userId);
+    if (!isAll && (!member || userId === null)) return;
+
+    const input = messageInputRef.current;
+    const start = mentionSearch?.start ?? input?.selectionStart ?? text.length;
+    const end = mentionSearch?.end ?? input?.selectionEnd ?? start;
+    const prefix = start > 0 && !/\s/.test(text[start - 1]) ? " " : "";
+    const insertion = `${prefix}@${isAll ? "all" : member!.fullName} `;
+    const nextText = `${text.slice(0, start)}${insertion}${text.slice(end)}`;
+
+    if (isAll) {
       setMentionAll(true);
-      setText((t) => (t ? `${t.replace(/\s$/, "")} @all ` : "@all "));
-      return;
+    } else if (userId !== null && !mentionIds.includes(userId)) {
+      setMentionIds((ids) => [...ids, userId]);
     }
-    const userId = Number(userIdStr);
-    const member = members?.find((m) => m.id === userId);
-    if (!member) return;
-    if (!mentionIds.includes(userId)) setMentionIds((ids) => [...ids, userId]);
-    setText((t) => (t ? `${t.replace(/\s$/, "")} @${member.fullName} ` : `@${member.fullName} `));
+
+    setText(nextText);
+    setMentionSearch(null);
+    setTagOpen(false);
+    requestAnimationFrame(() => {
+      input?.focus();
+      const caret = start + insertion.length;
+      input?.setSelectionRange(caret, caret);
+    });
   };
 
   const insertLineBreak = () => {
@@ -981,6 +1003,12 @@ function GroupChat({
   };
 
   const memberOptions = useMemo(() => members || [], [members]);
+  const mentionQuery = mentionSearch?.query.trim().toLowerCase() || "";
+  const filteredMentionMembers = memberOptions.filter((member) =>
+    member.fullName.toLowerCase().includes(mentionQuery),
+  );
+  const showAllMentionOption =
+    !mentionQuery || "all".includes(mentionQuery) || "everyone".includes(mentionQuery);
   const onlineMemberCount = memberOptions.filter((member) => member.isOnline).length;
 
   return (
@@ -1092,19 +1120,86 @@ function GroupChat({
           >
             {isRecording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
           </Button>
-          {!privateConversationId && <Popover open={tagOpen} onOpenChange={setTagOpen}>
-            <PopoverTrigger asChild>
+          <Popover
+            open={!privateConversationId && tagOpen}
+            onOpenChange={(open) => {
+              setTagOpen(open);
+              if (!open) setMentionSearch(null);
+            }}
+          >
+            {!privateConversationId && <PopoverTrigger asChild>
               <Button
                 type="button"
                 variant="outline"
                 size="icon"
                 className="hidden sm:inline-flex shrink-0"
                 title="Tag someone"
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  const input = messageInputRef.current;
+                  const start = input?.selectionStart ?? text.length;
+                  const end = input?.selectionEnd ?? start;
+                  setMentionSearch({ start, end, query: "" });
+                }}
               >
                 <AtSign className="h-4 w-4" />
               </Button>
-            </PopoverTrigger>
-            <PopoverContent
+            </PopoverTrigger>}
+            <PopoverAnchor asChild>
+              <Textarea
+                ref={messageInputRef}
+                rows={1}
+                value={text}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const caret = e.target.selectionStart;
+                  setText(value);
+
+                  if (!privateConversationId) {
+                    const match = /(?:^|[^\w@])@([^\s@]*)$/.exec(value.slice(0, caret));
+                    if (match) {
+                      const query = match[1];
+                      setMentionSearch({
+                        start: caret - query.length - 1,
+                        end: caret,
+                        query,
+                      });
+                      setTagOpen(true);
+                    } else {
+                      setMentionSearch(null);
+                      setTagOpen(false);
+                    }
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape" && tagOpen) {
+                    e.preventDefault();
+                    setTagOpen(false);
+                    setMentionSearch(null);
+                    return;
+                  }
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    if (tagOpen && mentionSearch) {
+                      const firstSuggestion = showAllMentionOption
+                        ? "__all__"
+                        : filteredMentionMembers[0]
+                          ? String(filteredMentionMembers[0].id)
+                          : null;
+                      if (firstSuggestion) {
+                        e.preventDefault();
+                        handleTag(firstSuggestion);
+                        return;
+                      }
+                    }
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder={isUploading ? "Uploading file..." : "Type a message..."}
+                className="flex-1 min-w-0 w-full min-h-11 sm:min-h-9 max-h-44 resize-none overflow-y-hidden rounded-[1.5rem] bg-background px-4 py-2.5 sm:rounded-md sm:px-3 sm:py-2"
+              />
+            </PopoverAnchor>
+            {!privateConversationId && <PopoverContent
               side="top"
               align="start"
               className="w-60 p-1"
@@ -1112,25 +1207,23 @@ function GroupChat({
               collisionPadding={8}
             >
               <div className="max-h-[45vh] overflow-y-auto overscroll-contain">
-                <button
-                  type="button"
-                  className="w-full rounded px-2.5 py-2 text-left text-sm font-medium hover:bg-accent"
-                  onClick={() => {
-                    handleTag("__all__");
-                    setTagOpen(false);
-                  }}
-                >
-                  @ Everyone
-                </button>
-                {memberOptions.map((m) => (
+                {showAllMentionOption && (
+                  <button
+                    type="button"
+                    className="w-full rounded px-2.5 py-2 text-left text-sm font-medium hover:bg-accent"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => handleTag("__all__")}
+                  >
+                    @ Everyone
+                  </button>
+                )}
+                {filteredMentionMembers.map((m) => (
                   <button
                     key={m.id}
                     type="button"
                     className="w-full rounded px-2.5 py-2 text-left text-sm hover:bg-accent"
-                    onClick={() => {
-                      handleTag(String(m.id));
-                      setTagOpen(false);
-                    }}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => handleTag(String(m.id))}
                   >
                     <span className="flex items-center justify-between gap-3">
                       <span className="truncate">{m.fullName}</span>
@@ -1141,23 +1234,12 @@ function GroupChat({
                     </span>
                   </button>
                 ))}
+                {!showAllMentionOption && filteredMentionMembers.length === 0 && (
+                  <p className="px-2.5 py-2 text-sm text-muted-foreground">No matching employees</p>
+                )}
               </div>
-            </PopoverContent>
-          </Popover>}
-          <Textarea
-            ref={messageInputRef}
-            rows={1}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder={isUploading ? "Uploading file..." : "Type a message..."}
-            className="flex-1 min-w-0 w-full min-h-11 sm:min-h-9 max-h-44 resize-none overflow-y-hidden rounded-[1.5rem] bg-background px-4 py-2.5 sm:rounded-md sm:px-3 sm:py-2"
-          />
+            </PopoverContent>}
+          </Popover>
           <Button
             type="button"
             size="icon"
