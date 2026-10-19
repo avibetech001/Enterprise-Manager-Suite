@@ -21,6 +21,11 @@ import {
   ObjectNotFoundError,
   ObjectStorageService,
 } from '../lib/objectStorage';
+import {
+  canAccessCreativeTeam,
+  canAccessPrivateConversation,
+  CREATIVE_TEAM_KEY,
+} from '../lib/chatAccess';
 
 const router: IRouter = Router();
 const objectStorageService = new ObjectStorageService();
@@ -150,6 +155,7 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
       const [chatMsg] = await db
         .select({
           id: chatMessagesTable.id,
+          companyId: chatMessagesTable.companyId,
           departmentId: chatMessagesTable.departmentId,
           teamKey: chatMessagesTable.teamKey,
         })
@@ -161,20 +167,26 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           ),
         );
       if (chatMsg) {
-        if (chatMsg.teamKey) {
+        if (chatMsg.teamKey === CREATIVE_TEAM_KEY) {
           if (me.role === "super_admin") {
-            allowed = true;
+            allowed = canAccessCreativeTeam(
+              me,
+              chatMsg.companyId,
+              chatMsg.teamKey,
+            );
           } else {
             const [emp] = await db
               .select({ jobTitle: employmentInfoTable.jobTitle })
               .from(employmentInfoTable)
               .where(eq(employmentInfoTable.userId, me.id));
-            allowed =
-              me.role === "employee" &&
-              /(brand.*manager|social.*manager|copy\s*writer|designer|team\s*lead|team\s*leader)/i.test(
-                emp?.jobTitle || "",
-              );
+            allowed = canAccessCreativeTeam(
+              { ...me, jobTitle: emp?.jobTitle },
+              chatMsg.companyId,
+              chatMsg.teamKey,
+            );
           }
+        } else if (chatMsg.teamKey) {
+          allowed = false;
         } else if (chatMsg.departmentId == null || me.role === "super_admin") {
           // Company-wide attachments are open to everyone in the company;
           // super admins can access every department chat's attachments.
@@ -190,7 +202,10 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
     }
     if (!allowed) {
       const [directMessage] = await db
-        .select({ conversationId: directChatMessagesTable.conversationId })
+        .select({
+          conversationId: directChatMessagesTable.conversationId,
+          companyId: chatConversationsTable.companyId,
+        })
         .from(directChatMessagesTable)
         .innerJoin(
           chatConversationsTable,
@@ -203,16 +218,19 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           ),
         );
       if (directMessage) {
-        const [participant] = await db
-          .select({ id: chatConversationParticipantsTable.id })
+        const participants = await db
+          .select({ userId: chatConversationParticipantsTable.userId })
           .from(chatConversationParticipantsTable)
           .where(
             and(
               eq(chatConversationParticipantsTable.conversationId, directMessage.conversationId),
-              eq(chatConversationParticipantsTable.userId, me.id),
             ),
           );
-        allowed = Boolean(participant);
+        allowed = canAccessPrivateConversation(
+          me,
+          directMessage.companyId,
+          participants.map((participant) => participant.userId),
+        );
       }
     }
     if (!allowed) {

@@ -24,6 +24,15 @@ import {
 } from "@workspace/api-zod";
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth } from "../lib/auth";
+import {
+  canAccessCreativeTeam,
+  canAccessPrivateConversation,
+  canonicalPrivatePair,
+  CREATIVE_TEAM_GROUP_ID,
+  CREATIVE_TEAM_KEY,
+  findOrCreatePrivateConversation,
+  isCreativeTeamEmployee,
+} from "../lib/chatAccess";
 import { notify } from "../lib/notify";
 import { sendPush } from "../lib/push";
 
@@ -49,10 +58,6 @@ interface ResolvedGroup {
   teamKey: string | null;
 }
 
-const CREATIVE_TEAM_GROUP_ID = "team-creative";
-const CREATIVE_TEAM_KEY = "brand-social-creative";
-const CREATIVE_TEAM_TITLE = /(brand.*manager|social.*manager|copy\s*(?:writer|righter)|designer|team\s*lead|team\s*leader)/i;
-
 async function creativeTeamMemberIds(companyId: number): Promise<number[]> {
   const rows = await db
     .select({ id: usersTable.id, jobTitle: employmentInfoTable.jobTitle })
@@ -66,11 +71,18 @@ async function creativeTeamMemberIds(companyId: number): Promise<number[]> {
         eq(usersTable.archived, false),
       ),
     );
-  return rows.filter((row) => CREATIVE_TEAM_TITLE.test(row.jobTitle || "")).map((row) => row.id);
+  return rows.filter((row) =>
+    isCreativeTeamEmployee({
+      role: "employee",
+      status: "active",
+      archived: false,
+      jobTitle: row.jobTitle,
+    }),
+  ).map((row) => row.id);
 }
 
 async function isCreativeTeamMember(me: CurrentUser): Promise<boolean> {
-  if (me.role === "super_admin") return true;
+  if (canAccessCreativeTeam(me, me.companyId)) return true;
   return (await creativeTeamMemberIds(me.companyId)).includes(me.id);
 }
 
@@ -458,21 +470,27 @@ async function privateConversationFor(
   me: CurrentUser,
   conversationId: number,
 ) {
-  const [participant] = await db
-    .select({ conversationId: chatConversationParticipantsTable.conversationId })
+  const participants = await db
+    .select({
+      conversationId: chatConversationParticipantsTable.conversationId,
+      companyId: chatConversationsTable.companyId,
+      userId: chatConversationParticipantsTable.userId,
+    })
     .from(chatConversationParticipantsTable)
     .innerJoin(
       chatConversationsTable,
       eq(chatConversationsTable.id, chatConversationParticipantsTable.conversationId),
     )
     .where(
-      and(
-        eq(chatConversationParticipantsTable.conversationId, conversationId),
-        eq(chatConversationParticipantsTable.userId, me.id),
-        eq(chatConversationsTable.companyId, me.companyId),
-      ),
+      eq(chatConversationParticipantsTable.conversationId, conversationId),
     );
-  return participant ?? null;
+  return canAccessPrivateConversation(
+    me,
+    participants[0]?.companyId ?? -1,
+    participants.map((participant) => participant.userId),
+  )
+    ? participants[0] ?? null
+    : null;
 }
 
 router.get(
@@ -576,27 +594,23 @@ router.post(
       res.status(400).json({ error: "Choose another active coworker." });
       return;
     }
-    let [conversation] = await db
-      .select()
-      .from(chatConversationsTable)
-      .where(
-        and(
-          eq(chatConversationsTable.companyId, me.companyId),
-          or(
-            and(
-              eq(chatConversationsTable.initiatedByUserId, me.id),
-              eq(chatConversationsTable.employeeUserId, recipient.id),
-            ),
-            and(
-              eq(chatConversationsTable.initiatedByUserId, recipient.id),
-              eq(chatConversationsTable.employeeUserId, me.id),
-            ),
+    const [firstUserId, secondUserId] = canonicalPrivatePair(me.id, recipient.id);
+    const findExisting = async () => {
+      const [existing] = await db
+        .select()
+        .from(chatConversationsTable)
+        .where(
+          and(
+            eq(chatConversationsTable.companyId, me.companyId),
+            eq(chatConversationsTable.initiatedByUserId, firstUserId),
+            eq(chatConversationsTable.employeeUserId, secondUserId),
           ),
-        ),
-      );
-    if (!conversation) {
-      conversation = await db.transaction(async (tx) => {
-        const [firstUserId, secondUserId] = [me.id, recipient.id].sort((a, b) => a - b);
+        );
+      return existing ?? null;
+    };
+    const conversation = await findOrCreatePrivateConversation(
+      findExisting,
+      () => db.transaction(async (tx) => {
         const [created] = await tx
           .insert(chatConversationsTable)
           .values({
@@ -613,19 +627,9 @@ router.post(
           ]);
           return created;
         }
-        const [existing] = await tx
-          .select()
-          .from(chatConversationsTable)
-          .where(
-            and(
-              eq(chatConversationsTable.companyId, me.companyId),
-              eq(chatConversationsTable.initiatedByUserId, firstUserId),
-              eq(chatConversationsTable.employeeUserId, secondUserId),
-            ),
-          );
-        return existing;
-      });
-    }
+        return null;
+      }),
+    );
     if (!conversation) {
       res.status(500).json({ error: "Could not open the private conversation." });
       return;
