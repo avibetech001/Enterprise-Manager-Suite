@@ -1063,7 +1063,7 @@ function GroupChat({
             Recording... tap the stop button to send.
           </div>
         )}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -1074,7 +1074,7 @@ function GroupChat({
             type="button"
             variant="outline"
             size="icon"
-            className="shrink-0"
+            className="hidden sm:inline-flex shrink-0"
             disabled={isUploading || isRecording}
             onClick={() => fileInputRef.current?.click()}
             title="Attach a file"
@@ -1085,7 +1085,7 @@ function GroupChat({
             type="button"
             variant={isRecording ? "destructive" : "outline"}
             size="icon"
-            className="shrink-0"
+            className="hidden sm:inline-flex shrink-0"
             disabled={isUploading || sendMessage.isPending}
             onClick={isRecording ? stopRecording : startRecording}
             title={isRecording ? "Stop and send" : "Record a voice note"}
@@ -1098,7 +1098,7 @@ function GroupChat({
                 type="button"
                 variant="outline"
                 size="icon"
-                className="shrink-0"
+                className="hidden sm:inline-flex shrink-0"
                 title="Tag someone"
               >
                 <AtSign className="h-4 w-4" />
@@ -1156,13 +1156,13 @@ function GroupChat({
               }
             }}
             placeholder={isUploading ? "Uploading file..." : "Type a message..."}
-            className="flex-1 min-w-0 min-h-9 max-h-44 resize-none overflow-y-hidden py-2"
+            className="flex-1 min-w-0 w-full min-h-11 sm:min-h-9 max-h-44 resize-none overflow-y-hidden py-2"
           />
           <Button
             type="button"
             size="icon"
             variant="outline"
-            className="shrink-0"
+            className="hidden sm:inline-flex shrink-0"
             onClick={insertLineBreak}
             disabled={isUploading || isRecording}
             title="New line (Shift + Enter)"
