@@ -2833,7 +2833,7 @@ export const GetEmployeeOverviewResponse = zod.object({
 export const ListChatGroupsResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "kind": zod.enum(['company', 'department'])
+  "kind": zod.enum(['company', 'department', 'team'])
 })
 export const ListChatGroupsResponse = zod.array(ListChatGroupsResponseItem)
 
@@ -2929,13 +2929,13 @@ export const DeleteChatMessageResponse = zod.object({
 
 
 /**
- * @summary List active employees management may message
+ * @summary List active coworkers the current user may message
  */
-export const ListPrivateChatEmployeesResponseItem = zod.object({
+export const ListPrivateChatContactsResponseItem = zod.object({
   "id": zod.number(),
   "fullName": zod.string()
 })
-export const ListPrivateChatEmployeesResponse = zod.array(ListPrivateChatEmployeesResponseItem)
+export const ListPrivateChatContactsResponse = zod.array(ListPrivateChatContactsResponseItem)
 
 
 /**
@@ -2951,10 +2951,10 @@ export const ListPrivateConversationsResponse = zod.array(ListPrivateConversatio
 
 
 /**
- * @summary Start or retrieve a private conversation with an active employee
+ * @summary Start or retrieve a private conversation with an active coworker
  */
 export const CreatePrivateConversationBody = zod.object({
-  "employeeId": zod.number()
+  "recipientUserId": zod.number()
 })
 
 export const CreatePrivateConversationResponse = zod.object({

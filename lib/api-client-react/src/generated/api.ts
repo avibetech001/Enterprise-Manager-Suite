@@ -7460,20 +7460,20 @@ export const useDeleteChatMessage = <TError = ErrorType<ErrorResponse>,
       return useMutation(getDeleteChatMessageMutationOptions(options));
     }
 
-export const getListPrivateChatEmployeesUrl = () => {
+export const getListPrivateChatContactsUrl = () => {
 
 
 
 
-  return `/api/chat/private/employees`
+  return `/api/chat/private/contacts`
 }
 
 /**
- * @summary List active employees management may message
+ * @summary List active coworkers the current user may message
  */
-export const listPrivateChatEmployees = async ( options?: RequestInit): Promise<ChatMember[]> => {
+export const listPrivateChatContacts = async ( options?: RequestInit): Promise<ChatMember[]> => {
 
-  return customFetch<ChatMember[]>(getListPrivateChatEmployeesUrl(),
+  return customFetch<ChatMember[]>(getListPrivateChatContactsUrl(),
   {
     ...options,
     method: 'GET'
@@ -7486,45 +7486,45 @@ export const listPrivateChatEmployees = async ( options?: RequestInit): Promise<
 
 
 
-export const getListPrivateChatEmployeesQueryKey = () => {
+export const getListPrivateChatContactsQueryKey = () => {
     return [
-    `/api/chat/private/employees`
+    `/api/chat/private/contacts`
     ] as const;
     }
 
 
-export const getListPrivateChatEmployeesQueryOptions = <TData = Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListPrivateChatContactsQueryOptions = <TData = Awaited<ReturnType<typeof listPrivateChatContacts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatContacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getListPrivateChatEmployeesQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListPrivateChatContactsQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPrivateChatEmployees>>> = ({ signal }) => listPrivateChatEmployees({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPrivateChatContacts>>> = ({ signal }) => listPrivateChatContacts({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatContacts>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type ListPrivateChatEmployeesQueryResult = NonNullable<Awaited<ReturnType<typeof listPrivateChatEmployees>>>
-export type ListPrivateChatEmployeesQueryError = ErrorType<ErrorResponse>
+export type ListPrivateChatContactsQueryResult = NonNullable<Awaited<ReturnType<typeof listPrivateChatContacts>>>
+export type ListPrivateChatContactsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List active employees management may message
+ * @summary List active coworkers the current user may message
  */
 
-export function useListPrivateChatEmployees<TData = Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatEmployees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListPrivateChatContacts<TData = Awaited<ReturnType<typeof listPrivateChatContacts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPrivateChatContacts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getListPrivateChatEmployeesQueryOptions(options)
+  const queryOptions = getListPrivateChatContactsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -7623,7 +7623,7 @@ export const getCreatePrivateConversationUrl = () => {
 }
 
 /**
- * @summary Start or retrieve a private conversation with an active employee
+ * @summary Start or retrieve a private conversation with an active coworker
  */
 export const createPrivateConversation = async (privateConversationInput: PrivateConversationInput, options?: RequestInit): Promise<PrivateConversation> => {
 
@@ -7672,7 +7672,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreatePrivateConversationMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Start or retrieve a private conversation with an active employee
+ * @summary Start or retrieve a private conversation with an active coworker
  */
 export const useCreatePrivateConversation = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPrivateConversation>>, TError,{data: BodyType<PrivateConversationInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import {
   db,
+  employmentInfoTable,
   attendanceCodesTable,
   attendanceRecordsTable,
   attendanceSettingsTable,
@@ -117,6 +118,26 @@ function requireEmployee(
     return;
   }
   next();
+}
+
+async function requireTeamLead(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  try {
+    const [employment] = await db
+      .select({ jobTitle: employmentInfoTable.jobTitle })
+      .from(employmentInfoTable)
+      .where(eq(employmentInfoTable.userId, req.currentUser!.id));
+    if (!/\bteam\s*lead(?:er)?\b/i.test(employment?.jobTitle || "")) {
+      res.status(403).json({ error: "Only a Team Lead can submit work reports." });
+      return;
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 // All attendance day/time decisions use one explicit company timezone so
@@ -2178,6 +2199,7 @@ router.post(
   "/work-reports/me",
   requireAuth,
   requireEmployee,
+  requireTeamLead,
   async (req, res): Promise<void> => {
     const parsed = CreateWorkReportBody.safeParse(req.body);
     if (!parsed.success) {

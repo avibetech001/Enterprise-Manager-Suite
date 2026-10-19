@@ -7,5 +7,5 @@
  */
 
 export interface PrivateConversationInput {
-  employeeId: number;
+  recipientUserId: number;
 }

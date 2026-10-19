@@ -12,4 +12,5 @@ export type ChatGroupKind = typeof ChatGroupKind[keyof typeof ChatGroupKind];
 export const ChatGroupKind = {
   company: 'company',
   department: 'department',
+  team: 'team',
 } as const;

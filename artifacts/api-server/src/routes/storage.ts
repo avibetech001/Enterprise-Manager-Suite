@@ -151,6 +151,7 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
         .select({
           id: chatMessagesTable.id,
           departmentId: chatMessagesTable.departmentId,
+          teamKey: chatMessagesTable.teamKey,
         })
         .from(chatMessagesTable)
         .where(
@@ -160,7 +161,21 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           ),
         );
       if (chatMsg) {
-        if (chatMsg.departmentId == null || me.role === "super_admin") {
+        if (chatMsg.teamKey) {
+          if (me.role === "super_admin") {
+            allowed = true;
+          } else {
+            const [emp] = await db
+              .select({ jobTitle: employmentInfoTable.jobTitle })
+              .from(employmentInfoTable)
+              .where(eq(employmentInfoTable.userId, me.id));
+            allowed =
+              me.role === "employee" &&
+              /(brand.*manager|social.*manager|copy\s*writer|designer|team\s*lead|team\s*leader)/i.test(
+                emp?.jobTitle || "",
+              );
+          }
+        } else if (chatMsg.departmentId == null || me.role === "super_admin") {
           // Company-wide attachments are open to everyone in the company;
           // super admins can access every department chat's attachments.
           allowed = true;

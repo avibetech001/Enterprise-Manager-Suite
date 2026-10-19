@@ -9,8 +9,8 @@ import {
   useSendChatMessage,
   useDeleteChatMessage,
   getListChatMessagesQueryKey,
-  useListPrivateChatEmployees,
-  getListPrivateChatEmployeesQueryKey,
+  useListPrivateChatContacts,
+  getListPrivateChatContactsQueryKey,
   useListPrivateConversations,
   useCreatePrivateConversation,
   getListPrivateConversationsQueryKey,
@@ -49,6 +49,7 @@ import {
   Square,
   CornerDownLeft,
   MessageCircle,
+  Download,
 } from "lucide-react";
 
 // Render message text with clickable links.
@@ -88,11 +89,9 @@ export default function TeamChatPage() {
       refetchInterval: 4000,
     },
   });
-  const isManagement = session?.user?.role !== "employee";
-  const { data: privateEmployees } = useListPrivateChatEmployees({
+  const { data: privateContacts } = useListPrivateChatContacts({
     query: {
-      queryKey: getListPrivateChatEmployeesQueryKey(),
-      enabled: isManagement,
+      queryKey: getListPrivateChatContactsQueryKey(),
     },
   });
   const createPrivateConversation = useCreatePrivateConversation();
@@ -106,7 +105,7 @@ export default function TeamChatPage() {
     const value = Number(new URLSearchParams(window.location.search).get("conversation"));
     return Number.isInteger(value) && value > 0 ? value : null;
   });
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState("");
+  const [selectedContactId, setSelectedContactId] = useState("");
 
   // Stay in sync with the URL: opening another chat notification while
   // already on this page must switch to the newly linked group.
@@ -180,16 +179,20 @@ export default function TeamChatPage() {
           >
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                {g.kind === "company" ? (
-                  <Users className="h-5 w-5 text-primary" />
-                ) : (
+                {g.kind === "department" ? (
                   <Building2 className="h-5 w-5 text-primary" />
+                ) : (
+                  <Users className="h-5 w-5 text-primary" />
                 )}
               </div>
               <div className="min-w-0">
                 <p className="font-medium truncate">{g.name}</p>
                 <p className="text-xs text-muted-foreground">
-                  {g.kind === "company" ? "Everyone in the company" : "Department group"}
+                  {g.kind === "company"
+                    ? "Everyone in the company"
+                    : g.kind === "team"
+                      ? "Brand and creative roles"
+                      : "Department group"}
                 </p>
               </div>
             </div>
@@ -204,42 +207,40 @@ export default function TeamChatPage() {
             Conversations are visible only to their two participants.
           </p>
         </div>
-        {isManagement && (
-          <Card>
-            <CardContent className="flex flex-col gap-2 py-4 sm:flex-row">
-              <select
-                className="h-10 flex-1 rounded-md border bg-background px-3 text-sm"
-                value={selectedEmployeeId}
-                onChange={(event) => setSelectedEmployeeId(event.target.value)}
-                aria-label="Choose an active employee"
-              >
-                <option value="">Choose an active employee</option>
-                {(privateEmployees || []).map((employee) => (
-                  <option key={employee.id} value={employee.id}>{employee.fullName}</option>
-                ))}
-              </select>
-              <Button
-                disabled={!selectedEmployeeId || createPrivateConversation.isPending}
-                onClick={() => createPrivateConversation.mutate(
-                  { data: { employeeId: Number(selectedEmployeeId) } },
-                  {
-                    onSuccess: (conversation) => {
-                      queryClient.invalidateQueries({
-                        queryKey: getListPrivateConversationsQueryKey(),
-                      });
-                      setActiveConversationId(conversation.id);
-                      setSelectedEmployeeId("");
-                    },
-                    onError: () => toast.error("Could not start private conversation"),
+        <Card>
+          <CardContent className="flex flex-col gap-2 py-4 sm:flex-row">
+            <select
+              className="h-10 flex-1 rounded-md border bg-background px-3 text-sm"
+              value={selectedContactId}
+              onChange={(event) => setSelectedContactId(event.target.value)}
+              aria-label="Choose a coworker"
+            >
+              <option value="">Choose a coworker</option>
+              {(privateContacts || []).map((contact) => (
+                <option key={contact.id} value={contact.id}>{contact.fullName}</option>
+              ))}
+            </select>
+            <Button
+              disabled={!selectedContactId || createPrivateConversation.isPending}
+              onClick={() => createPrivateConversation.mutate(
+                { data: { recipientUserId: Number(selectedContactId) } },
+                {
+                  onSuccess: (conversation) => {
+                    queryClient.invalidateQueries({
+                      queryKey: getListPrivateConversationsQueryKey(),
+                    });
+                    setActiveConversationId(conversation.id);
+                    setSelectedContactId("");
                   },
-                )}
-              >
-                <MessageCircle className="mr-2 h-4 w-4" />
-                Start conversation
-              </Button>
-            </CardContent>
-          </Card>
-        )}
+                  onError: () => toast.error("Could not start private conversation"),
+                },
+              )}
+            >
+              <MessageCircle className="mr-2 h-4 w-4" />
+              Start private conversation
+            </Button>
+          </CardContent>
+        </Card>
         {(privateConversations || []).length === 0 ? (
           <p className="rounded-lg border p-6 text-center text-sm text-muted-foreground">
             No private conversations yet.
@@ -339,6 +340,7 @@ function MessageBubble({
   const fileUrl = m.filePath
     ? `${import.meta.env.BASE_URL}api/storage${m.filePath}`
     : null;
+  const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp)$/i.test(m.fileName || "");
 
   return (
     <div className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}>
@@ -385,17 +387,32 @@ function MessageBubble({
           <audio controls preload="none" src={fileUrl} className="mt-1 max-w-full h-9" />
         ) : (
           fileUrl && (
-            <a
-              href={fileUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={`mt-1 flex items-center gap-1.5 text-xs underline break-all ${
-                mine ? "text-primary-foreground" : "text-foreground"
-              }`}
-            >
-              <FileText className="h-3.5 w-3.5 shrink-0" />
-              {m.fileName || "Attachment"}
-            </a>
+            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <a
+                href={fileUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`flex items-center gap-1.5 text-xs underline break-all ${
+                  mine ? "text-primary-foreground" : "text-foreground"
+                }`}
+              >
+                <FileText className="h-3.5 w-3.5 shrink-0" />
+                {m.fileName || "Attachment"}
+              </a>
+              {canSaveToDevice && (
+                <a
+                  href={fileUrl}
+                  download={m.fileName || "attachment"}
+                  className={`inline-flex items-center gap-1 text-xs underline whitespace-nowrap ${
+                    mine ? "text-primary-foreground" : "text-foreground"
+                  }`}
+                  aria-label={`Save ${m.fileName || "attachment"} to device`}
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Save to device
+                </a>
+              )}
+            </div>
           )
         )}
         <p className={`text-[10px] mt-1 ${mine ? "opacity-70" : "text-muted-foreground"}`}>
@@ -506,6 +523,14 @@ function GroupChat({
   const chunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    const input = messageInputRef.current;
+    if (!input) return;
+    input.style.height = "auto";
+    const maxHeight = 180;
+    input.style.height = `${Math.min(input.scrollHeight, maxHeight)}px`;
+    input.style.overflowY = input.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [text]);
   const bottomRef = useRef<HTMLDivElement>(null);
   const { uploadFile, isUploading } = useUpload({
     onError: (err) => toast.error("Upload failed", { description: err.message }),
@@ -845,7 +870,7 @@ function GroupChat({
               }
             }}
             placeholder={isUploading ? "Uploading file..." : "Type a message..."}
-            className="flex-1 min-w-0 min-h-9 max-h-28 resize-none py-2"
+            className="flex-1 min-w-0 min-h-9 max-h-44 resize-none overflow-y-hidden py-2"
           />
           <Button
             type="button"

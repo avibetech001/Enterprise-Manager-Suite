@@ -45,6 +45,7 @@ export type ChatGroupKind = typeof ChatGroupKind[keyof typeof ChatGroupKind];
 export const ChatGroupKind = {
   company: 'company',
   department: 'department',
+  team: 'team',
 } as const;
 
 export interface ChatGroup {
@@ -66,7 +67,7 @@ export interface PrivateConversation {
 }
 
 export interface PrivateConversationInput {
-  employeeId: number;
+  recipientUserId: number;
 }
 
 export interface ChatMessage {

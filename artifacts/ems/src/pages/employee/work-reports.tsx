@@ -4,6 +4,7 @@ import {
   useListMyWorkReports,
   useCreateWorkReport,
   getListMyWorkReportsQueryKey,
+  useGetMyProfile,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,6 +61,10 @@ function formatDateStr(d: string, style: "short" | "long" = "short") {
 export default function EmployeeWorkReports() {
   const queryClient = useQueryClient();
   const { data: reports, isLoading } = useListMyWorkReports();
+  const { data: profile } = useGetMyProfile();
+  const canSubmit = /\bteam\s*lead(?:er)?\b/i.test(
+    profile?.employment?.jobTitle || "",
+  );
 
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
@@ -132,14 +137,17 @@ export default function EmployeeWorkReports() {
             My Work Reports
           </h1>
           <p className="text-muted-foreground mt-1">
-            Report what you did daily, weekly, or monthly. Management sees every
-            report you submit.
+            {canSubmit
+              ? "Submit daily, weekly, or monthly reports for management."
+              : "Work reports are submitted by your Team Lead and reviewed by management."}
           </p>
         </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          New Report
-        </Button>
+        {canSubmit && (
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            New Report
+          </Button>
+        )}
       </div>
 
       {isLoading ? (
@@ -151,7 +159,9 @@ export default function EmployeeWorkReports() {
           <NotebookPen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-medium">No reports yet</h3>
           <p className="text-muted-foreground text-sm mt-1">
-            Submit your first report so management can follow your work.
+            {canSubmit
+              ? "Submit your first report so management can follow your work."
+              : "Your Team Lead will submit work reports for management to review."}
           </p>
         </div>
       ) : (
