@@ -14,6 +14,7 @@ export const chatMessagesTable = pgTable("chat_messages", {
   departmentId: integer("department_id").references(() => departmentsTable.id, {
     onDelete: "cascade",
   }),
+  teamKey: text("team_key"),
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),

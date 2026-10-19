@@ -46,6 +46,43 @@ interface ResolvedGroup {
   id: string;
   name: string;
   departmentId: number | null;
+  teamKey: string | null;
+}
+
+const CREATIVE_TEAM_GROUP_ID = "team-creative";
+const CREATIVE_TEAM_KEY = "brand-social-creative";
+const CREATIVE_TEAM_TITLE = /(brand.*manager|social.*manager|copy\s*writer|designer|team\s*lead|team\s*leader)/i;
+
+async function creativeTeamMemberIds(companyId: number): Promise<number[]> {
+  const rows = await db
+    .select({ id: usersTable.id, jobTitle: employmentInfoTable.jobTitle })
+    .from(usersTable)
+    .innerJoin(employmentInfoTable, eq(employmentInfoTable.userId, usersTable.id))
+    .where(
+      and(
+        eq(usersTable.companyId, companyId),
+        eq(usersTable.role, "employee"),
+        eq(usersTable.status, "active"),
+        eq(usersTable.archived, false),
+      ),
+    );
+  return rows.filter((row) => CREATIVE_TEAM_TITLE.test(row.jobTitle || "")).map((row) => row.id);
+}
+
+async function isCreativeTeamMember(me: CurrentUser): Promise<boolean> {
+  if (me.role === "super_admin") return true;
+  return (await creativeTeamMemberIds(me.companyId)).includes(me.id);
+}
+
+function groupMessageScope(group: ResolvedGroup) {
+  return and(
+    group.departmentId === null
+      ? isNull(chatMessagesTable.departmentId)
+      : eq(chatMessagesTable.departmentId, group.departmentId),
+    group.teamKey === null
+      ? isNull(chatMessagesTable.teamKey)
+      : eq(chatMessagesTable.teamKey, group.teamKey),
+  );
 }
 
 // Resolve a group id ("company" or "dept-<id>") and enforce access:
@@ -56,7 +93,16 @@ async function resolveGroup(
   groupId: string,
 ): Promise<ResolvedGroup | null> {
   if (groupId === "company") {
-    return { id: "company", name: "General", departmentId: null };
+    return { id: "company", name: "General", departmentId: null, teamKey: null };
+  }
+  if (groupId === CREATIVE_TEAM_GROUP_ID) {
+    if (!(await isCreativeTeamMember(me))) return null;
+    return {
+      id: CREATIVE_TEAM_GROUP_ID,
+      name: "Brand & Creative Team",
+      departmentId: null,
+      teamKey: CREATIVE_TEAM_KEY,
+    };
   }
   const match = /^dept-(\d+)$/.exec(groupId);
   if (!match) return null;
@@ -76,7 +122,7 @@ async function resolveGroup(
   if (me.role !== "super_admin" && (await departmentIdOf(me.id)) !== dept.id) {
     return null;
   }
-  return { id: groupId, name: dept.name, departmentId: dept.id };
+  return { id: groupId, name: dept.name, departmentId: dept.id, teamKey: null };
 }
 
 router.get(
@@ -87,7 +133,7 @@ router.get(
     const groups: Array<{
       id: string;
       name: string;
-      kind: "company" | "department";
+      kind: "company" | "department" | "team";
     }> = [{ id: "company", name: "General", kind: "company" }];
     const myDeptId = await departmentIdOf(me.id);
     const departments = await db
@@ -99,6 +145,13 @@ router.get(
       if (me.role === "super_admin" || myDeptId === d.id) {
         groups.push({ id: `dept-${d.id}`, name: d.name, kind: "department" });
       }
+    }
+    if (await isCreativeTeamMember(me)) {
+      groups.push({
+        id: CREATIVE_TEAM_GROUP_ID,
+        name: "Brand & Creative Team",
+        kind: "team",
+      });
     }
     res.json(groups.map((g) => ChatGroup.parse(g)));
   },
@@ -128,9 +181,13 @@ router.get(
       )
       .where(eq(usersTable.companyId, me.companyId))
       .orderBy(asc(usersTable.fullName));
-    const members = rows.filter(
-      (u) =>
-        group.departmentId === null || u.departmentId === group.departmentId,
+    const teamMemberIds = group.teamKey
+      ? new Set(await creativeTeamMemberIds(me.companyId))
+      : null;
+    const members = rows.filter((u) =>
+      teamMemberIds
+        ? teamMemberIds.has(u.id) || (me.role === "super_admin" && u.id === me.id)
+        : group.departmentId === null || u.departmentId === group.departmentId,
     );
     res.json(
       members.map((m) => ChatMember.parse({ id: m.id, fullName: m.fullName })),
@@ -148,10 +205,7 @@ router.get(
       res.status(404).json({ error: "Group not found." });
       return;
     }
-    const scope =
-      group.departmentId === null
-        ? isNull(chatMessagesTable.departmentId)
-        : eq(chatMessagesTable.departmentId, group.departmentId);
+    const scope = groupMessageScope(group);
     const replyMsg = alias(chatMessagesTable, "reply_msg");
     const replyUser = alias(usersTable, "reply_user");
     const rows = await db
@@ -231,10 +285,7 @@ router.post(
     let replyToId: number | null = null;
     let replyPreview: { body: string; userName: string | null } | null = null;
     if (parsed.data.replyToId != null) {
-      const scope =
-        group.departmentId === null
-          ? isNull(chatMessagesTable.departmentId)
-          : eq(chatMessagesTable.departmentId, group.departmentId);
+      const scope = groupMessageScope(group);
       const [target] = await db
         .select({
           id: chatMessagesTable.id,
@@ -275,12 +326,15 @@ router.post(
         eq(employmentInfoTable.userId, usersTable.id),
       )
       .where(eq(usersTable.companyId, me.companyId));
+    const creativeIds = group.teamKey
+      ? new Set(await creativeTeamMemberIds(me.companyId))
+      : null;
     const memberIds = new Set(
       allMembers
-        .filter(
-          (u) =>
-            group.departmentId === null ||
-            u.departmentId === group.departmentId,
+        .filter((u) =>
+          creativeIds
+            ? creativeIds.has(u.id)
+            : group.departmentId === null || u.departmentId === group.departmentId,
         )
         .map((u) => u.id),
     );
@@ -299,6 +353,7 @@ router.post(
       .values({
         companyId: me.companyId,
         departmentId: group.departmentId,
+        teamKey: group.teamKey,
         userId: me.id,
         body,
         filePath: objectPath,
@@ -374,10 +429,7 @@ router.delete(
       return;
     }
     const messageId = Number(req.params.messageId);
-    const scope =
-      group.departmentId === null
-        ? isNull(chatMessagesTable.departmentId)
-        : eq(chatMessagesTable.departmentId, group.departmentId);
+    const scope = groupMessageScope(group);
     const [msg] = await db
       .select({ id: chatMessagesTable.id, userId: chatMessagesTable.userId })
       .from(chatMessagesTable)
