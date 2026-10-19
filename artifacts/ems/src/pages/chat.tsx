@@ -1063,7 +1063,7 @@ function GroupChat({
             Recording... tap the stop button to send.
           </div>
         )}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-end gap-1.5 sm:items-center sm:gap-2">
           <input
             ref={fileInputRef}
             type="file"
@@ -1156,7 +1156,7 @@ function GroupChat({
               }
             }}
             placeholder={isUploading ? "Uploading file..." : "Type a message..."}
-            className="flex-1 min-w-0 w-full min-h-11 sm:min-h-9 max-h-44 resize-none overflow-y-hidden py-2"
+            className="flex-1 min-w-0 w-full min-h-11 sm:min-h-9 max-h-44 resize-none overflow-y-hidden rounded-[1.5rem] bg-background px-4 py-2.5 sm:rounded-md sm:px-3 sm:py-2"
           />
           <Button
             type="button"
@@ -1173,10 +1173,11 @@ function GroupChat({
           <Button
             type="button"
             size="icon"
-            className="shrink-0"
+            className="h-11 w-11 shrink-0 rounded-full bg-[#25D366] p-0 text-white hover:bg-[#20bd5a] sm:h-10 sm:w-10 sm:rounded-md sm:bg-primary sm:text-primary-foreground sm:hover:bg-primary/90"
             onClick={handleSend}
             disabled={sendMessage.isPending || sendPrivateMessage.isPending || isUploading || isRecording || (!text.trim() && !attachment)}
             title="Send"
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
           </Button>
