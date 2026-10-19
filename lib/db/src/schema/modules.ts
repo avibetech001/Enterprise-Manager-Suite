@@ -11,6 +11,7 @@ import {
 import { companiesTable } from "./companies";
 import { departmentsTable } from "./departments";
 import { usersTable } from "./users";
+import { chatTeamsTable } from "./chat";
 
 // ---------------------------------------------------------------------------
 // Attendance
@@ -381,6 +382,10 @@ export const workReportsTable = pgTable("work_reports", {
   departmentId: integer("department_id").references(() => departmentsTable.id, {
     onDelete: "set null",
   }),
+  teamId: integer("team_id").references(() => chatTeamsTable.id, {
+    onDelete: "set null",
+  }),
+  teamName: text("team_name"),
   period: text("period").notNull(),
   // The day (daily), week start (weekly), or month start (monthly) covered.
   reportDate: date("report_date").notNull(),

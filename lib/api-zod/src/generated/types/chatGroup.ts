@@ -11,4 +11,8 @@ export interface ChatGroup {
   id: string;
   name: string;
   kind: ChatGroupKind;
+  /** @nullable */
+  teamLeadUserId: number | null;
+  /** @nullable */
+  teamLeadName: string | null;
 }

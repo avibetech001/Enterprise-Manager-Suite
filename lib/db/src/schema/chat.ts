@@ -31,6 +31,53 @@ export const chatMessagesTable = pgTable("chat_messages", {
 
 export type ChatMessageRow = typeof chatMessagesTable.$inferSelect;
 
+export const chatTeamsTable = pgTable(
+  "chat_teams",
+  {
+    id: serial("id").primaryKey(),
+    companyId: integer("company_id")
+      .notNull()
+      .references(() => companiesTable.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    teamLeadUserId: integer("team_lead_user_id").references(
+      () => usersTable.id,
+      { onDelete: "set null" },
+    ),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("chat_teams_company_name_unique").on(
+      table.companyId,
+      table.name,
+    ),
+  ],
+);
+
+export const chatTeamMembersTable = pgTable(
+  "chat_team_members",
+  {
+    id: serial("id").primaryKey(),
+    teamId: integer("team_id")
+      .notNull()
+      .references(() => chatTeamsTable.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("chat_team_members_team_user_unique").on(
+      table.teamId,
+      table.userId,
+    ),
+  ],
+);
+
 export const userPresenceTable = pgTable("user_presence", {
   userId: integer("user_id")
     .primaryKey()

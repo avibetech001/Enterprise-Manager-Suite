@@ -281,7 +281,10 @@ export default function AttendancePage() {
   const { data: codeData, isLoading: codeLoading } = useGetAttendanceCode();
   const params = { date };
   const { data, isLoading: recordsLoading } = useListAttendanceRecords(params, {
-    query: { queryKey: getListAttendanceRecordsQueryKey(params) },
+    query: {
+      queryKey: getListAttendanceRecordsQueryKey(params),
+      refetchInterval: 60_000,
+    },
   });
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -442,7 +445,9 @@ export default function AttendancePage() {
               <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
                   <CardTitle>Attendance Records</CardTitle>
-                  <CardDescription>Check-ins for the selected date.</CardDescription>
+                  <CardDescription>
+                    Check-ins and completed-workday absences for the selected date.
+                  </CardDescription>
                 </div>
                 <div className="flex flex-col sm:flex-row sm:items-end gap-3">
                   <div className="space-y-1">
@@ -501,8 +506,9 @@ export default function AttendancePage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {records.length > 0 ? (
-                      records.map((r) => (
+                    {records.length > 0 || absent.length > 0 ? (
+                      <>
+                        {records.map((r) => (
                         <TableRow key={r.id}>
                           <TableCell className="font-medium">
                             {r.employeeName}
@@ -518,11 +524,36 @@ export default function AttendancePage() {
                             {formatDistance(r.checkInDistanceM)}
                           </TableCell>
                         </TableRow>
-                      ))
+                        ))}
+                        {absent.map((employee) => (
+                          <TableRow key={`absent-${employee.userId}`}>
+                            <TableCell className="font-medium">
+                              {employee.employeeName}
+                              {employee.employeeCode && (
+                                <span className="text-muted-foreground font-mono text-xs ml-2">
+                                  {employee.employeeCode}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>—</TableCell>
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className="bg-red-50 text-red-700 border-red-200"
+                              >
+                                Absent
+                              </Badge>
+                            </TableCell>
+                            <TableCell>—</TableCell>
+                          </TableRow>
+                        ))}
+                      </>
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          No attendance records for this date.
+                          No attendance or absence records for this date.
                         </TableCell>
                       </TableRow>
                     )}
@@ -532,28 +563,6 @@ export default function AttendancePage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Absent</CardTitle>
-              <CardDescription>Employees with no check-in on the selected date.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {recordsLoading ? (
-                <Skeleton className="h-10 w-full" />
-              ) : absent.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Everyone has checked in.</p>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {absent.map((a) => (
-                    <Badge key={a.userId} variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                      {a.employeeName}
-                      {a.employeeCode ? ` (${a.employeeCode})` : ""}
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
     </div>

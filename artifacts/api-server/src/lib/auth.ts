@@ -121,11 +121,19 @@ export async function attachCurrentUser(
     .from(usersTable)
     .where(eq(usersTable.id, userId));
 
-  if (user && user.status === "active") {
+  if (user && user.status === "active" && !user.archived) {
     req.currentUser = user;
+    next();
+    return;
   }
 
-  next();
+  req.session.destroy((error) => {
+    if (error) {
+      next(error);
+      return;
+    }
+    next();
+  });
 }
 
 export function requireAuth(

@@ -5,10 +5,13 @@ import {
   usersTable,
   companiesTable,
   departmentsTable,
+  chatTeamMembersTable,
+  chatTeamsTable,
   employeeProfilesTable,
   emergencyContactsTable,
   employmentInfoTable,
   notificationsTable,
+  userPresenceTable,
 } from "@workspace/db";
 import {
   ListEmployeesResponse,
@@ -792,6 +795,16 @@ router.post(
         .update(departmentsTable)
         .set({ teamLeadUserId: null })
         .where(eq(departmentsTable.teamLeadUserId, user.id));
+      await tx
+        .delete(chatTeamMembersTable)
+        .where(eq(chatTeamMembersTable.userId, user.id));
+      await tx
+        .update(chatTeamsTable)
+        .set({ teamLeadUserId: null })
+        .where(eq(chatTeamsTable.teamLeadUserId, user.id));
+      await tx
+        .delete(userPresenceTable)
+        .where(eq(userPresenceTable.userId, user.id));
       return archivedUser;
     });
     res.json(ArchiveEmployeeResponse.parse(await loadFullEmployee(updated)));

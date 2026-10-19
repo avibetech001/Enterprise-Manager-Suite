@@ -4,6 +4,8 @@ import {
   db,
   chatMessagesTable,
   chatMessageReadReceiptsTable,
+  chatTeamsTable,
+  chatTeamMembersTable,
   chatConversationsTable,
   chatConversationParticipantsTable,
   directChatMessagesTable,
@@ -22,12 +24,18 @@ import {
   ListPrivateChatContactsResponseItem as PrivateEmployee,
   ListPrivateConversationsResponseItem as PrivateConversation,
   CreatePrivateConversationBody,
+  ListTeamChatEmployeesResponse,
+  ListManagedChatTeamsResponseItem,
+  CreateManagedChatTeamBody,
+  CreateManagedChatTeamResponse,
+  UpdateManagedChatTeamBody,
+  UpdateManagedChatTeamResponse,
 } from "@workspace/api-zod";
 import {
   DeleteChatMessageResponse,
 } from "@workspace/api-zod";
 import { alias } from "drizzle-orm/pg-core";
-import { requireAuth } from "../lib/auth";
+import { requireAuth, requireManagementPermission } from "../lib/auth";
 import {
   canAccessCreativeTeam,
   canAccessPrivateConversation,
@@ -47,6 +55,108 @@ const router: IRouter = Router();
 
 type CurrentUser = NonNullable<Request["currentUser"]>;
 const ONLINE_WINDOW_MS = 90_000;
+const managedTeamLead = alias(usersTable, "managed_team_lead");
+
+function canManageTeamChats(user: CurrentUser): boolean {
+  return (
+    user.role === "super_admin" ||
+    (user.role === "hr" && user.permissions.includes("manage_departments"))
+  );
+}
+
+async function managedTeamResponse(teamId: number, companyId: number) {
+  const [team] = await db
+    .select({
+      id: chatTeamsTable.id,
+      name: chatTeamsTable.name,
+      description: chatTeamsTable.description,
+      teamLeadUserId: chatTeamsTable.teamLeadUserId,
+      teamLeadName: managedTeamLead.fullName,
+      createdAt: chatTeamsTable.createdAt,
+    })
+    .from(chatTeamsTable)
+    .leftJoin(
+      managedTeamLead,
+      eq(managedTeamLead.id, chatTeamsTable.teamLeadUserId),
+    )
+    .where(
+      and(
+        eq(chatTeamsTable.id, teamId),
+        eq(chatTeamsTable.companyId, companyId),
+      ),
+    );
+  if (!team) return null;
+  const members = await db
+    .select({ userId: chatTeamMembersTable.userId })
+    .from(chatTeamMembersTable)
+    .innerJoin(usersTable, eq(usersTable.id, chatTeamMembersTable.userId))
+    .where(
+      and(
+        eq(chatTeamMembersTable.teamId, teamId),
+        eq(usersTable.companyId, companyId),
+        eq(usersTable.role, "employee"),
+        eq(usersTable.status, "active"),
+        eq(usersTable.archived, false),
+      ),
+    );
+  return ListManagedChatTeamsResponseItem.parse({
+    ...team,
+    teamLeadUserId: team.teamLeadUserId,
+    teamLeadName: team.teamLeadName,
+    memberUserIds: members.map((member) => member.userId),
+    createdAt: team.createdAt.toISOString(),
+  });
+}
+
+async function validateManagedTeamMembers(
+  companyId: number,
+  rawUserIds: number[],
+  teamLeadUserId: number,
+): Promise<number[] | null> {
+  const memberUserIds = [...new Set(rawUserIds)];
+  if (memberUserIds.length === 0 || !memberUserIds.includes(teamLeadUserId)) {
+    return null;
+  }
+  const activeEmployees = await db
+    .select({ id: usersTable.id })
+    .from(usersTable)
+    .where(
+      and(
+        eq(usersTable.companyId, companyId),
+        eq(usersTable.role, "employee"),
+        eq(usersTable.status, "active"),
+        eq(usersTable.archived, false),
+        inArray(usersTable.id, memberUserIds),
+      ),
+    );
+  if (activeEmployees.length !== memberUserIds.length) return null;
+  return memberUserIds;
+}
+
+router.get(
+  "/chat/team-members",
+  requireAuth,
+  requireManagementPermission("manage_departments"),
+  async (req: Request, res: Response): Promise<void> => {
+    const employees = await db
+      .select({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        employeeCode: usersTable.employeeCode,
+      })
+      .from(usersTable)
+      .where(
+        and(
+          eq(usersTable.companyId, req.currentUser!.companyId),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      )
+      .orderBy(asc(usersTable.fullName));
+    res.json(ListTeamChatEmployeesResponse.parse(employees));
+  },
+);
 
 async function presenceByUserId(
   companyId: number,
@@ -111,7 +221,11 @@ async function recordGroupMessageReads(
       eq(usersTable.id, chatMessageReadReceiptsTable.userId),
     )
     .where(
-      inArray(chatMessageReadReceiptsTable.messageId, authoredMessageIds),
+      and(
+        inArray(chatMessageReadReceiptsTable.messageId, authoredMessageIds),
+        eq(usersTable.status, "active"),
+        eq(usersTable.archived, false),
+      ),
     );
   const names = new Map<number, string[]>();
   for (const receipt of receipts) {
@@ -155,7 +269,11 @@ async function recordPrivateMessageReads(
       eq(usersTable.id, directChatMessageReadReceiptsTable.userId),
     )
     .where(
-      inArray(directChatMessageReadReceiptsTable.messageId, authoredMessageIds),
+      and(
+        inArray(directChatMessageReadReceiptsTable.messageId, authoredMessageIds),
+        eq(usersTable.status, "active"),
+        eq(usersTable.archived, false),
+      ),
     );
   const names = new Map<number, string[]>();
   for (const receipt of receipts) {
@@ -202,11 +320,236 @@ router.post(
   },
 );
 
+router.get(
+  "/chat/teams",
+  requireAuth,
+  requireManagementPermission("manage_departments"),
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const teams = await db
+      .select({ id: chatTeamsTable.id })
+      .from(chatTeamsTable)
+      .where(eq(chatTeamsTable.companyId, me.companyId))
+      .orderBy(asc(chatTeamsTable.name));
+    const results = await Promise.all(
+      teams.map((team) => managedTeamResponse(team.id, me.companyId)),
+    );
+    res.json(results.filter((team) => team !== null));
+  },
+);
+
+router.post(
+  "/chat/teams",
+  requireAuth,
+  requireManagementPermission("manage_departments"),
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const parsed = CreateManagedChatTeamBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Enter a team name, members, and lead." });
+      return;
+    }
+    const name = parsed.data.name.trim();
+    if (!name) {
+      res.status(400).json({ error: "Team name is required." });
+      return;
+    }
+    const memberUserIds = await validateManagedTeamMembers(
+      me.companyId,
+      parsed.data.memberUserIds,
+      parsed.data.teamLeadUserId,
+    );
+    if (!memberUserIds) {
+      res.status(400).json({
+        error: "The Team Lead must be an active employee included in the team.",
+      });
+      return;
+    }
+    const [existing] = await db
+      .select({ id: chatTeamsTable.id })
+      .from(chatTeamsTable)
+      .where(
+        and(
+          eq(chatTeamsTable.companyId, me.companyId),
+          eq(chatTeamsTable.name, name),
+        ),
+      );
+    if (existing) {
+      res.status(409).json({ error: "A team chat with that name already exists." });
+      return;
+    }
+    const teamId = await db.transaction(async (tx) => {
+      const [team] = await tx
+        .insert(chatTeamsTable)
+        .values({
+          companyId: me.companyId,
+          name,
+          description: parsed.data.description?.trim() ?? "",
+          teamLeadUserId: parsed.data.teamLeadUserId,
+        })
+        .returning({ id: chatTeamsTable.id });
+      if (!team) return null;
+      await tx.insert(chatTeamMembersTable).values(
+        memberUserIds.map((userId) => ({ teamId: team.id, userId })),
+      );
+      return team.id;
+    });
+    if (teamId === null) {
+      res.status(500).json({ error: "Could not create the team chat." });
+      return;
+    }
+    const result = await managedTeamResponse(teamId, me.companyId);
+    res.status(201).json(CreateManagedChatTeamResponse.parse(result));
+  },
+);
+
+router.patch(
+  "/chat/teams/:teamId",
+  requireAuth,
+  requireManagementPermission("manage_departments"),
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const teamId = Number(req.params.teamId);
+    if (!Number.isSafeInteger(teamId) || teamId < 1) {
+      res.status(400).json({ error: "Invalid team ID." });
+      return;
+    }
+    const parsed = UpdateManagedChatTeamBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Enter a team name, members, and lead." });
+      return;
+    }
+    const name = parsed.data.name.trim();
+    if (!name) {
+      res.status(400).json({ error: "Team name is required." });
+      return;
+    }
+    const [existingTeam] = await db
+      .select({ id: chatTeamsTable.id })
+      .from(chatTeamsTable)
+      .where(
+        and(
+          eq(chatTeamsTable.id, teamId),
+          eq(chatTeamsTable.companyId, me.companyId),
+        ),
+      );
+    if (!existingTeam) {
+      res.status(404).json({ error: "Team chat not found." });
+      return;
+    }
+    const memberUserIds = await validateManagedTeamMembers(
+      me.companyId,
+      parsed.data.memberUserIds,
+      parsed.data.teamLeadUserId,
+    );
+    if (!memberUserIds) {
+      res.status(400).json({
+        error: "The Team Lead must be an active employee included in the team.",
+      });
+      return;
+    }
+    const [duplicate] = await db
+      .select({ id: chatTeamsTable.id })
+      .from(chatTeamsTable)
+      .where(
+        and(
+          eq(chatTeamsTable.companyId, me.companyId),
+          eq(chatTeamsTable.name, name),
+        ),
+      );
+    if (duplicate && duplicate.id !== teamId) {
+      res.status(409).json({ error: "A team chat with that name already exists." });
+      return;
+    }
+    await db.transaction(async (tx) => {
+      await tx
+        .update(chatTeamsTable)
+        .set({
+          name,
+          description: parsed.data.description?.trim() ?? "",
+          teamLeadUserId: parsed.data.teamLeadUserId,
+        })
+        .where(
+          and(
+            eq(chatTeamsTable.id, teamId),
+            eq(chatTeamsTable.companyId, me.companyId),
+          ),
+        );
+      await tx
+        .delete(chatTeamMembersTable)
+        .where(eq(chatTeamMembersTable.teamId, teamId));
+      await tx.insert(chatTeamMembersTable).values(
+        memberUserIds.map((userId) => ({ teamId, userId })),
+      );
+    });
+    const result = await managedTeamResponse(teamId, me.companyId);
+    if (!result) {
+      res.status(404).json({ error: "Team chat not found." });
+      return;
+    }
+    res.json(UpdateManagedChatTeamResponse.parse(result));
+  },
+);
+
+router.delete(
+  "/chat/teams/:teamId",
+  requireAuth,
+  requireManagementPermission("manage_departments"),
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const teamId = Number(req.params.teamId);
+    if (!Number.isSafeInteger(teamId) || teamId < 1) {
+      res.status(400).json({ error: "Invalid team ID." });
+      return;
+    }
+    const [team] = await db
+      .select({ id: chatTeamsTable.id })
+      .from(chatTeamsTable)
+      .where(
+        and(
+          eq(chatTeamsTable.id, teamId),
+          eq(chatTeamsTable.companyId, me.companyId),
+        ),
+      );
+    if (!team) {
+      res.status(404).json({ error: "Team chat not found." });
+      return;
+    }
+    const teamKey = `managed-team:${teamId}`;
+    const deleted = await db.transaction(async (tx) => {
+      await tx
+        .delete(chatMessagesTable)
+        .where(
+          and(
+            eq(chatMessagesTable.companyId, me.companyId),
+            eq(chatMessagesTable.teamKey, teamKey),
+          ),
+        );
+      return tx
+        .delete(chatTeamsTable)
+        .where(
+          and(
+            eq(chatTeamsTable.id, teamId),
+            eq(chatTeamsTable.companyId, me.companyId),
+          ),
+        )
+        .returning({ id: chatTeamsTable.id });
+    });
+    if (deleted.length === 0) {
+      res.status(404).json({ error: "Team chat not found." });
+      return;
+    }
+    res.sendStatus(204);
+  },
+);
+
 interface ResolvedGroup {
   id: string;
   name: string;
   departmentId: number | null;
   teamKey: string | null;
+  managedTeamId?: number;
+  memberUserIds?: number[];
 }
 
 async function creativeTeamMemberIds(companyId: number): Promise<number[]> {
@@ -306,6 +649,47 @@ async function resolveGroup(
       teamKey: GROWTH_TEAM_KEY,
     };
   }
+  const managedTeamMatch = /^custom-team-(\d+)$/.exec(groupId);
+  if (managedTeamMatch) {
+    const managedTeamId = Number(managedTeamMatch[1]);
+    const [team] = await db
+      .select({
+        id: chatTeamsTable.id,
+        name: chatTeamsTable.name,
+        teamLeadUserId: chatTeamsTable.teamLeadUserId,
+      })
+      .from(chatTeamsTable)
+      .where(
+        and(
+          eq(chatTeamsTable.id, managedTeamId),
+          eq(chatTeamsTable.companyId, me.companyId),
+        ),
+      );
+    if (!team) return null;
+    const memberRows = await db
+      .select({ userId: chatTeamMembersTable.userId })
+      .from(chatTeamMembersTable)
+      .innerJoin(usersTable, eq(usersTable.id, chatTeamMembersTable.userId))
+      .where(
+        and(
+          eq(chatTeamMembersTable.teamId, team.id),
+          eq(usersTable.companyId, me.companyId),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      );
+    const memberUserIds = memberRows.map((row) => row.userId);
+    if (!memberUserIds.includes(me.id) && !canManageTeamChats(me)) return null;
+    return {
+      id: groupId,
+      name: team.name,
+      departmentId: null,
+      teamKey: `managed-team:${team.id}`,
+      managedTeamId: team.id,
+      memberUserIds,
+    };
+  }
   const match = /^dept-(\d+)$/.exec(groupId);
   if (!match) return null;
   const deptId = Number(match[1]);
@@ -336,7 +720,15 @@ router.get(
       id: string;
       name: string;
       kind: "company" | "department" | "team";
-    }> = [{ id: "company", name: "General", kind: "company" }];
+      teamLeadUserId: number | null;
+      teamLeadName: string | null;
+    }> = [{
+      id: "company",
+      name: "General",
+      kind: "company",
+      teamLeadUserId: null,
+      teamLeadName: null,
+    }];
     const myDeptId = await departmentIdOf(me.id);
     const departments = await db
       .select()
@@ -345,7 +737,13 @@ router.get(
       .orderBy(asc(departmentsTable.name));
     for (const d of departments) {
       if (me.role === "super_admin" || myDeptId === d.id) {
-        groups.push({ id: `dept-${d.id}`, name: d.name, kind: "department" });
+        groups.push({
+          id: `dept-${d.id}`,
+          name: d.name,
+          kind: "department",
+          teamLeadUserId: null,
+          teamLeadName: null,
+        });
       }
     }
     if (await isCreativeTeamMember(me)) {
@@ -353,13 +751,50 @@ router.get(
         id: CREATIVE_TEAM_GROUP_ID,
         name: "Brand, Social & Creative Team",
         kind: "team",
+        teamLeadUserId: null,
+        teamLeadName: null,
       });
     }
     if (
       me.role === "super_admin" ||
       (await growthTeamMemberIds(me.companyId)).includes(me.id)
     ) {
-      groups.push({ id: GROWTH_TEAM_GROUP_ID, name: "Growth Team", kind: "team" });
+      groups.push({
+        id: GROWTH_TEAM_GROUP_ID,
+        name: "Growth Team",
+        kind: "team",
+        teamLeadUserId: null,
+        teamLeadName: null,
+      });
+    }
+    const managedTeams = await db
+      .select({
+        id: chatTeamsTable.id,
+        name: chatTeamsTable.name,
+        teamLeadUserId: chatTeamsTable.teamLeadUserId,
+        teamLeadName: managedTeamLead.fullName,
+      })
+      .from(chatTeamsTable)
+      .leftJoin(
+        managedTeamLead,
+        eq(managedTeamLead.id, chatTeamsTable.teamLeadUserId),
+      )
+      .where(eq(chatTeamsTable.companyId, me.companyId))
+      .orderBy(asc(chatTeamsTable.name));
+    const myTeamRows = await db
+      .select({ teamId: chatTeamMembersTable.teamId })
+      .from(chatTeamMembersTable)
+      .where(eq(chatTeamMembersTable.userId, me.id));
+    const myTeamIds = new Set(myTeamRows.map((row) => row.teamId));
+    for (const team of managedTeams) {
+      if (!canManageTeamChats(me) && !myTeamIds.has(team.id)) continue;
+      groups.push({
+        id: `custom-team-${team.id}`,
+        name: team.name,
+        kind: "team",
+        teamLeadUserId: team.teamLeadUserId,
+        teamLeadName: team.teamLeadName,
+      });
     }
     res.json(groups.map((g) => ChatGroup.parse(g)));
   },
@@ -387,9 +822,17 @@ router.get(
         employmentInfoTable,
         eq(employmentInfoTable.userId, usersTable.id),
       )
-      .where(eq(usersTable.companyId, me.companyId))
+      .where(
+        and(
+          eq(usersTable.companyId, me.companyId),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      )
       .orderBy(asc(usersTable.fullName));
-    const teamMemberIds = group.teamKey
+    const teamMemberIds = group.managedTeamId
+      ? new Set(group.memberUserIds ?? [])
+      : group.teamKey
       ? new Set(
           group.teamKey === CREATIVE_TEAM_KEY
             ? await creativeTeamMemberIds(me.companyId)
@@ -549,8 +992,16 @@ router.post(
         employmentInfoTable,
         eq(employmentInfoTable.userId, usersTable.id),
       )
-      .where(eq(usersTable.companyId, me.companyId));
-    const teamIds = group.teamKey
+      .where(
+        and(
+          eq(usersTable.companyId, me.companyId),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      );
+    const teamIds = group.managedTeamId
+      ? new Set(group.memberUserIds ?? [])
+      : group.teamKey
       ? new Set(
           group.teamKey === CREATIVE_TEAM_KEY
             ? await creativeTeamMemberIds(me.companyId)

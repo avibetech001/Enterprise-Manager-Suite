@@ -80,6 +80,8 @@ import type {
   ListPostsParams,
   ListQueriesParams,
   LoginInput,
+  ManagedChatTeam,
+  ManagedChatTeamInput,
   ManagementUser,
   ManagementUserInput,
   ManagementUserUpdate,
@@ -105,6 +107,7 @@ import type {
   ReviewInput,
   SetupInput,
   SetupStatus,
+  TeamChatEmployee,
   UploadUrlRequest,
   UploadUrlResponse,
   WorkReport,
@@ -7602,6 +7605,374 @@ export const useHeartbeatChatPresence = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getHeartbeatChatPresenceMutationOptions(options));
+    }
+
+export const getListTeamChatEmployeesUrl = () => {
+
+
+
+
+  return `/api/chat/team-members`
+}
+
+/**
+ * @summary List active employees available for team chats
+ */
+export const listTeamChatEmployees = async ( options?: RequestInit): Promise<TeamChatEmployee[]> => {
+
+  return customFetch<TeamChatEmployee[]>(getListTeamChatEmployeesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTeamChatEmployeesQueryKey = () => {
+    return [
+    `/api/chat/team-members`
+    ] as const;
+    }
+
+
+export const getListTeamChatEmployeesQueryOptions = <TData = Awaited<ReturnType<typeof listTeamChatEmployees>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamChatEmployees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTeamChatEmployeesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTeamChatEmployees>>> = ({ signal }) => listTeamChatEmployees({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTeamChatEmployees>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTeamChatEmployeesQueryResult = NonNullable<Awaited<ReturnType<typeof listTeamChatEmployees>>>
+export type ListTeamChatEmployeesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List active employees available for team chats
+ */
+
+export function useListTeamChatEmployees<TData = Awaited<ReturnType<typeof listTeamChatEmployees>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTeamChatEmployees>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTeamChatEmployeesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListManagedChatTeamsUrl = () => {
+
+
+
+
+  return `/api/chat/teams`
+}
+
+/**
+ * @summary List managed team chats for management
+ */
+export const listManagedChatTeams = async ( options?: RequestInit): Promise<ManagedChatTeam[]> => {
+
+  return customFetch<ManagedChatTeam[]>(getListManagedChatTeamsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListManagedChatTeamsQueryKey = () => {
+    return [
+    `/api/chat/teams`
+    ] as const;
+    }
+
+
+export const getListManagedChatTeamsQueryOptions = <TData = Awaited<ReturnType<typeof listManagedChatTeams>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listManagedChatTeams>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListManagedChatTeamsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listManagedChatTeams>>> = ({ signal }) => listManagedChatTeams({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listManagedChatTeams>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListManagedChatTeamsQueryResult = NonNullable<Awaited<ReturnType<typeof listManagedChatTeams>>>
+export type ListManagedChatTeamsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List managed team chats for management
+ */
+
+export function useListManagedChatTeams<TData = Awaited<ReturnType<typeof listManagedChatTeams>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listManagedChatTeams>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListManagedChatTeamsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateManagedChatTeamUrl = () => {
+
+
+
+
+  return `/api/chat/teams`
+}
+
+/**
+ * @summary Create a team chat and assign its members and lead
+ */
+export const createManagedChatTeam = async (managedChatTeamInput: ManagedChatTeamInput, options?: RequestInit): Promise<ManagedChatTeam> => {
+
+  return customFetch<ManagedChatTeam>(getCreateManagedChatTeamUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(managedChatTeamInput)
+  }
+);}
+
+
+
+
+
+export const getCreateManagedChatTeamMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManagedChatTeam>>, TError,{data: BodyType<ManagedChatTeamInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createManagedChatTeam>>, TError,{data: BodyType<ManagedChatTeamInput>}, TContext> => {
+
+const mutationKey = ['createManagedChatTeam'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createManagedChatTeam>>, {data: BodyType<ManagedChatTeamInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createManagedChatTeam(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateManagedChatTeamMutationResult = NonNullable<Awaited<ReturnType<typeof createManagedChatTeam>>>
+    export type CreateManagedChatTeamMutationBody = BodyType<ManagedChatTeamInput>
+    export type CreateManagedChatTeamMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a team chat and assign its members and lead
+ */
+export const useCreateManagedChatTeam = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createManagedChatTeam>>, TError,{data: BodyType<ManagedChatTeamInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createManagedChatTeam>>,
+        TError,
+        {data: BodyType<ManagedChatTeamInput>},
+        TContext
+      > => {
+      return useMutation(getCreateManagedChatTeamMutationOptions(options));
+    }
+
+export const getUpdateManagedChatTeamUrl = (teamId: number,) => {
+
+
+
+
+  return `/api/chat/teams/${teamId}`
+}
+
+/**
+ * @summary Update a team's name, members, or team lead
+ */
+export const updateManagedChatTeam = async (teamId: number,
+    managedChatTeamInput: ManagedChatTeamInput, options?: RequestInit): Promise<ManagedChatTeam> => {
+
+  return customFetch<ManagedChatTeam>(getUpdateManagedChatTeamUrl(teamId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(managedChatTeamInput)
+  }
+);}
+
+
+
+
+
+export const getUpdateManagedChatTeamMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateManagedChatTeam>>, TError,{teamId: number;data: BodyType<ManagedChatTeamInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateManagedChatTeam>>, TError,{teamId: number;data: BodyType<ManagedChatTeamInput>}, TContext> => {
+
+const mutationKey = ['updateManagedChatTeam'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateManagedChatTeam>>, {teamId: number;data: BodyType<ManagedChatTeamInput>}> = (props) => {
+          const {teamId,data} = props ?? {};
+
+          return  updateManagedChatTeam(teamId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateManagedChatTeamMutationResult = NonNullable<Awaited<ReturnType<typeof updateManagedChatTeam>>>
+    export type UpdateManagedChatTeamMutationBody = BodyType<ManagedChatTeamInput>
+    export type UpdateManagedChatTeamMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update a team's name, members, or team lead
+ */
+export const useUpdateManagedChatTeam = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateManagedChatTeam>>, TError,{teamId: number;data: BodyType<ManagedChatTeamInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateManagedChatTeam>>,
+        TError,
+        {teamId: number;data: BodyType<ManagedChatTeamInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateManagedChatTeamMutationOptions(options));
+    }
+
+export const getDeleteManagedChatTeamUrl = (teamId: number,) => {
+
+
+
+
+  return `/api/chat/teams/${teamId}`
+}
+
+/**
+ * @summary Delete a team chat and its messages
+ */
+export const deleteManagedChatTeam = async (teamId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteManagedChatTeamUrl(teamId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteManagedChatTeamMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteManagedChatTeam>>, TError,{teamId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteManagedChatTeam>>, TError,{teamId: number}, TContext> => {
+
+const mutationKey = ['deleteManagedChatTeam'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteManagedChatTeam>>, {teamId: number}> = (props) => {
+          const {teamId} = props ?? {};
+
+          return  deleteManagedChatTeam(teamId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteManagedChatTeamMutationResult = NonNullable<Awaited<ReturnType<typeof deleteManagedChatTeam>>>
+
+    export type DeleteManagedChatTeamMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete a team chat and its messages
+ */
+export const useDeleteManagedChatTeam = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteManagedChatTeam>>, TError,{teamId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteManagedChatTeam>>,
+        TError,
+        {teamId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteManagedChatTeamMutationOptions(options));
     }
 
 export const getListChatGroupsUrl = () => {

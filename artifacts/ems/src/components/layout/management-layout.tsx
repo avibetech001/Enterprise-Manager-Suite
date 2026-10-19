@@ -72,6 +72,20 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
 
+                  {(hasPerm("manage_departments") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={location === "/team-chat-management"}
+                        asChild
+                      >
+                        <Link href="/team-chat-management">
+                          <Users className="h-4 w-4" />
+                          <span>Manage Team Chats</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
                   {(hasPerm("manage_employees") || isSuperAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton isActive={location === "/employees"} asChild>

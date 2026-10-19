@@ -49,6 +49,7 @@ import ManagementKnowledgeBasePage from '@/pages/management/knowledge-base';
 import EmployeeDepartmentsPage from '@/pages/employee/departments';
 import SettingsCompanyPage from '@/pages/management/settings-company';
 import TeamChatPage from '@/pages/chat';
+import TeamChatManagementPage from '@/pages/management/team-chat-management';
 import ManagementAppraisalsPage from '@/pages/management/appraisals';
 import MyAppraisalsPage from '@/pages/employee/appraisals';
 import { EmployeeClientsPage, ManagementClientsPage } from '@/pages/client-workspace';
@@ -177,6 +178,13 @@ function Router() {
         <ManagementGuard>
           <ManagementLayout>
             <DepartmentDetailPage />
+          </ManagementLayout>
+        </ManagementGuard>
+      </Route>
+      <Route path="/team-chat-management">
+        <ManagementGuard>
+          <ManagementLayout>
+            <TeamChatManagementPage />
           </ManagementLayout>
         </ManagementGuard>
       </Route>

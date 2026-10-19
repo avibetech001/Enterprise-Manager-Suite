@@ -2360,6 +2360,114 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /chat/team-members:
+    get:
+      operationId: listTeamChatEmployees
+      tags: [chat]
+      summary: List active employees available for team chats
+      responses:
+        "200":
+          description: Active employees in the current company
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamChatEmployee"
+        "403":
+          description: Not permitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chat/teams:
+    get:
+      operationId: listManagedChatTeams
+      tags: [chat]
+      summary: List managed team chats for management
+      responses:
+        "200":
+          description: Managed team chats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ManagedChatTeam"
+    post:
+      operationId: createManagedChatTeam
+      tags: [chat]
+      summary: Create a team chat and assign its members and lead
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManagedChatTeamInput"
+      responses:
+        "201":
+          description: Created team chat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagedChatTeam"
+        "400":
+          description: Invalid members or team lead
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /chat/teams/{teamId}:
+    patch:
+      operationId: updateManagedChatTeam
+      tags: [chat]
+      summary: Update a team's name, members, or team lead
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManagedChatTeamInput"
+      responses:
+        "200":
+          description: Updated team chat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagedChatTeam"
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: deleteManagedChatTeam
+      tags: [chat]
+      summary: Delete a team chat and its messages
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Team chat deleted
+        "404":
+          description: Team not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /chat/groups:
     get:
       operationId: listChatGroups
@@ -2783,7 +2891,7 @@ components:
 
     ChatGroup:
       type: object
-      required: [id, name, kind]
+      required: [id, name, kind, teamLeadUserId, teamLeadName]
       properties:
         id:
           type: string
@@ -2792,6 +2900,64 @@ components:
         kind:
           type: string
           enum: [company, department, team]
+        teamLeadUserId:
+          type: ["integer", "null"]
+        teamLeadName:
+          type: ["string", "null"]
+
+    TeamChatEmployee:
+      type: object
+      required: [id, fullName, employeeCode]
+      properties:
+        id:
+          type: integer
+        fullName:
+          type: string
+        employeeCode:
+          type: ["string", "null"]
+
+    ManagedChatTeam:
+      type: object
+      required: [id, name, description, teamLeadUserId, teamLeadName, memberUserIds, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        teamLeadUserId:
+          type: ["integer", "null"]
+        teamLeadName:
+          type: ["string", "null"]
+        memberUserIds:
+          type: array
+          items:
+            type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ManagedChatTeamInput:
+      type: object
+      required: [name, memberUserIds, teamLeadUserId]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        memberUserIds:
+          type: array
+          minItems: 1
+          items:
+            type: integer
+            minimum: 1
+        teamLeadUserId:
+          type: integer
+          minimum: 1
 
     ChatMember:
       type: object
@@ -4457,10 +4623,13 @@ components:
         content:
           type: string
           minLength: 1
+        teamId:
+          type: integer
+          minimum: 1
 
     WorkReport:
       type: object
-      required: [id, companyId, userId, departmentId, period, reportDate, content, createdAt]
+      required: [id, companyId, userId, departmentId, teamId, teamName, period, reportDate, content, createdAt]
       properties:
         id:
           type: integer
@@ -4470,6 +4639,10 @@ components:
           type: integer
         departmentId:
           type: ["integer", "null"]
+        teamId:
+          type: ["integer", "null"]
+        teamName:
+          type: ["string", "null"]
         period:
           type: string
           enum: [daily, weekly, monthly]

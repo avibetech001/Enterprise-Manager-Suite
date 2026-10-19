@@ -4,6 +4,8 @@ import { and, desc, eq, gte, inArray, lte, ne, or, sql } from "drizzle-orm";
 import {
   db,
   chatMessagesTable,
+  chatTeamsTable,
+  chatTeamMembersTable,
   clientMaterialsTable,
   directChatMessagesTable,
   departmentsTable,
@@ -130,42 +132,57 @@ function requireEmployee(
   next();
 }
 
-async function requireTeamLead(
-  req: Request,
-  res: Response,
-  next: NextFunction,
-): Promise<void> {
-  try {
-    const me = req.currentUser!;
-    const [assignment] = await db
-      .select({ departmentId: departmentsTable.id })
-      .from(departmentsTable)
+async function reportTeamAssignment(
+  userId: number,
+  companyId: number,
+  requestedTeamId?: number,
+): Promise<{
+  departmentId: number | null;
+  teamId: number | null;
+  teamName: string | null;
+} | null> {
+  if (requestedTeamId !== undefined) {
+    const [team] = await db
+      .select({ id: chatTeamsTable.id, name: chatTeamsTable.name })
+      .from(chatTeamsTable)
       .innerJoin(
-        employmentInfoTable,
-        eq(employmentInfoTable.departmentId, departmentsTable.id),
+        chatTeamMembersTable,
+        eq(chatTeamMembersTable.teamId, chatTeamsTable.id),
       )
-      .innerJoin(usersTable, eq(usersTable.id, employmentInfoTable.userId))
+      .innerJoin(usersTable, eq(usersTable.id, chatTeamMembersTable.userId))
       .where(
         and(
-          eq(departmentsTable.companyId, me.companyId),
-          eq(departmentsTable.teamLeadUserId, me.id),
-          eq(usersTable.id, me.id),
+          eq(chatTeamsTable.id, requestedTeamId),
+          eq(chatTeamsTable.companyId, companyId),
+          eq(chatTeamsTable.teamLeadUserId, userId),
+          eq(chatTeamMembersTable.userId, userId),
           eq(usersTable.role, "employee"),
           eq(usersTable.status, "active"),
           eq(usersTable.archived, false),
         ),
       );
-    if (!assignment) {
-      res.status(403).json({
-        error: "Only the assigned Team Lead for a department can submit team reports.",
-      });
-      return;
-    }
-    res.locals.teamLeadDepartmentId = assignment.departmentId;
-    next();
-  } catch (error) {
-    next(error);
+    return team
+      ? { departmentId: null, teamId: team.id, teamName: team.name }
+      : null;
   }
+
+  const [department] = await db
+    .select({ id: departmentsTable.id })
+    .from(departmentsTable)
+    .innerJoin(
+      employmentInfoTable,
+      eq(employmentInfoTable.departmentId, departmentsTable.id),
+    )
+    .where(
+      and(
+        eq(departmentsTable.companyId, companyId),
+        eq(departmentsTable.teamLeadUserId, userId),
+        eq(employmentInfoTable.userId, userId),
+      ),
+    );
+  return department
+    ? { departmentId: department.id, teamId: null, teamName: null }
+    : null;
 }
 
 // All attendance day/time decisions use one explicit company timezone so
@@ -481,6 +498,28 @@ const DAY_KEYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
 
 function todaySchedule(schedule: WeeklySchedule): DaySchedule {
   return schedule[DAY_KEYS[tzParts().weekday]];
+}
+
+function companyWeekdayForDate(date: string): number {
+  // Use midday UTC so the calendar date is stable, then ask Intl for the
+  // weekday in the same timezone used by all other attendance decisions.
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone: COMPANY_TZ,
+    weekday: "short",
+  })
+    .format(new Date(`${date}T12:00:00Z`))
+    .toLowerCase()
+    .slice(0, 3);
+  return DAY_KEYS.indexOf(weekday as (typeof DAY_KEYS)[number]);
+}
+
+function timeStringToMinutes(value: string): number | null {
+  const match = /^(\d{2}):(\d{2})$/.exec(value);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours === 24 && minutes === 0) return 24 * 60;
+  return hours <= 23 && minutes <= 59 ? hours * 60 + minutes : null;
 }
 
 const DEFAULT_ATTENDANCE_SETTINGS = {
@@ -914,6 +953,10 @@ router.get(
     const date = typeof req.query.date === "string" ? req.query.date : null;
     const from = typeof req.query.from === "string" ? req.query.from : null;
     const to = typeof req.query.to === "string" ? req.query.to : null;
+    if (date && !isValidDateStr(date)) {
+      res.status(400).json({ error: "Attendance date must be a valid calendar date." });
+      return;
+    }
     if ((from && !to) || (!from && to)) {
       res.status(400).json({ error: "Both from and to dates are required." });
       return;
@@ -955,36 +998,76 @@ router.get(
       .orderBy(desc(attendanceRecordsTable.checkInAt));
     const rows = from && to ? await query : await query.limit(500);
 
-    // When a specific date is requested, list employees with no record that
-    // day as absent.
+    // Mark no-shows absent only after a scheduled workday has ended. Future
+    // dates, days off, holidays, and approved leave are not absences.
     let absent: Array<{
       userId: number;
       employeeName: string;
       employeeCode: string | null;
     }> = [];
-    // Public holidays are non-working days — nobody is "absent" on them.
-    if (date && !(await companyHolidaySet(companyId)).has(date)) {
-      const presentIds = new Set(rows.map((r) => r.record.userId));
-      const employees = await db
-        .select({
-          id: usersTable.id,
-          fullName: usersTable.fullName,
-          employeeCode: usersTable.employeeCode,
-        })
-        .from(usersTable)
-        .where(
-          and(
-            eq(usersTable.companyId, companyId),
-            eq(usersTable.role, "employee"),
-          ),
+    if (date) {
+      const schedule = parseSchedule(
+        (await getAttendanceSettings(companyId)).weeklySchedule,
+      );
+      const day = schedule[DAY_KEYS[companyWeekdayForDate(date)]];
+      const now = tzParts();
+      const shiftEnd = timeStringToMinutes(day.end);
+      const workdayComplete =
+        day.mode !== "off" &&
+        (date < now.date ||
+          (date === now.date &&
+            shiftEnd !== null &&
+            now.minutes >= shiftEnd));
+      const isHoliday = (await companyHolidaySet(companyId)).has(date);
+      if (workdayComplete && !isHoliday) {
+        const presentIds = new Set(rows.map((r) => r.record.userId));
+        const employees = await db
+          .select({
+            id: usersTable.id,
+            fullName: usersTable.fullName,
+            employeeCode: usersTable.employeeCode,
+            employmentStatus: employmentInfoTable.employmentStatus,
+          })
+          .from(usersTable)
+          .leftJoin(
+            employmentInfoTable,
+            eq(employmentInfoTable.userId, usersTable.id),
+          )
+          .where(
+            and(
+              eq(usersTable.companyId, companyId),
+              eq(usersTable.role, "employee"),
+              eq(usersTable.status, "active"),
+              eq(usersTable.archived, false),
+            ),
+          );
+        const approvedLeaveRows = await db
+          .select({ userId: leaveRequestsTable.userId })
+          .from(leaveRequestsTable)
+          .where(
+            and(
+              eq(leaveRequestsTable.companyId, companyId),
+              eq(leaveRequestsTable.status, "approved"),
+              lte(leaveRequestsTable.startDate, date),
+              gte(leaveRequestsTable.endDate, date),
+            ),
+          );
+        const excusedIds = new Set(
+          approvedLeaveRows.map((leave) => leave.userId),
         );
-      absent = employees
-        .filter((e) => !presentIds.has(e.id))
-        .map((e) => ({
-          userId: e.id,
-          employeeName: e.fullName,
-          employeeCode: e.employeeCode,
-        }));
+        absent = employees
+          .filter(
+            (e) =>
+              !presentIds.has(e.id) &&
+              !excusedIds.has(e.id) &&
+              e.employmentStatus !== "terminated",
+          )
+          .map((e) => ({
+            userId: e.id,
+            employeeName: e.fullName,
+            employeeCode: e.employeeCode,
+          }));
+      }
     }
 
     res.json(
@@ -2227,7 +2310,6 @@ router.post(
   "/work-reports/me",
   requireAuth,
   requireEmployee,
-  requireTeamLead,
   async (req, res): Promise<void> => {
     const parsed = CreateWorkReportBody.safeParse(req.body);
     if (!parsed.success) {
@@ -2258,12 +2340,25 @@ router.post(
       endDate = raw;
     }
     const me = req.currentUser!;
+    const assignment = await reportTeamAssignment(
+      me.id,
+      me.companyId,
+      parsed.data.teamId,
+    );
+    if (!assignment) {
+      res.status(403).json({
+        error: "Only an assigned team lead can submit a team report.",
+      });
+      return;
+    }
     const [report] = await db
       .insert(workReportsTable)
       .values({
         companyId: me.companyId,
         userId: me.id,
-        departmentId: res.locals.teamLeadDepartmentId,
+        departmentId: assignment.departmentId,
+        teamId: assignment.teamId,
+        teamName: assignment.teamName,
         period: parsed.data.period,
         reportDate: parsed.data.reportDate,
         endDate,

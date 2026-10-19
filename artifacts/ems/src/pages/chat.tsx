@@ -50,6 +50,8 @@ import {
   CornerDownLeft,
   MessageCircle,
   Download,
+  ExternalLink,
+  Globe2,
 } from "lucide-react";
 
 // Render message text with clickable links.
@@ -60,7 +62,7 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((part, i) => {
         if (i % 2 === 1) {
-          const href = part.startsWith("http") ? part : `https://${part}`;
+          const href = /^https?:\/\//i.test(part) ? part : `https://${part}`;
           return (
             <a
               key={i}
@@ -77,6 +79,47 @@ function Linkify({ text }: { text: string }) {
         return <span key={i}>{part}</span>;
       })}
     </>
+  );
+}
+
+function LinkPreviewCard({ text, mine }: { text: string; mine: boolean }) {
+  const match = text.match(/(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/i)?.[0];
+  const rawUrl = match?.replace(/[),.!?;:]+$/, "");
+  if (!rawUrl) return null;
+
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`);
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+
+  return (
+    <a
+      href={url.toString()}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(event) => event.stopPropagation()}
+      className={`mt-2 block max-w-[340px] rounded-md border px-3 py-2 no-underline transition-colors ${
+        mine
+          ? "border-primary-foreground/25 bg-primary-foreground/10 hover:bg-primary-foreground/15"
+          : "border-border bg-background/70 hover:bg-background"
+      }`}
+      aria-label={`Open link to ${url.hostname}`}
+    >
+      <div className="flex min-w-0 items-center gap-2">
+        <Globe2 className="h-4 w-4 shrink-0 opacity-75" />
+        <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+          {url.hostname}
+        </span>
+        <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
+      </div>
+      {url.pathname !== "/" && (
+        <p className="mt-1 truncate text-xs opacity-75">{url.pathname}</p>
+      )}
+      <p className="mt-1 text-[10px] opacity-70">Open link</p>
+    </a>
   );
 }
 
@@ -107,6 +150,7 @@ export default function TeamChatPage() {
     return Number.isInteger(value) && value > 0 ? value : null;
   });
   const [selectedContactId, setSelectedContactId] = useState("");
+  const [contactPickerOpen, setContactPickerOpen] = useState(false);
 
   // Stay in sync with the URL: opening another chat notification while
   // already on this page must switch to the newly linked group.
@@ -123,6 +167,9 @@ export default function TeamChatPage() {
   const activeGroup = groups?.find((g) => g.id === activeGroupId) || null;
   const activeConversation =
     privateConversations?.find((conversation) => conversation.id === activeConversationId) || null;
+  const selectedContact = (privateContacts || []).find(
+    (contact) => String(contact.id) === selectedContactId,
+  );
 
   // Chat view: full-width conversation with a back button.
   if (activeGroup || activeConversation) {
@@ -212,19 +259,57 @@ export default function TeamChatPage() {
         </div>
         <Card>
           <CardContent className="flex flex-col gap-2 py-4 sm:flex-row">
-            <select
-              className="h-10 flex-1 rounded-md border bg-background px-3 text-sm"
-              value={selectedContactId}
-              onChange={(event) => setSelectedContactId(event.target.value)}
-              aria-label="Choose a coworker"
-            >
-              <option value="">Choose a coworker</option>
-              {(privateContacts || []).map((contact) => (
-                <option key={contact.id} value={contact.id}>
-                  {contact.fullName} — {presenceLabel(contact.isOnline, contact.lastSeenAt)}
-                </option>
-              ))}
-            </select>
+            <Popover open={contactPickerOpen} onOpenChange={setContactPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-w-0 flex-1 justify-between"
+                  aria-label="Choose a coworker"
+                >
+                  {selectedContact ? (
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span className="truncate">{selectedContact.fullName}</span>
+                      <PresenceStatus
+                        isOnline={selectedContact.isOnline}
+                        lastSeenAt={selectedContact.lastSeenAt}
+                      />
+                    </span>
+                  ) : (
+                    "Choose a coworker"
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                align="start"
+                className="w-[var(--radix-popover-trigger-width)] p-1"
+              >
+                <div className="max-h-64 overflow-y-auto">
+                  {(privateContacts || []).map((contact) => (
+                    <button
+                      type="button"
+                      key={contact.id}
+                      className="flex w-full items-center justify-between gap-3 rounded px-3 py-2 text-left text-sm hover:bg-accent"
+                      onClick={() => {
+                        setSelectedContactId(String(contact.id));
+                        setContactPickerOpen(false);
+                      }}
+                    >
+                      <span className="truncate">{contact.fullName}</span>
+                      <PresenceStatus
+                        isOnline={contact.isOnline}
+                        lastSeenAt={contact.lastSeenAt}
+                      />
+                    </button>
+                  ))}
+                  {(privateContacts || []).length === 0 && (
+                    <p className="px-3 py-2 text-sm text-muted-foreground">
+                      No active coworkers to message.
+                    </p>
+                  )}
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button
               disabled={!selectedContactId || createPrivateConversation.isPending}
               onClick={() => createPrivateConversation.mutate(
@@ -263,8 +348,8 @@ export default function TeamChatPage() {
               >
                 <div className="flex items-center gap-3">
                   <MessageCircle className="h-5 w-5 text-primary" />
-                  <div className="min-w-0">
-                    <span className="font-medium block truncate">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-medium truncate">
                       {conversation.otherUserName}
                     </span>
                     <PresenceStatus
@@ -329,13 +414,19 @@ function PresenceStatus({
   isOnline: boolean;
   lastSeenAt: Date | string | null | undefined;
 }) {
+  if (isOnline) {
+    return (
+      <Badge className="inline-flex h-5 shrink-0 items-center gap-1 border-emerald-300 bg-emerald-100 px-2 text-[10px] font-semibold text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300">
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+        Active
+      </Badge>
+    );
+  }
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
       <span
-        aria-label={isOnline ? "Online" : "Offline"}
-        className={`h-2 w-2 shrink-0 rounded-full ${
-          isOnline ? "bg-emerald-500" : "bg-muted-foreground/50"
-        }`}
+        aria-label="Offline"
+        className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/50"
       />
       {presenceLabel(isOnline, lastSeenAt)}
     </span>
@@ -359,12 +450,14 @@ function DaySeparator({ label }: { label: string }) {
 function MessageBubble({
   m,
   mine,
+  showLinkPreview,
   canDelete,
   onReply,
   onDelete,
 }: {
   m: ChatMessage;
   mine: boolean;
+  showLinkPreview: boolean;
   canDelete: boolean;
   onReply: () => void;
   onDelete: () => void;
@@ -438,6 +531,9 @@ function MessageBubble({
           <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] select-text">
             <Linkify text={m.body} />
           </p>
+        )}
+        {showLinkPreview && m.body && (
+          <LinkPreviewCard text={m.body} mine={mine} />
         )}
         {mine && readByNames.length > 0 && (
           <details className="mt-1 max-w-full text-[10px] opacity-80">
@@ -819,6 +915,7 @@ function GroupChat({
                 <MessageBubble
                   m={m}
                   mine={mine}
+                  showLinkPreview={!privateConversationId}
                    canDelete={mine || (isManagement && !privateConversationId)}
                   onReply={() => setReplyTo(m)}
                   onDelete={() => handleDelete(m)}
@@ -931,13 +1028,10 @@ function GroupChat({
                   >
                     <span className="flex items-center justify-between gap-3">
                       <span className="truncate">{m.fullName}</span>
-                      <span
-                        className={`shrink-0 text-[10px] ${
-                          m.isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
-                        }`}
-                      >
-                        {presenceLabel(m.isOnline, m.lastSeenAt)}
-                      </span>
+                      <PresenceStatus
+                        isOnline={m.isOnline}
+                        lastSeenAt={m.lastSeenAt}
+                      />
                     </span>
                   </button>
                 ))}

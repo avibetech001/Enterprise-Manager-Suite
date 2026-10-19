@@ -13,6 +13,10 @@ export interface WorkReport {
   userId: number;
   /** @nullable */
   departmentId: number | null;
+  /** @nullable */
+  teamId: number | null;
+  /** @nullable */
+  teamName: string | null;
   period: WorkReportPeriod;
   reportDate: string;
   /** @nullable */

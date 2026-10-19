@@ -52,6 +52,46 @@ export interface ChatGroup {
   id: string;
   name: string;
   kind: ChatGroupKind;
+  /** @nullable */
+  teamLeadUserId: number | null;
+  /** @nullable */
+  teamLeadName: string | null;
+}
+
+export interface TeamChatEmployee {
+  id: number;
+  fullName: string;
+  /** @nullable */
+  employeeCode: string | null;
+}
+
+export interface ManagedChatTeam {
+  id: number;
+  name: string;
+  description: string;
+  /** @nullable */
+  teamLeadUserId: number | null;
+  /** @nullable */
+  teamLeadName: string | null;
+  memberUserIds: number[];
+  createdAt: string;
+}
+
+export interface ManagedChatTeamInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  /** @maxLength 1000 */
+  description?: string;
+  /**
+     * @minItems 1
+     * @items.minimum 1
+     */
+  memberUserIds: number[];
+  /** @minimum 1 */
+  teamLeadUserId: number;
 }
 
 export interface ChatMember {
@@ -1221,6 +1261,8 @@ export interface WorkReportInput {
   endDate?: string | null;
   /** @minLength 1 */
   content: string;
+  /** @minimum 1 */
+  teamId?: number;
 }
 
 export type WorkReportPeriod = typeof WorkReportPeriod[keyof typeof WorkReportPeriod];
@@ -1238,6 +1280,10 @@ export interface WorkReport {
   userId: number;
   /** @nullable */
   departmentId: number | null;
+  /** @nullable */
+  teamId: number | null;
+  /** @nullable */
+  teamName: string | null;
   period: WorkReportPeriod;
   reportDate: string;
   /** @nullable */

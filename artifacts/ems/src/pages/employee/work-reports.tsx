@@ -7,6 +7,8 @@ import {
   useGetMyProfile,
   useListDepartments,
   getListDepartmentsQueryKey,
+  useListChatGroups,
+  getListChatGroupsQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,16 +66,33 @@ export default function EmployeeWorkReports() {
   const queryClient = useQueryClient();
   const { data: reports, isLoading } = useListMyWorkReports();
   const { data: profile } = useGetMyProfile();
+  const { data: chatGroups } = useListChatGroups({
+    query: {
+      queryKey: getListChatGroupsQueryKey(),
+      refetchInterval: 15_000,
+    },
+  });
   const { data: departments } = useListDepartments({
     query: {
       queryKey: getListDepartmentsQueryKey(),
       refetchInterval: 15_000,
     },
   });
-  const canSubmit = Boolean(
+  const [selectedTeamId, setSelectedTeamId] = useState("");
+  const ledTeamChats = (chatGroups || []).filter(
+    (group) =>
+      group.id.startsWith("custom-team-") &&
+      group.teamLeadUserId === profile?.id,
+  );
+  const isDepartmentLead = Boolean(
     profile &&
       departments?.some((department) => department.teamLeadUserId === profile.id),
   );
+  const canSubmit = ledTeamChats.length > 0 || isDepartmentLead;
+  const selectedLedTeam =
+    ledTeamChats.length === 1
+      ? ledTeamChats[0]
+      : ledTeamChats.find((group) => group.id === selectedTeamId);
 
   const [open, setOpen] = useState(false);
   const [period, setPeriod] = useState<"daily" | "weekly" | "monthly">("daily");
@@ -127,12 +146,19 @@ export default function EmployeeWorkReports() {
         return;
       }
     }
+    if (ledTeamChats.length > 1 && !selectedLedTeam) {
+      toast.error("Choose which team this report is for.");
+      return;
+    }
     createReport.mutate({
       data: {
         period,
         reportDate,
         endDate: period === "daily" ? undefined : endDate,
         content: content.trim(),
+        teamId: selectedLedTeam
+          ? Number(selectedLedTeam.id.replace("custom-team-", ""))
+          : undefined,
       },
     });
   };
@@ -148,7 +174,7 @@ export default function EmployeeWorkReports() {
           <p className="text-muted-foreground mt-1">
             {canSubmit
               ? "Submit daily, weekly, or monthly reports for management."
-              : "Only the assigned Team Lead can submit team reports. Management can assign a lead under Departments."}
+              : "Only an assigned Team Lead can submit reports. Management can assign leads in Team Chat Management or Departments."}
           </p>
         </div>
         {canSubmit && (
@@ -217,6 +243,31 @@ export default function EmployeeWorkReports() {
             <DialogTitle>New Work Report</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            {ledTeamChats.length > 1 ? (
+              <div className="space-y-2">
+                <Label>Team</Label>
+                <Select
+                  value={selectedTeamId}
+                  onValueChange={setSelectedTeamId}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose a team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ledTeamChats.map((team) => (
+                      <SelectItem key={team.id} value={team.id}>
+                        {team.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : selectedLedTeam ? (
+              <div className="flex items-center gap-2 text-sm">
+                <Label>Team</Label>
+                <Badge variant="outline">{selectedLedTeam.name}</Badge>
+              </div>
+            ) : null}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label>Report type</Label>

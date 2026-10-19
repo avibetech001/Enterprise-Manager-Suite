@@ -146,8 +146,10 @@ export default function ManagementWorkReports() {
                     >
                       {PERIOD_LABEL[r.period] || r.period}
                     </Badge>
-                    {r.departmentName && (
-                      <Badge variant="outline">{r.departmentName} team</Badge>
+                    {(r.teamName || r.departmentName) && (
+                      <Badge variant="outline">
+                        {r.teamName || r.departmentName} team
+                      </Badge>
                     )}
                     <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground ml-auto">
                       <CalendarDays className="h-3.5 w-3.5" />
@@ -180,8 +182,10 @@ export default function ManagementWorkReports() {
                   >
                     {PERIOD_LABEL[detail.period] || detail.period}
                   </Badge>
-                  {detail.departmentName && (
-                    <Badge variant="outline">{detail.departmentName} team</Badge>
+                  {(detail.teamName || detail.departmentName) && (
+                    <Badge variant="outline">
+                      {detail.teamName || detail.departmentName} team
+                    </Badge>
                   )}
                   <span className="text-sm font-normal text-muted-foreground">
                     {formatDateStr(detail.reportDate, "long")}

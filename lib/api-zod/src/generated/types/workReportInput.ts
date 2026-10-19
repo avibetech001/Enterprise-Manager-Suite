@@ -18,4 +18,6 @@ export interface WorkReportInput {
   endDate?: string | null;
   /** @minLength 1 */
   content: string;
+  /** @minimum 1 */
+  teamId?: number;
 }

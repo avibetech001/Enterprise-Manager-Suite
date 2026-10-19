@@ -2682,6 +2682,8 @@ export const ListMyWorkReportsResponseItem = zod.object({
   "companyId": zod.number(),
   "userId": zod.number(),
   "departmentId": zod.number().nullable(),
+  "teamId": zod.number().nullable(),
+  "teamName": zod.string().nullable(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
   "endDate": zod.string().nullish(),
@@ -2699,11 +2701,13 @@ export const createWorkReportBodyEndDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{
 
 
 
+
 export const CreateWorkReportBody = zod.object({
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string().regex(createWorkReportBodyReportDateRegExp),
   "endDate": zod.string().regex(createWorkReportBodyEndDateRegExp).nullish(),
-  "content": zod.string().min(1)
+  "content": zod.string().min(1),
+  "teamId": zod.number().min(1).optional()
 })
 
 export const CreateWorkReportResponse = zod.object({
@@ -2711,6 +2715,8 @@ export const CreateWorkReportResponse = zod.object({
   "companyId": zod.number(),
   "userId": zod.number(),
   "departmentId": zod.number().nullable(),
+  "teamId": zod.number().nullable(),
+  "teamName": zod.string().nullable(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
   "endDate": zod.string().nullish(),
@@ -2727,6 +2733,8 @@ export const ListWorkReportsResponseItem = zod.object({
   "companyId": zod.number(),
   "userId": zod.number(),
   "departmentId": zod.number().nullable(),
+  "teamId": zod.number().nullable(),
+  "teamName": zod.string().nullable(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
   "endDate": zod.string().nullish(),
@@ -3057,12 +3065,114 @@ export const HeartbeatChatPresenceResponse = zod.object({
 
 
 /**
+ * @summary List active employees available for team chats
+ */
+export const ListTeamChatEmployeesResponseItem = zod.object({
+  "id": zod.number(),
+  "fullName": zod.string(),
+  "employeeCode": zod.string().nullable()
+})
+export const ListTeamChatEmployeesResponse = zod.array(ListTeamChatEmployeesResponseItem)
+
+
+/**
+ * @summary List managed team chats for management
+ */
+export const ListManagedChatTeamsResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable(),
+  "memberUserIds": zod.array(zod.number()),
+  "createdAt": zod.coerce.date()
+})
+export const ListManagedChatTeamsResponse = zod.array(ListManagedChatTeamsResponseItem)
+
+
+/**
+ * @summary Create a team chat and assign its members and lead
+ */
+export const createManagedChatTeamBodyNameMax = 100;
+
+export const createManagedChatTeamBodyDescriptionMax = 1000;
+
+
+
+
+
+
+export const CreateManagedChatTeamBody = zod.object({
+  "name": zod.string().min(1).max(createManagedChatTeamBodyNameMax),
+  "description": zod.string().max(createManagedChatTeamBodyDescriptionMax).optional(),
+  "memberUserIds": zod.array(zod.number().min(1)).min(1),
+  "teamLeadUserId": zod.number().min(1)
+})
+
+export const CreateManagedChatTeamResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable(),
+  "memberUserIds": zod.array(zod.number()),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Update a team's name, members, or team lead
+ */
+export const UpdateManagedChatTeamParams = zod.object({
+  "teamId": zod.coerce.number()
+})
+
+export const updateManagedChatTeamBodyNameMax = 100;
+
+export const updateManagedChatTeamBodyDescriptionMax = 1000;
+
+
+
+
+
+
+export const UpdateManagedChatTeamBody = zod.object({
+  "name": zod.string().min(1).max(updateManagedChatTeamBodyNameMax),
+  "description": zod.string().max(updateManagedChatTeamBodyDescriptionMax).optional(),
+  "memberUserIds": zod.array(zod.number().min(1)).min(1),
+  "teamLeadUserId": zod.number().min(1)
+})
+
+export const UpdateManagedChatTeamResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "description": zod.string(),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable(),
+  "memberUserIds": zod.array(zod.number()),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a team chat and its messages
+ */
+export const DeleteManagedChatTeamParams = zod.object({
+  "teamId": zod.coerce.number()
+})
+
+export const DeleteManagedChatTeamResponse = zod.void()
+
+
+/**
  * @summary List chat groups available to the current user
  */
 export const ListChatGroupsResponseItem = zod.object({
   "id": zod.string(),
   "name": zod.string(),
-  "kind": zod.enum(['company', 'department', 'team'])
+  "kind": zod.enum(['company', 'department', 'team']),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable()
 })
 export const ListChatGroupsResponse = zod.array(ListChatGroupsResponseItem)
 

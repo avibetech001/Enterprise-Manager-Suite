@@ -111,7 +111,8 @@ router.post("/auth/management-login", async (req, res): Promise<void> => {
     !user ||
     !user.passwordHash ||
     (user.role !== "super_admin" && user.role !== "hr") ||
-    user.status !== "active"
+    user.status !== "active" ||
+    user.archived
   ) {
     res.status(401).json({ error: "Invalid credentials." });
     return;
@@ -146,7 +147,7 @@ router.post("/auth/employee-login", async (req, res): Promise<void> => {
     .from(usersTable)
     .where(eq(usersTable.email, email.toLowerCase()));
 
-  if (!user || !user.passwordHash || user.role !== "employee") {
+  if (!user || !user.passwordHash || user.role !== "employee" || user.archived) {
     res.status(401).json({ error: "Invalid credentials." });
     return;
   }
