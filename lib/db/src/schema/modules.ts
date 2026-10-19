@@ -140,6 +140,55 @@ export const projectsTable = pgTable("projects", {
     .$onUpdate(() => new Date()),
 });
 
+export const clientsTable = pgTable("clients", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  contactName: text("contact_name"),
+  email: text("email"),
+  phone: text("phone"),
+  website: text("website"),
+  industry: text("industry"),
+  socialLinks: text("social_links"),
+  summary: text("summary"),
+  status: text("status").notNull().default("active"),
+  createdBy: integer("created_by").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+export const clientMaterialsTable = pgTable("client_materials", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  clientId: integer("client_id")
+    .notNull()
+    .references(() => clientsTable.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  category: text("category").notNull(),
+  description: text("description"),
+  content: text("content"),
+  filePath: text("file_path"),
+  fileName: text("file_name"),
+  contentType: text("content_type"),
+  uploadedBy: integer("uploaded_by").references(() => usersTable.id, {
+    onDelete: "set null",
+  }),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const projectMembersTable = pgTable("project_members", {
   id: serial("id").primaryKey(),
   projectId: integer("project_id")
@@ -344,6 +393,8 @@ export type EmployeeQuery = typeof employeeQueriesTable.$inferSelect;
 export type AttendanceRecord = typeof attendanceRecordsTable.$inferSelect;
 export type LeaveRequest = typeof leaveRequestsTable.$inferSelect;
 export type Project = typeof projectsTable.$inferSelect;
+export type Client = typeof clientsTable.$inferSelect;
+export type ClientMaterial = typeof clientMaterialsTable.$inferSelect;
 export type ProjectDeliverable = typeof projectDeliverablesTable.$inferSelect;
 export type FundRequest = typeof fundRequestsTable.$inferSelect;
 export type Requisition = typeof requisitionsTable.$inferSelect;

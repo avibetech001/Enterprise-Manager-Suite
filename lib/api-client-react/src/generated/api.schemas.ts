@@ -877,6 +877,115 @@ export interface ProjectProgressUpdateInput {
   deliverables?: ProjectProgressUpdateInputDeliverablesItem[];
 }
 
+export type ClientStatus = typeof ClientStatus[keyof typeof ClientStatus];
+
+
+export const ClientStatus = {
+  active: 'active',
+  archived: 'archived',
+} as const;
+
+export type ClientMaterialCategory = typeof ClientMaterialCategory[keyof typeof ClientMaterialCategory];
+
+
+export const ClientMaterialCategory = {
+  spreadsheet: 'spreadsheet',
+  social_strategy: 'social_strategy',
+  brief: 'brief',
+  report: 'report',
+  creative: 'creative',
+  other: 'other',
+} as const;
+
+export interface ClientInput {
+  /** @minLength 1 */
+  name: string;
+  /** @nullable */
+  contactName: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  phone: string | null;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  industry: string | null;
+  /** @nullable */
+  socialLinks: string | null;
+  /** @nullable */
+  summary: string | null;
+  status: ClientStatus;
+}
+
+export interface Client {
+  id: number;
+  companyId: number;
+  name: string;
+  /** @nullable */
+  contactName: string | null;
+  /** @nullable */
+  email: string | null;
+  /** @nullable */
+  phone: string | null;
+  /** @nullable */
+  website: string | null;
+  /** @nullable */
+  industry: string | null;
+  /** @nullable */
+  socialLinks: string | null;
+  /** @nullable */
+  summary: string | null;
+  status: ClientStatus;
+  /** @nullable */
+  createdBy: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientMaterialInput {
+  /** @minLength 1 */
+  title: string;
+  category: ClientMaterialCategory;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  content: string | null;
+  /** @nullable */
+  filePath: string | null;
+  /** @nullable */
+  fileName: string | null;
+  /** @nullable */
+  contentType: string | null;
+}
+
+export interface ClientMaterial {
+  id: number;
+  companyId: number;
+  clientId: number;
+  title: string;
+  category: ClientMaterialCategory;
+  /** @nullable */
+  description: string | null;
+  /** @nullable */
+  content: string | null;
+  /** @nullable */
+  filePath: string | null;
+  /** @nullable */
+  fileName: string | null;
+  /** @nullable */
+  contentType: string | null;
+  /** @nullable */
+  uploadedBy: number | null;
+  /** @nullable */
+  uploadedByName: string | null;
+  createdAt: string;
+}
+
+export interface ClientDetail {
+  client: Client;
+  materials: ClientMaterial[];
+}
+
 export type ProjectInputStatus = typeof ProjectInputStatus[keyof typeof ProjectInputStatus];
 
 

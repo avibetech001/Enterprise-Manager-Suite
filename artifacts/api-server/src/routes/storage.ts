@@ -8,6 +8,7 @@ import { and, eq } from 'drizzle-orm';
 import {
   db,
   projectsTable,
+  clientMaterialsTable,
   chatMessagesTable,
   directChatMessagesTable,
   chatConversationsTable,
@@ -140,9 +141,8 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
     const objectPath = `/objects/${wildcardPath}`;
 
-    // Object entities are project submissions or chat attachments: only
-    // serve files that belong to the requester's company (and, for
-    // department chats, that the requester is allowed to see).
+    // Object entities are project submissions, client materials, or chat
+    // attachments. Only serve company-owned files (and respect chat group ACLs).
     const [owningProject] = await db
       .select({ id: projectsTable.id })
       .from(projectsTable)
@@ -152,7 +152,16 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           eq(projectsTable.companyId, me.companyId),
         ),
       );
-    let allowed = Boolean(owningProject);
+    const [owningClientMaterial] = await db
+      .select({ id: clientMaterialsTable.id })
+      .from(clientMaterialsTable)
+      .where(
+        and(
+          eq(clientMaterialsTable.filePath, objectPath),
+          eq(clientMaterialsTable.companyId, me.companyId),
+        ),
+      );
+    let allowed = Boolean(owningProject || owningClientMaterial);
     if (!allowed) {
       const [chatMsg] = await db
         .select({

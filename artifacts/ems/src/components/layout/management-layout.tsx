@@ -204,6 +204,16 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
               <SidebarGroupLabel>Company</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  {(hasPerm("manage_projects") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/clients"} asChild>
+                        <Link href="/clients">
+                          <Building2 className="h-4 w-4" />
+                          <span>Clients</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   {(hasPerm("manage_leave") || isSuperAdmin) && (
                     <SidebarMenuItem>
                       <SidebarMenuButton isActive={location === "/leave"} asChild>

@@ -50,6 +50,7 @@ import SettingsCompanyPage from '@/pages/management/settings-company';
 import TeamChatPage from '@/pages/chat';
 import ManagementAppraisalsPage from '@/pages/management/appraisals';
 import MyAppraisalsPage from '@/pages/employee/appraisals';
+import { EmployeeClientsPage, ManagementClientsPage } from '@/pages/client-workspace';
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ function Router() {
         ["/employee/work-reports", EmployeeWorkReportsPage],
         ["/employee/policies", EmployeePoliciesPage],
         ["/employee/departments", EmployeeDepartmentsPage],
+        ["/employee/clients", EmployeeClientsPage],
         ["/employee/announcements", EmployeeAnnouncementsPage],
         ["/employee/knowledge-base", EmployeeKnowledgeBasePage],
         ["/employee/settings", EmployeeSettingsPage],
@@ -194,6 +196,7 @@ function Router() {
         ["/invoices", ManagementInvoicesPage],
         ["/work-reports", ManagementWorkReportsPage],
         ["/queries", ManagementQueriesPage],
+        ["/clients", ManagementClientsPage],
         ["/announcements", ManagementAnnouncementsPage],
         ["/knowledge-base", ManagementKnowledgeBasePage],
         ["/chat", TeamChatPage],

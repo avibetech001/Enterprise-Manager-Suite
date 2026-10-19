@@ -1588,6 +1588,194 @@ export const ReviewLeaveRequestResponse = zod.object({
 
 
 /**
+ * @summary List client records available to company staff
+ */
+export const ListClientsResponseItem = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "contactName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "socialLinks": zod.string().nullable(),
+  "summary": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+export const ListClientsResponse = zod.array(ListClientsResponseItem)
+
+
+/**
+ * @summary Create a client record
+ */
+
+
+
+export const CreateClientBody = zod.object({
+  "name": zod.string().min(1),
+  "contactName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "socialLinks": zod.string().nullable(),
+  "summary": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived'])
+})
+
+export const CreateClientResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "contactName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "socialLinks": zod.string().nullable(),
+  "summary": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Get a client profile and its materials
+ */
+export const GetClientParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetClientResponse = zod.object({
+  "client": zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "contactName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "socialLinks": zod.string().nullable(),
+  "summary": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+}),
+  "materials": zod.array(zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "clientId": zod.number(),
+  "title": zod.string(),
+  "category": zod.enum(['spreadsheet', 'social_strategy', 'brief', 'report', 'creative', 'other']),
+  "description": zod.string().nullable(),
+  "content": zod.string().nullable(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "contentType": zod.string().nullable(),
+  "uploadedBy": zod.number().nullable(),
+  "uploadedByName": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+}))
+})
+
+
+/**
+ * @summary Update a client profile or archive status
+ */
+export const UpdateClientParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const UpdateClientBody = zod.object({
+  "name": zod.string().min(1),
+  "contactName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "socialLinks": zod.string().nullable(),
+  "summary": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived'])
+})
+
+export const UpdateClientResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "contactName": zod.string().nullable(),
+  "email": zod.string().nullable(),
+  "phone": zod.string().nullable(),
+  "website": zod.string().nullable(),
+  "industry": zod.string().nullable(),
+  "socialLinks": zod.string().nullable(),
+  "summary": zod.string().nullable(),
+  "status": zod.enum(['active', 'archived']),
+  "createdBy": zod.number().nullable(),
+  "createdAt": zod.coerce.date(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Add a note or file to a client record
+ */
+export const CreateClientMaterialParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+
+
+export const CreateClientMaterialBody = zod.object({
+  "title": zod.string().min(1),
+  "category": zod.enum(['spreadsheet', 'social_strategy', 'brief', 'report', 'creative', 'other']),
+  "description": zod.string().nullable(),
+  "content": zod.string().nullable(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "contentType": zod.string().nullable()
+})
+
+export const CreateClientMaterialResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "clientId": zod.number(),
+  "title": zod.string(),
+  "category": zod.enum(['spreadsheet', 'social_strategy', 'brief', 'report', 'creative', 'other']),
+  "description": zod.string().nullable(),
+  "content": zod.string().nullable(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "contentType": zod.string().nullable(),
+  "uploadedBy": zod.number().nullable(),
+  "uploadedByName": zod.string().nullable(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Remove a file or note from a client record
+ */
+export const DeleteClientMaterialParams = zod.object({
+  "id": zod.coerce.number(),
+  "materialId": zod.coerce.number()
+})
+
+export const DeleteClientMaterialResponse = zod.void()
+
+
+/**
  * @summary List projects the current employee is assigned to
  */
 export const ListMyProjectsResponseItem = zod.object({

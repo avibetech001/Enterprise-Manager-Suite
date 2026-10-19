@@ -30,6 +30,8 @@ tags:
     description: Leave requests and balances
   - name: projects
     description: Projects, members, and deliverables
+  - name: clients
+    description: Internal client profiles and project materials
   - name: funds
     description: Fund requests
   - name: requisitions
@@ -1287,6 +1289,197 @@ paths:
                 $ref: "#/components/schemas/LeaveRequestWithUser"
         "404":
           description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List client records available to company staff
+      responses:
+        "200":
+          description: Client records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a client record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client profile and its materials
+      responses:
+        "200":
+          description: Client profile and materials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientDetail"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client profile or archive status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "200":
+          description: Client updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/materials:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      operationId: createClientMaterial
+      tags: [clients]
+      summary: Add a note or file to a client record
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientMaterialInput"
+      responses:
+        "201":
+          description: Client material created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientMaterial"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{id}/materials/{materialId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: materialId
+        in: path
+        required: true
+        schema:
+          type: integer
+    delete:
+      operationId: deleteClientMaterial
+      tags: [clients]
+      summary: Remove a file or note from a client record
+      responses:
+        "204":
+          description: Client material deleted
+        "403":
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Client material not found
           content:
             application/json:
               schema:
@@ -3799,6 +3992,136 @@ components:
               status:
                 type: string
                 enum: [pending, in_progress, done]
+
+    ClientStatus:
+      type: string
+      enum: [active, archived]
+
+    ClientMaterialCategory:
+      type: string
+      enum: [spreadsheet, social_strategy, brief, report, creative, other]
+
+    ClientInput:
+      type: object
+      required: [name, contactName, email, phone, website, industry, socialLinks, summary, status]
+      properties:
+        name:
+          type: string
+          minLength: 1
+        contactName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        socialLinks:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/ClientStatus"
+
+    Client:
+      type: object
+      required: [id, companyId, name, contactName, email, phone, website, industry, socialLinks, summary, status, createdBy, createdAt, updatedAt]
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        name:
+          type: string
+        contactName:
+          type: ["string", "null"]
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        website:
+          type: ["string", "null"]
+        industry:
+          type: ["string", "null"]
+        socialLinks:
+          type: ["string", "null"]
+        summary:
+          type: ["string", "null"]
+        status:
+          $ref: "#/components/schemas/ClientStatus"
+        createdBy:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ClientMaterialInput:
+      type: object
+      required: [title, category, description, content, filePath, fileName, contentType]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        category:
+          $ref: "#/components/schemas/ClientMaterialCategory"
+        description:
+          type: ["string", "null"]
+        content:
+          type: ["string", "null"]
+        filePath:
+          type: ["string", "null"]
+        fileName:
+          type: ["string", "null"]
+        contentType:
+          type: ["string", "null"]
+
+    ClientMaterial:
+      type: object
+      required: [id, companyId, clientId, title, category, description, content, filePath, fileName, contentType, uploadedBy, uploadedByName, createdAt]
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        clientId:
+          type: integer
+        title:
+          type: string
+        category:
+          $ref: "#/components/schemas/ClientMaterialCategory"
+        description:
+          type: ["string", "null"]
+        content:
+          type: ["string", "null"]
+        filePath:
+          type: ["string", "null"]
+        fileName:
+          type: ["string", "null"]
+        contentType:
+          type: ["string", "null"]
+        uploadedBy:
+          type: ["integer", "null"]
+        uploadedByName:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    ClientDetail:
+      type: object
+      required: [client, materials]
+      properties:
+        client:
+          $ref: "#/components/schemas/Client"
+        materials:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientMaterial"
 
     ProjectInput:
       type: object

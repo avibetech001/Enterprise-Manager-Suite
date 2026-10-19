@@ -64,6 +64,7 @@ const NAV = [
     label: "Company",
     items: [
       { href: "/employee/leave", icon: Palmtree, title: "Leave" },
+      { href: "/employee/clients", icon: Building2, title: "Clients" },
       { href: "/employee/departments", icon: Building2, title: "Departments" },
       { href: "/employee/announcements", icon: Megaphone, title: "Announcements" },
       { href: "/employee/policies", icon: ScrollText, title: "Company Policies" },
