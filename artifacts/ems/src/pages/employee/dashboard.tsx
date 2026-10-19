@@ -62,13 +62,6 @@ export default function EmployeeDashboard() {
       highlight: Boolean(summary.attendanceToday && !summary.attendanceToday.checkOutAt),
     },
     {
-      href: "/employee/leave",
-      icon: CalendarClock,
-      title: "Leave Balance",
-      description: `${summary.leaveBalance.allocation} days allocated this year.`,
-      value: `${summary.leaveBalance.remaining} days left`,
-    },
-    {
       href: "/employee/projects",
       icon: FolderKanban,
       title: "My Projects",
@@ -190,7 +183,7 @@ export default function EmployeeDashboard() {
         ) : (
           <div className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">
             Dashboard details are temporarily unavailable. Use the navigation to open
-            Attendance, Leave, Projects, or Team Chat, or retry the dashboard data above.
+            Attendance, Projects, or Team Chat, or retry the dashboard data above.
           </div>
         )}
       </section>
