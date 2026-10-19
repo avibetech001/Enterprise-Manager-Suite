@@ -8,6 +8,7 @@ import {
   useListProjects,
   useListWorkReports,
   useListInvoices,
+  useListLeaveRequests,
   getListEmployeesQueryKey,
   getListDepartmentsQueryKey,
   getGetPendingCountsQueryKey,
@@ -15,6 +16,7 @@ import {
   getListProjectsQueryKey,
   getListWorkReportsQueryKey,
   getListInvoicesQueryKey,
+  getListLeaveRequestsQueryKey,
 } from "@workspace/api-client-react";
 import {
   Building2,
@@ -25,6 +27,7 @@ import {
   NotebookPen,
   ReceiptText,
   CalendarClock,
+  CalendarDays,
   ChevronRight,
 } from "lucide-react";
 import { Link } from "wouter";
@@ -40,6 +43,7 @@ export default function ManagementDashboard() {
   const canManageDepartments = hasPerm("manage_departments");
   const canManageProjects = hasPerm("manage_projects");
   const canManageFinance = hasPerm("manage_finance");
+  const canManageLeave = hasPerm("manage_leave");
   const canViewReports = hasPerm("view_reports");
   const canManageInvoices = hasPerm("manage_invoices") || canManageFinance;
 
@@ -88,6 +92,14 @@ export default function ManagementDashboard() {
       queryKey: getListInvoicesQueryKey(),
     },
   });
+  const { data: leaveRequests, isLoading: leaveRequestsLoading } =
+    useListLeaveRequests({
+      query: {
+        enabled: canManageLeave,
+        refetchInterval: 30000,
+        queryKey: getListLeaveRequestsQueryKey(),
+      },
+    });
   if (!session) return null;
 
   const activeEmployees = employees?.filter(e => e.accountStatus === 'active')?.length || 0;
@@ -96,8 +108,19 @@ export default function ManagementDashboard() {
   const unreadChatNotifications =
     notifications?.filter((n) => !n.readAt && n.link?.startsWith("/chat")).length ||
     0;
+  const pendingLeaveRequests =
+    leaveRequests?.filter((request) => request.status === "pending") || [];
 
   const modules = [
+    {
+      title: "Leave Requests",
+      description: "Review employee leave requests.",
+      icon: CalendarDays,
+      href: "/leave",
+      count: pendingCounts?.leave ?? pendingLeaveRequests.length,
+      pending: true,
+      show: canManageLeave,
+    },
     {
       title: "Fund Requests",
       description: "Approve and track financial requests.",
@@ -219,6 +242,61 @@ export default function ManagementDashboard() {
           ))}
         </div>
       </div>
+
+      {canManageLeave && (
+        <section className="rounded-xl border bg-card p-4 sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-lg font-semibold tracking-tight">
+                Pending Leave Requests
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                Review recent requests from your employees.
+              </p>
+            </div>
+            <Link
+              href="/leave"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              View all requests
+            </Link>
+          </div>
+
+          {leaveRequestsLoading ? (
+            <p className="py-4 text-sm text-muted-foreground">
+              Loading leave requests…
+            </p>
+          ) : pendingLeaveRequests.length > 0 ? (
+            <div className="divide-y">
+              {pendingLeaveRequests.slice(0, 5).map((request) => (
+                <Link
+                  key={request.id}
+                  href="/leave"
+                  className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">{request.employeeName}</p>
+                    <p className="text-sm text-muted-foreground">
+                      <span className="capitalize">{request.type}</span>
+                      {" · "}
+                      {format(new Date(`${request.startDate}T00:00:00`), "MMM d")}
+                      {" – "}
+                      {format(new Date(`${request.endDate}T00:00:00`), "MMM d, yyyy")}
+                    </p>
+                  </div>
+                  <span className="shrink-0 text-sm text-muted-foreground">
+                    {request.days} {request.days === 1 ? "day" : "days"}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="py-4 text-sm text-muted-foreground">
+              No pending leave requests.
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

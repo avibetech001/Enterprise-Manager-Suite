@@ -5,6 +5,7 @@ import {
   useGetMySummary,
   useListNotifications,
 } from "@workspace/api-client-react";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -15,11 +16,21 @@ import {
 } from "lucide-react";
 
 export default function EmployeeDashboard() {
-  const { data: profile, isLoading: profileLoading } = useGetMyProfile();
-  const { data: summary, isLoading: summaryLoading } = useGetMySummary();
+  const {
+    data: profile,
+    isLoading: profileLoading,
+    isError: profileError,
+    refetch: refetchProfile,
+  } = useGetMyProfile();
+  const {
+    data: summary,
+    isLoading: summaryLoading,
+    isError: summaryError,
+    refetch: refetchSummary,
+  } = useGetMySummary();
   const { data: notifications } = useListNotifications();
 
-  if (profileLoading || summaryLoading) {
+  if (!profile && !summary && (profileLoading || summaryLoading)) {
     return (
       <div className="flex items-center justify-center p-8">
         <div className="animate-spin h-8 w-8 border-b-2 border-primary rounded-full"></div>
@@ -27,13 +38,11 @@ export default function EmployeeDashboard() {
     );
   }
 
-  if (!profile || !summary) return null;
-
-  const attendanceStatus = summary.attendanceToday
+  const attendanceStatus = summary?.attendanceToday
     ? summary.attendanceToday.checkOutAt
       ? "Checked out"
       : "Checked in"
-    : "Absent";
+    : "No check-in";
 
   const unreadChatCount =
     notifications?.filter(
@@ -43,7 +52,7 @@ export default function EmployeeDashboard() {
           notification.link?.startsWith("/chat")),
     ).length || 0;
 
-  const cards = [
+  const cards = summary ? [
     {
       href: "/employee/attendance",
       icon: CalendarClock,
@@ -51,6 +60,13 @@ export default function EmployeeDashboard() {
       description: "Check in, check out, and view your attendance.",
       value: attendanceStatus,
       highlight: Boolean(summary.attendanceToday && !summary.attendanceToday.checkOutAt),
+    },
+    {
+      href: "/employee/leave",
+      icon: CalendarClock,
+      title: "Leave Balance",
+      description: `${summary.leaveBalance.allocation} days allocated this year.`,
+      value: `${summary.leaveBalance.remaining} days left`,
     },
     {
       href: "/employee/projects",
@@ -67,36 +83,67 @@ export default function EmployeeDashboard() {
       value: unreadChatCount > 0 ? String(unreadChatCount) : undefined,
       pending: unreadChatCount > 0,
     },
-  ];
+  ] : [];
 
   return (
     <div className="mx-auto max-w-[1600px] space-y-6 p-3 sm:p-5 md:space-y-8 md:p-8">
-      <div className="flex items-center gap-4">
-        <Avatar className="h-12 w-12 border-2 border-border sm:h-16 sm:w-16">
-          <AvatarImage src={photoSrc(profile.profilePhotoUrl)} />
-          <AvatarFallback className="text-lg sm:text-xl">
-            {profile.firstName[0]}
-            {profile.lastName[0]}
-          </AvatarFallback>
-        </Avatar>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            Welcome, {profile.firstName}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
-            <Badge variant="outline">{profile.employeeCode}</Badge>
-            {profile.employment.jobTitle && <span>{profile.employment.jobTitle}</span>}
-            {profile.employment.employmentType && (
-              <span className="capitalize">
-                · {profile.employment.employmentType.replace("_", " ")}
-              </span>
-            )}
+      {profile ? (
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12 border-2 border-border sm:h-16 sm:w-16">
+            <AvatarImage src={photoSrc(profile.profilePhotoUrl)} />
+            <AvatarFallback className="text-lg sm:text-xl">
+              {profile.firstName[0]}
+              {profile.lastName[0]}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Welcome, {profile.firstName}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-2 text-muted-foreground">
+              <Badge variant="outline">{profile.employeeCode}</Badge>
+              {profile.employment.jobTitle && <span>{profile.employment.jobTitle}</span>}
+              {profile.employment.employmentType && (
+                <span className="capitalize">
+                  · {profile.employment.employmentType.replace("_", " ")}
+                </span>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Employee Dashboard
+          </h1>
+        </div>
+      )}
+
+      {(profileError || summaryError) && (
+        <div
+          role="alert"
+          className="flex flex-col gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <p className="text-sm text-muted-foreground">
+            Some dashboard details could not be loaded. Your available sections are still shown.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void refetchProfile();
+              void refetchSummary();
+            }}
+          >
+            Try again
+          </Button>
+        </div>
+      )}
 
       <section>
         <h2 className="mb-4 text-lg font-semibold tracking-tight">Employee Hub</h2>
+        {cards.length > 0 ? (
         <div className="grid grid-cols-2 gap-2.5 sm:gap-4 md:grid-cols-3 xl:grid-cols-4">
           {cards.map((card) => (
             <Link
@@ -140,6 +187,12 @@ export default function EmployeeDashboard() {
             </Link>
           ))}
         </div>
+        ) : (
+          <div className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">
+            Dashboard details are temporarily unavailable. Use the navigation to open
+            Attendance, Leave, Projects, or Team Chat, or retry the dashboard data above.
+          </div>
+        )}
       </section>
     </div>
   );

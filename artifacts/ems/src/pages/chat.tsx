@@ -401,7 +401,7 @@ function presenceLabel(
   lastSeenAt: Date | string | null | undefined,
 ): string {
   if (isOnline) return "Online";
-  if (!lastSeenAt) return "Last seen unavailable";
+  if (!lastSeenAt) return "No activity recorded yet";
   const timestamp = new Date(lastSeenAt).getTime();
   if (!Number.isFinite(timestamp)) return "Last seen unavailable";
 
@@ -546,7 +546,7 @@ function MessageBubble({
         {showLinkPreview && m.body && (
           <LinkPreviewCard text={m.body} mine={mine} />
         )}
-        {mine && readByNames.length > 0 && (
+        {readByNames.length > 0 && (
           <details className="mt-1 max-w-full text-[10px] opacity-80">
             <summary className="cursor-pointer break-words [overflow-wrap:anywhere]">
               Seen by {readByNames.slice(0, 2).join(", ")}

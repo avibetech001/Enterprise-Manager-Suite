@@ -14,3 +14,4 @@
 - [Internal client workspace](client-workspace-access.md) — client records stay company-only; staff roles and client accounts remain separate.
 - [Artifact workflow port conflicts](artifact-workflow-port-conflicts.md) — a failed restart can leave an older app listener alive; check and clear the exact port owner before retrying.
 - [Department and managed team leads](department-team-leads.md) — validate team-lead membership server-side and clear assignments when employees are archived or deleted.
+- [Express error-log crash](express-error-log-crash.md) — Node 24 `util.inspect` can crash Express 5's default error logging and mask the original production request error.

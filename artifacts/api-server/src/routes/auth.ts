@@ -1,6 +1,11 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, companiesTable, usersTable } from "@workspace/db";
+import {
+  db,
+  companiesTable,
+  userPresenceTable,
+  usersTable,
+} from "@workspace/db";
 import {
   GetSetupStatusResponse,
   CompleteSetupBody,
@@ -19,6 +24,22 @@ import {
 } from "../lib/auth";
 
 const router: IRouter = Router();
+
+async function recordLoginPresence(userId: number, companyId: number): Promise<void> {
+  const lastSeenAt = new Date();
+  try {
+    await db
+      .insert(userPresenceTable)
+      .values({ userId, companyId, lastSeenAt })
+      .onConflictDoUpdate({
+        target: userPresenceTable.userId,
+        set: { companyId, lastSeenAt },
+      });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.warn(`Could not record login presence: ${message}`);
+  }
+}
 
 router.get("/auth/setup-status", async (_req, res): Promise<void> => {
   const [company] = await db.select().from(companiesTable).limit(1);
@@ -125,6 +146,7 @@ router.post("/auth/management-login", async (req, res): Promise<void> => {
   }
 
   req.session.userId = user.id;
+  await recordLoginPresence(user.id, company.id);
   res.json(ManagementLoginResponse.parse({ user, company }));
 });
 
@@ -170,6 +192,7 @@ router.post("/auth/employee-login", async (req, res): Promise<void> => {
   }
 
   req.session.userId = user.id;
+  await recordLoginPresence(user.id, company.id);
   res.json(EmployeeLoginResponse.parse({ user, company }));
 });
 

@@ -199,10 +199,6 @@ async function recordGroupMessageReads(
       )
       .onConflictDoNothing();
   }
-  const authoredMessageIds = rows
-    .filter((row) => row.userId === userId)
-    .map((row) => row.id);
-  if (authoredMessageIds.length === 0) return new Map();
   const receipts = await db
     .select({
       messageId: chatMessageReadReceiptsTable.messageId,
@@ -215,11 +211,12 @@ async function recordGroupMessageReads(
     )
     .where(
       and(
-        inArray(chatMessageReadReceiptsTable.messageId, authoredMessageIds),
+        inArray(chatMessageReadReceiptsTable.messageId, messageIds),
         eq(usersTable.status, "active"),
         eq(usersTable.archived, false),
       ),
-    );
+    )
+    .orderBy(asc(usersTable.fullName));
   const names = new Map<number, string[]>();
   for (const receipt of receipts) {
     const viewers = names.get(receipt.messageId) ?? [];
@@ -247,10 +244,6 @@ async function recordPrivateMessageReads(
       )
       .onConflictDoNothing();
   }
-  const authoredMessageIds = rows
-    .filter((row) => row.userId === userId)
-    .map((row) => row.id);
-  if (authoredMessageIds.length === 0) return new Map();
   const receipts = await db
     .select({
       messageId: directChatMessageReadReceiptsTable.messageId,
@@ -263,11 +256,12 @@ async function recordPrivateMessageReads(
     )
     .where(
       and(
-        inArray(directChatMessageReadReceiptsTable.messageId, authoredMessageIds),
+        inArray(directChatMessageReadReceiptsTable.messageId, messageIds),
         eq(usersTable.status, "active"),
         eq(usersTable.archived, false),
       ),
-    );
+    )
+    .orderBy(asc(usersTable.fullName));
   const names = new Map<number, string[]>();
   for (const receipt of receipts) {
     const viewers = names.get(receipt.messageId) ?? [];
