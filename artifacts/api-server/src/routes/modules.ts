@@ -2299,13 +2299,61 @@ router.get(
   requireAuth,
   requireEmployee,
   async (req, res): Promise<void> => {
+    const me = req.currentUser!;
+    const [teamMemberships, departmentMemberships] = await Promise.all([
+      db
+        .select({ teamId: chatTeamsTable.id })
+        .from(chatTeamMembersTable)
+        .innerJoin(
+          chatTeamsTable,
+          eq(chatTeamsTable.id, chatTeamMembersTable.teamId),
+        )
+        .where(
+          and(
+            eq(chatTeamMembersTable.userId, me.id),
+            eq(chatTeamsTable.companyId, me.companyId),
+          ),
+        ),
+      db
+        .select({ departmentId: departmentsTable.id })
+        .from(employmentInfoTable)
+        .innerJoin(
+          departmentsTable,
+          eq(departmentsTable.id, employmentInfoTable.departmentId),
+        )
+        .where(
+          and(
+            eq(employmentInfoTable.userId, me.id),
+            eq(departmentsTable.companyId, me.companyId),
+          ),
+        ),
+    ]);
+    const reportScopes = [
+      eq(workReportsTable.userId, me.id),
+      ...(teamMemberships.length > 0
+        ? [
+            inArray(
+              workReportsTable.teamId,
+              teamMemberships.map((membership) => membership.teamId),
+            ),
+          ]
+        : []),
+      ...(departmentMemberships.length > 0
+        ? [
+            inArray(
+              workReportsTable.departmentId,
+              departmentMemberships.map((membership) => membership.departmentId),
+            ),
+          ]
+        : []),
+    ];
     const rows = await db
       .select()
       .from(workReportsTable)
       .where(
         and(
-          eq(workReportsTable.userId, req.currentUser!.id),
-          eq(workReportsTable.companyId, req.currentUser!.companyId),
+          eq(workReportsTable.companyId, me.companyId),
+          or(...reportScopes),
         ),
       )
       .orderBy(desc(workReportsTable.createdAt));

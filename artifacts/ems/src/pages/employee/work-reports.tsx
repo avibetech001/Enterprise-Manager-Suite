@@ -64,7 +64,12 @@ function formatDateStr(d: string, style: "short" | "long" = "short") {
 
 export default function EmployeeWorkReports() {
   const queryClient = useQueryClient();
-  const { data: reports, isLoading } = useListMyWorkReports();
+  const { data: reports, isLoading } = useListMyWorkReports({
+    query: {
+      queryKey: getListMyWorkReportsQueryKey(),
+      refetchInterval: 15_000,
+    },
+  });
   const { data: profile } = useGetMyProfile();
   const { data: chatGroups } = useListChatGroups({
     query: {
@@ -104,6 +109,8 @@ export default function EmployeeWorkReports() {
     reportDate: string;
     endDate?: string | null;
     content: string;
+    teamName: string | null;
+    submittedBy: string;
   }>(null);
 
   const createReport = useCreateWorkReport({
@@ -113,7 +120,7 @@ export default function EmployeeWorkReports() {
           queryKey: getListMyWorkReportsQueryKey(),
         });
         toast.success("Report submitted", {
-          description: "Management can now see your report.",
+          description: "Your team and management can now see your report.",
         });
         setContent("");
         setEndDate("");
@@ -173,8 +180,8 @@ export default function EmployeeWorkReports() {
           </h1>
           <p className="text-muted-foreground mt-1">
             {canSubmit
-              ? "Submit daily, weekly, or monthly reports for management."
-              : "Only an assigned Team Lead can submit reports. Management can assign leads in Team Chat Management or Departments."}
+              ? "Submit reports for your team and view reports shared with your team."
+              : "View work reports submitted by your Team Lead for your team."}
           </p>
         </div>
         {canSubmit && (
@@ -195,44 +202,66 @@ export default function EmployeeWorkReports() {
           <h3 className="text-lg font-medium">No reports yet</h3>
           <p className="text-muted-foreground text-sm mt-1">
             {canSubmit
-              ? "Submit your first report so management can follow your work."
-              : "Your assigned Team Lead will submit team reports for management to review."}
+              ? "Submit your first report for your team and management to review."
+              : "Your Team Lead's reports will appear here when submitted."}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {reports.map((r) => (
-            <Card
-              key={r.id}
-              className="cursor-pointer hover:bg-accent/50 transition-colors"
-              onClick={() =>
-                setDetail({
-                  period: r.period,
-                  reportDate: r.reportDate,
-                  endDate: r.endDate,
-                  content: r.content,
-                })
-              }
-            >
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base flex flex-wrap items-center gap-2">
-                  <Badge className={PERIOD_BADGE[r.period] || ""} variant="secondary">
-                    {PERIOD_LABEL[r.period] || r.period}
-                  </Badge>
-                  <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    {formatDateStr(r.reportDate)}
-                    {r.endDate ? ` → ${formatDateStr(r.endDate)}` : ""}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap break-words">
-                  {r.content}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+          {reports.map((r) => {
+            const reportTeam = r.teamId
+              ? chatGroups?.find((group) => group.id === `custom-team-${r.teamId}`)
+              : departments?.find((department) => department.id === r.departmentId);
+            const teamName = r.teamName || reportTeam?.name || null;
+            const submittedBy =
+              r.userId === profile?.id
+                ? "You"
+                : reportTeam?.teamLeadName || "Your Team Lead";
+
+            return (
+              <Card
+                key={r.id}
+                className="cursor-pointer hover:bg-accent/50 transition-colors"
+                onClick={() =>
+                  setDetail({
+                    period: r.period,
+                    reportDate: r.reportDate,
+                    endDate: r.endDate,
+                    content: r.content,
+                    teamName,
+                    submittedBy:
+                      r.userId === profile?.id
+                        ? "Submitted by you"
+                        : `Submitted by ${submittedBy}`,
+                  })
+                }
+              >
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex flex-wrap items-center gap-2">
+                    <Badge className={PERIOD_BADGE[r.period] || ""} variant="secondary">
+                      {PERIOD_LABEL[r.period] || r.period}
+                    </Badge>
+                    {teamName && <Badge variant="outline">{teamName}</Badge>}
+                    {r.userId !== profile?.id && (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        By {submittedBy}
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {formatDateStr(r.reportDate)}
+                      {r.endDate ? ` → ${formatDateStr(r.endDate)}` : ""}
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground line-clamp-2 whitespace-pre-wrap break-words">
+                    {r.content}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
@@ -353,10 +382,16 @@ export default function EmployeeWorkReports() {
                       ? ` → ${formatDateStr(detail.endDate, "long")}`
                       : ""}
                   </span>
+                  {detail.teamName && (
+                    <Badge variant="outline">{detail.teamName}</Badge>
+                  )}
                 </>
               )}
             </DialogTitle>
           </DialogHeader>
+          {detail && (
+            <p className="text-xs text-muted-foreground">{detail.submittedBy}</p>
+          )}
           <div className="max-h-[50vh] overflow-y-auto">
             <p className="text-sm whitespace-pre-wrap break-words">
               {detail?.content}

@@ -2044,7 +2044,7 @@ paths:
     get:
       operationId: listMyWorkReports
       tags: [work-reports]
-      summary: List the current employee's work reports
+      summary: List the current employee's and team's work reports
       responses:
         "200":
           description: Work reports
