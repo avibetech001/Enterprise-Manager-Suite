@@ -43,7 +43,12 @@ export default function TeamChatManagementPage() {
       refetchInterval: 30_000,
     },
   });
-  const { data: employeeRows } = useListTeamChatEmployees();
+  const {
+    data: employeeRows,
+    isLoading: employeesLoading,
+    isError: employeesLoadFailed,
+    error: employeesLoadError,
+  } = useListTeamChatEmployees();
   const createTeam = useCreateManagedChatTeam();
   const updateTeam = useUpdateManagedChatTeam();
   const deleteTeam = useDeleteManagedChatTeam();
@@ -304,7 +309,15 @@ export default function TeamChatManagementPage() {
             <div className="space-y-2">
               <Label>Employees</Label>
               <div className="grid max-h-56 gap-2 overflow-y-auto rounded-md border p-3 sm:grid-cols-2">
-                {employees.map((employee) => (
+                {employeesLoading ? (
+                  <p className="col-span-full text-sm text-muted-foreground">
+                    Loading active employees…
+                  </p>
+                ) : employeesLoadFailed ? (
+                  <p role="alert" className="col-span-full text-sm text-destructive">
+                    Could not load employees. {apiError(employeesLoadError)}
+                  </p>
+                ) : employees.map((employee) => (
                   <label
                     key={employee.id}
                     className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
@@ -318,7 +331,9 @@ export default function TeamChatManagementPage() {
                     <span className="min-w-0 truncate">{employee.fullName}</span>
                   </label>
                 ))}
-                {employees.length === 0 && (
+                {!employeesLoading &&
+                  !employeesLoadFailed &&
+                  employees.length === 0 && (
                   <p className="col-span-full text-sm text-muted-foreground">
                     There are no active employees to add.
                   </p>
@@ -356,7 +371,15 @@ export default function TeamChatManagementPage() {
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || employees.length === 0}>
+            <Button
+              onClick={handleSave}
+              disabled={
+                isSaving ||
+                employeesLoading ||
+                employeesLoadFailed ||
+                employees.length === 0
+              }
+            >
               {editingTeam ? "Save changes" : "Create team"}
             </Button>
           </DialogFooter>

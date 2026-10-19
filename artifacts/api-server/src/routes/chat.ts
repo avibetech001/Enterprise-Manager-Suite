@@ -37,16 +37,9 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import { requireAuth, requireManagementPermission } from "../lib/auth";
 import {
-  canAccessCreativeTeam,
   canAccessPrivateConversation,
   canonicalPrivatePair,
-  CREATIVE_TEAM_GROUP_ID,
-  CREATIVE_TEAM_KEY,
-  GROWTH_TEAM_GROUP_ID,
-  GROWTH_TEAM_KEY,
   findOrCreatePrivateConversation,
-  isGrowthTeamEmployee,
-  isCreativeTeamEmployee,
 } from "../lib/chatAccess";
 import { notify } from "../lib/notify";
 import { sendPush } from "../lib/push";
@@ -552,59 +545,6 @@ interface ResolvedGroup {
   memberUserIds?: number[];
 }
 
-async function creativeTeamMemberIds(companyId: number): Promise<number[]> {
-  const rows = await db
-    .select({ id: usersTable.id, jobTitle: employmentInfoTable.jobTitle })
-    .from(usersTable)
-    .innerJoin(employmentInfoTable, eq(employmentInfoTable.userId, usersTable.id))
-    .where(
-      and(
-        eq(usersTable.companyId, companyId),
-        eq(usersTable.role, "employee"),
-        eq(usersTable.status, "active"),
-        eq(usersTable.archived, false),
-      ),
-    );
-  return rows.filter((row) =>
-    isCreativeTeamEmployee({
-      role: "employee",
-      status: "active",
-      archived: false,
-      jobTitle: row.jobTitle,
-    }),
-  ).map((row) => row.id);
-}
-
-async function growthTeamMemberIds(companyId: number): Promise<number[]> {
-  const rows = await db
-    .select({ id: usersTable.id, jobTitle: employmentInfoTable.jobTitle })
-    .from(usersTable)
-    .innerJoin(employmentInfoTable, eq(employmentInfoTable.userId, usersTable.id))
-    .where(
-      and(
-        eq(usersTable.companyId, companyId),
-        eq(usersTable.role, "employee"),
-        eq(usersTable.status, "active"),
-        eq(usersTable.archived, false),
-      ),
-    );
-  return rows
-    .filter((row) =>
-      isGrowthTeamEmployee({
-        role: "employee",
-        status: "active",
-        archived: false,
-        jobTitle: row.jobTitle,
-      }),
-    )
-    .map((row) => row.id);
-}
-
-async function isCreativeTeamMember(me: CurrentUser): Promise<boolean> {
-  if (canAccessCreativeTeam(me, me.companyId)) return true;
-  return (await creativeTeamMemberIds(me.companyId)).includes(me.id);
-}
-
 function groupMessageScope(group: ResolvedGroup) {
   return and(
     group.departmentId === null
@@ -625,29 +565,6 @@ async function resolveGroup(
 ): Promise<ResolvedGroup | null> {
   if (groupId === "company") {
     return { id: "company", name: "General", departmentId: null, teamKey: null };
-  }
-  if (groupId === CREATIVE_TEAM_GROUP_ID) {
-    if (!(await isCreativeTeamMember(me))) return null;
-    return {
-      id: CREATIVE_TEAM_GROUP_ID,
-      name: "Brand, Social & Creative Team",
-      departmentId: null,
-      teamKey: CREATIVE_TEAM_KEY,
-    };
-  }
-  if (groupId === GROWTH_TEAM_GROUP_ID) {
-    if (
-      me.role !== "super_admin" &&
-      !(await growthTeamMemberIds(me.companyId)).includes(me.id)
-    ) {
-      return null;
-    }
-    return {
-      id: GROWTH_TEAM_GROUP_ID,
-      name: "Growth Team",
-      departmentId: null,
-      teamKey: GROWTH_TEAM_KEY,
-    };
   }
   const managedTeamMatch = /^custom-team-(\d+)$/.exec(groupId);
   if (managedTeamMatch) {
@@ -746,27 +663,6 @@ router.get(
         });
       }
     }
-    if (await isCreativeTeamMember(me)) {
-      groups.push({
-        id: CREATIVE_TEAM_GROUP_ID,
-        name: "Brand, Social & Creative Team",
-        kind: "team",
-        teamLeadUserId: null,
-        teamLeadName: null,
-      });
-    }
-    if (
-      me.role === "super_admin" ||
-      (await growthTeamMemberIds(me.companyId)).includes(me.id)
-    ) {
-      groups.push({
-        id: GROWTH_TEAM_GROUP_ID,
-        name: "Growth Team",
-        kind: "team",
-        teamLeadUserId: null,
-        teamLeadName: null,
-      });
-    }
     const managedTeams = await db
       .select({
         id: chatTeamsTable.id,
@@ -832,12 +728,6 @@ router.get(
       .orderBy(asc(usersTable.fullName));
     const teamMemberIds = group.managedTeamId
       ? new Set(group.memberUserIds ?? [])
-      : group.teamKey
-      ? new Set(
-          group.teamKey === CREATIVE_TEAM_KEY
-            ? await creativeTeamMemberIds(me.companyId)
-            : await growthTeamMemberIds(me.companyId),
-        )
       : null;
     const members = rows.filter((u) =>
       teamMemberIds
@@ -1001,12 +891,6 @@ router.post(
       );
     const teamIds = group.managedTeamId
       ? new Set(group.memberUserIds ?? [])
-      : group.teamKey
-      ? new Set(
-          group.teamKey === CREATIVE_TEAM_KEY
-            ? await creativeTeamMemberIds(me.companyId)
-            : await growthTeamMemberIds(me.companyId),
-        )
       : null;
     const memberIds = new Set(
       allMembers

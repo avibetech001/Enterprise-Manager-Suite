@@ -3,13 +3,15 @@ name: Chat groups design
 description: How team chat group membership and file auth work in the EMS
 ---
 
-Group chat has NO membership table. Groups are derived at request time:
-- `company` group id = every user in the company (satisfies "new employees are automatically in the group").
-- `dept-<id>` group id = users whose department matches, plus super_admin users (bypass in both resolveGroup() and the storage attachment route — keep them in sync). An employee's department lives in `employment_info.department_id` — the `users.department_id` column exists but is NEVER written; do not read it for authorization. Creating a department implicitly creates its group (satisfies auto-group-per-department).
+General and department chat membership is derived at request time:
+- `company` includes every user in the company.
+- `dept-<id>` includes employees whose department matches, plus super_admin users. An employee's department lives in `employment_info.department_id`; never use `users.department_id` for authorization.
+- Management-created team chats use explicit `chat_teams` and `chat_team_members` rows. Only active, non-archived employee members and management with `manage_departments` can access them. Archived employees are removed from memberships and lead assignments.
+- Growth and Brand Social Creative are not automatic rooms; create them as managed team chats if needed.
 
-**Why:** derived membership means no sync hooks on employee creation/department assignment — it can never drift.
+**Why:** company and department rooms should automatically reflect employment changes, while user-managed teams need explicit membership and lead assignment. The fixed Growth and Creative rooms were removed so management can create the desired teams manually.
 
-**How to apply:** any new chat feature (unread counts, more group kinds) must go through `resolveGroup()` in the chat routes for access checks; mentions must also be filtered to the resolved group member set, not just the company. Chat attachments are authorized in the storage download route by matching `chat_messages.file_path` with company + department scope. Messages query newest-200 desc then reversed. "Assign project to group" is frontend-only: the department select in the project dialog adds that department's active employees to memberIds.
+**How to apply:** group access must go through `resolveGroup()`; mentions and team-report submissions must use the resolved/assigned member set. Keep private team attachment checks in the storage route synchronized with group access, including manager permission and active team membership. Messages query newest-200 desc then reverse. Team report rows retain a team-name snapshot if a managed team is deleted.
 
 Private management-to-employee conversations are intentionally separate from derived groups. Each conversation has exactly two explicit participants, and every message, reply, deletion, listing, and attachment download must verify participant membership plus company scope. Only management initiates; the employee participant may reply.
 

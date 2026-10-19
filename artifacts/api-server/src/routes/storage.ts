@@ -11,6 +11,8 @@ import {
   clientMaterialsTable,
   companyPostsTable,
   chatMessagesTable,
+  chatTeamsTable,
+  chatTeamMembersTable,
   directChatMessagesTable,
   chatConversationsTable,
   chatConversationParticipantsTable,
@@ -24,11 +26,7 @@ import {
   ObjectStorageService,
 } from '../lib/objectStorage';
 import {
-  canAccessCreativeTeam,
-  canAccessGrowthTeam,
   canAccessPrivateConversation,
-  CREATIVE_TEAM_KEY,
-  GROWTH_TEAM_KEY,
 } from '../lib/chatAccess';
 
 const router: IRouter = Router();
@@ -190,36 +188,39 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           ),
         );
       if (chatMsg) {
-        if (chatMsg.teamKey === CREATIVE_TEAM_KEY) {
-          if (me.role === "super_admin") {
-            allowed = canAccessCreativeTeam(
-              me,
-              chatMsg.companyId,
-              chatMsg.teamKey,
-            );
-          } else {
-            const [emp] = await db
-              .select({ jobTitle: employmentInfoTable.jobTitle })
-              .from(employmentInfoTable)
-              .where(eq(employmentInfoTable.userId, me.id));
-            allowed = canAccessCreativeTeam(
-              { ...me, jobTitle: emp?.jobTitle },
-              chatMsg.companyId,
-              chatMsg.teamKey,
-            );
-          }
-        } else if (chatMsg.teamKey === GROWTH_TEAM_KEY) {
-          if (me.role === "super_admin") {
-            allowed = canAccessGrowthTeam(me, chatMsg.companyId);
-          } else {
-            const [emp] = await db
-              .select({ jobTitle: employmentInfoTable.jobTitle })
-              .from(employmentInfoTable)
-              .where(eq(employmentInfoTable.userId, me.id));
-            allowed = canAccessGrowthTeam(
-              { ...me, jobTitle: emp?.jobTitle },
-              chatMsg.companyId,
-            );
+        if (chatMsg.teamKey?.startsWith("managed-team:")) {
+          const teamId = Number(chatMsg.teamKey.slice("managed-team:".length));
+          if (Number.isSafeInteger(teamId) && teamId > 0) {
+            const [team] = await db
+              .select({ id: chatTeamsTable.id })
+              .from(chatTeamsTable)
+              .where(
+                and(
+                  eq(chatTeamsTable.id, teamId),
+                  eq(chatTeamsTable.companyId, me.companyId),
+                ),
+              );
+            if (team) {
+              const [membership] = await db
+                .select({ userId: chatTeamMembersTable.userId })
+                .from(chatTeamMembersTable)
+                .innerJoin(usersTable, eq(usersTable.id, chatTeamMembersTable.userId))
+                .where(
+                  and(
+                    eq(chatTeamMembersTable.teamId, teamId),
+                    eq(chatTeamMembersTable.userId, me.id),
+                    eq(usersTable.companyId, me.companyId),
+                    eq(usersTable.role, "employee"),
+                    eq(usersTable.status, "active"),
+                    eq(usersTable.archived, false),
+                  ),
+                );
+              allowed =
+                me.role === "super_admin" ||
+                (me.role === "hr" &&
+                  me.permissions.includes("manage_departments")) ||
+                Boolean(membership);
+            }
           }
         } else if (chatMsg.teamKey) {
           allowed = false;

@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  canAccessCreativeTeam,
   canAccessPrivateConversation,
   canonicalPrivatePair,
-  CREATIVE_TEAM_KEY,
   findOrCreatePrivateConversation,
 } from "./chatAccess.ts";
 
@@ -76,79 +74,3 @@ test("private messages and attachments are available only to participants in the
   );
 });
 
-test("only eligible creative-team employees can access the role room and attachments", () => {
-  const allowedTitles = [
-    "Brand Manager",
-    "Social Media Manager",
-    "Copywriter",
-    "Designer",
-    "Team Lead",
-  ];
-
-  for (const [index, jobTitle] of allowedTitles.entries()) {
-    assert.equal(
-      canAccessCreativeTeam(
-        {
-          id: 400 + index,
-          companyId,
-          role: "employee",
-          status: "active",
-          archived: false,
-          jobTitle,
-        },
-        companyId,
-        CREATIVE_TEAM_KEY,
-      ),
-      true,
-      `${jobTitle} should be eligible`,
-    );
-  }
-
-  for (const deniedUser of [
-    { role: "employee", status: "active", archived: false, jobTitle: "Accountant" },
-    { role: "hr", status: "active", archived: false, jobTitle: "Designer" },
-    { role: "employee", status: "inactive", archived: false, jobTitle: "Designer" },
-    { role: "employee", status: "active", archived: true, jobTitle: "Designer" },
-  ]) {
-    assert.equal(
-      canAccessCreativeTeam(
-        { id: 500, companyId, ...deniedUser },
-        companyId,
-        CREATIVE_TEAM_KEY,
-      ),
-      false,
-      JSON.stringify(deniedUser),
-    );
-  }
-});
-
-test("creative-team access is company-scoped and tied to the intended room", () => {
-  const designer = {
-    id: 601,
-    companyId,
-    role: "employee",
-    status: "active",
-    archived: false,
-    jobTitle: "Designer",
-  };
-  assert.equal(
-    canAccessCreativeTeam(designer, companyId + 1, CREATIVE_TEAM_KEY),
-    false,
-  );
-  assert.equal(
-    canAccessCreativeTeam(designer, companyId, "another-team"),
-    false,
-  );
-});
-
-test("an authorized super admin can access only their company's creative room", () => {
-  const admin = {
-    id: 701,
-    companyId,
-    role: "super_admin",
-    status: "active",
-    archived: false,
-  };
-  assert.equal(canAccessCreativeTeam(admin, companyId, CREATIVE_TEAM_KEY), true);
-  assert.equal(canAccessCreativeTeam(admin, companyId + 1, CREATIVE_TEAM_KEY), false);
-});

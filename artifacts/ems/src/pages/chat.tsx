@@ -3,6 +3,7 @@ import { useSearch } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListChatGroups,
+  getListChatGroupsQueryKey,
   useListChatMessages,
   useListChatGroupMembers,
   getListChatGroupMembersQueryKey,
@@ -62,18 +63,23 @@ function Linkify({ text }: { text: string }) {
     <>
       {parts.map((part, i) => {
         if (i % 2 === 1) {
-          const href = /^https?:\/\//i.test(part) ? part : `https://${part}`;
+          const cleanUrl = part.replace(/[),.!?;:]+$/, "");
+          const href = /^https?:\/\//i.test(cleanUrl)
+            ? cleanUrl
+            : `https://${cleanUrl}`;
           return (
-            <a
-              key={i}
-              href={href}
-              target="_blank"
-              rel="noreferrer"
-              className="underline break-all"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {part}
-            </a>
+            <span key={i}>
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline break-all"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {cleanUrl}
+              </a>
+              {part.slice(cleanUrl.length)}
+            </span>
           );
         }
         return <span key={i}>{part}</span>;
@@ -125,7 +131,12 @@ function LinkPreviewCard({ text, mine }: { text: string; mine: boolean }) {
 
 export default function TeamChatPage() {
   const { data: session } = useGetCurrentSession();
-  const { data: groups } = useListChatGroups();
+  const { data: groups } = useListChatGroups({
+    query: {
+      queryKey: getListChatGroupsQueryKey(),
+      refetchInterval: 15_000,
+    },
+  });
   const { data: privateConversations } = useListPrivateConversations({
     query: {
       queryKey: getListPrivateConversationsQueryKey(),
