@@ -1,15 +1,18 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
-import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
 import {
   db,
   employmentInfoTable,
   attendanceCodesTable,
   attendanceRecordsTable,
   attendanceSettingsTable,
+  chatConversationsTable,
+  chatConversationParticipantsTable,
   companiesTable,
   companyHolidaysTable,
   companyPostsTable,
+  directChatMessagesTable,
   fundRequestsTable,
   invoicesTable,
   leaveRequestsTable,
@@ -101,6 +104,8 @@ import {
 } from "../lib/auth";
 import { notify } from "../lib/notify";
 import { ObjectStorageService } from "../lib/objectStorage";
+import { canonicalPrivatePair, findOrCreatePrivateConversation } from "../lib/chatAccess";
+import { sendQueryIssuedEmail } from "../lib/email";
 
 const router: IRouter = Router();
 
@@ -2627,7 +2632,11 @@ router.post(
     }
     const companyId = req.currentUser!.companyId;
     const [target] = await db
-      .select({ id: usersTable.id })
+      .select({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        email: usersTable.email,
+      })
       .from(usersTable)
       .where(
         and(
@@ -2672,7 +2681,95 @@ router.post(
       parsed.data.userId,
       `queries?id=${row!.id}`,
     );
-    res.status(201).json(CreateQueryResponse.parse(withNames));
+    const issuerName = req.currentUser!.fullName;
+    let privateChatSent = false;
+    try {
+      const [firstUserId, secondUserId] = canonicalPrivatePair(
+        req.currentUser!.id,
+        target.id,
+      );
+      const findExisting = async () => {
+        const [conversation] = await db
+          .select()
+          .from(chatConversationsTable)
+          .where(
+            and(
+              eq(chatConversationsTable.companyId, companyId),
+              or(
+                and(
+                  eq(chatConversationsTable.initiatedByUserId, firstUserId),
+                  eq(chatConversationsTable.employeeUserId, secondUserId),
+                ),
+                and(
+                  eq(chatConversationsTable.initiatedByUserId, secondUserId),
+                  eq(chatConversationsTable.employeeUserId, firstUserId),
+                ),
+              ),
+            ),
+          );
+        return conversation ?? null;
+      };
+      const createConversation = async () =>
+        db.transaction(async (tx) => {
+          const [created] = await tx
+            .insert(chatConversationsTable)
+            .values({
+              companyId,
+              initiatedByUserId: firstUserId,
+              employeeUserId: secondUserId,
+            })
+            .onConflictDoNothing()
+            .returning();
+          if (!created) return null;
+          await tx.insert(chatConversationParticipantsTable).values([
+            { conversationId: created.id, userId: firstUserId },
+            { conversationId: created.id, userId: secondUserId },
+          ]);
+          return created;
+        });
+      const conversation = await findOrCreatePrivateConversation(
+        findExisting,
+        createConversation,
+      );
+      if (!conversation) throw new Error("Could not open the employee's private chat");
+      const chatBody = [
+        `${label} issued by ${issuerName}`,
+        parsed.data.amount?.trim() ? `Amount: ${parsed.data.amount.trim()}` : "",
+        "",
+        "Reason:",
+        parsed.data.reason.trim(),
+      ].filter((line) => line !== "").join("\n");
+      await db.insert(directChatMessagesTable).values({
+        conversationId: conversation.id,
+        userId: req.currentUser!.id,
+        body: chatBody,
+      });
+      await notify(
+        companyId,
+        "private_message",
+        `${label} from ${issuerName}.`,
+        target.id,
+        `chat?conversation=${conversation.id}`,
+      );
+      privateChatSent = true;
+    } catch (error) {
+      console.error(`Could not send query ${row!.id} to the employee's private chat:`, error);
+    }
+    const emailSent = await sendQueryIssuedEmail({
+      to: target.email,
+      employeeName: target.fullName,
+      issuerName,
+      category: parsed.data.category,
+      amount: parsed.data.amount,
+      reason: parsed.data.reason.trim(),
+    });
+    res.status(201).json(
+      CreateQueryResponse.parse({
+        ...withNames,
+        emailSent,
+        privateChatSent,
+      }),
+    );
   },
 );
 

@@ -2780,7 +2780,9 @@ export const CreateQueryResponse = zod.object({
   "reason": zod.string(),
   "createdAt": zod.coerce.date(),
   "employeeName": zod.string(),
-  "issuedByName": zod.string().nullable()
+  "issuedByName": zod.string().nullable(),
+  "emailSent": zod.boolean(),
+  "privateChatSent": zod.boolean()
 })
 
 

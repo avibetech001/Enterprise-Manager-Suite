@@ -118,6 +118,7 @@ export * from './pushSubscriptionInput';
 export * from './pushUnsubscribeInput';
 export * from './queryInput';
 export * from './queryInputCategory';
+export * from './queryIssueResponse';
 export * from './requisition';
 export * from './requisitionInput';
 export * from './requisitionWithUser';

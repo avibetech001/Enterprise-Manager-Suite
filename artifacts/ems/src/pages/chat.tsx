@@ -191,7 +191,7 @@ export default function TeamChatPage() {
                   {g.kind === "company"
                     ? "Everyone in the company"
                     : g.kind === "team"
-                      ? "Brand and creative roles"
+                      ? "Role-based team chat"
                       : "Department group"}
                 </p>
               </div>

@@ -74,6 +74,80 @@ export async function sendActivationEmail(options: {
   }
 }
 
+export async function sendQueryIssuedEmail(options: {
+  to: string;
+  employeeName: string;
+  issuerName: string;
+  category: string;
+  amount?: string | null;
+  reason: string;
+}): Promise<boolean> {
+  const { to, employeeName, issuerName, category, amount, reason } = options;
+  const label =
+    category === "deduction" ? "Deduction" : category === "fine" ? "Fine" : "Query";
+  const details = [
+    `${label} issued by: ${issuerName}`,
+    amount ? `Amount: ${amount}` : "",
+    "",
+    "Reason:",
+    reason,
+  ].filter((line, index) => line !== "" || index >= 2).join("\n");
+
+  try {
+    const connectors = new ReplitConnectors();
+    const response = await connectors.proxy("sendgrid", "/v3/mail/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        personalizations: [{ to: [{ email: to, name: employeeName }] }],
+        from: { email: FROM_EMAIL, name: FROM_NAME },
+        subject: `A ${label.toLowerCase()} has been issued to you`,
+        content: [
+          {
+            type: "text/plain",
+            value: [
+              `Hi ${employeeName},`,
+              "",
+              `Management has issued a ${label.toLowerCase()} to you.`,
+              "",
+              details,
+              "",
+              "You can review it in your employee portal and discuss it through your private chat.",
+              "",
+              "— 5th Element HR",
+            ].join("\n"),
+          },
+          {
+            type: "text/html",
+            value: `
+              <div style="font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto;padding:24px;color:#1a1a1a;">
+                <h2 style="margin:0 0 16px;">A ${label.toLowerCase()} has been issued to you</h2>
+                <p>Hi ${escapeHtml(employeeName)},</p>
+                <p>Management has issued a ${label.toLowerCase()} to you.</p>
+                <p><strong>Issued by:</strong> ${escapeHtml(issuerName)}</p>
+                ${amount ? `<p><strong>Amount:</strong> ${escapeHtml(amount)}</p>` : ""}
+                <p><strong>Reason:</strong></p>
+                <p style="white-space:pre-wrap;">${escapeHtml(reason)}</p>
+                <p>You can review it in your employee portal and discuss it through your private chat.</p>
+                <p style="font-size:13px;color:#666;">— 5th Element HR</p>
+              </div>
+            `,
+          },
+        ],
+      }),
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.error(`Query email to ${to} failed: ${response.status} ${detail}`);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.error(`Query email to ${to} failed:`, error);
+    return false;
+  }
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")

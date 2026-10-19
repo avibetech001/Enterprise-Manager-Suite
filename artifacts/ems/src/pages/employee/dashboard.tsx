@@ -9,7 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   CalendarClock,
-  Palmtree,
   FolderKanban,
   MessagesSquare,
   ChevronRight,
@@ -52,13 +51,6 @@ export default function EmployeeDashboard() {
       description: "Check in, check out, and view your attendance.",
       value: attendanceStatus,
       highlight: Boolean(summary.attendanceToday && !summary.attendanceToday.checkOutAt),
-    },
-    {
-      href: "/employee/leave",
-      icon: Palmtree,
-      title: "Leave Balance",
-      description: "Review your balance and submit leave requests.",
-      value: `${summary.leaveBalance.remaining} / ${summary.leaveBalance.allocation}`,
     },
     {
       href: "/employee/projects",

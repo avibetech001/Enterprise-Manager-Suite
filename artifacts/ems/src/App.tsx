@@ -36,6 +36,7 @@ import ManagementProjectsPage from '@/pages/management/projects';
 import ManagementFundRequestsPage from '@/pages/management/fund-requests';
 import ManagementInvoicesPage from '@/pages/management/invoices';
 import ManagementAnnouncementsPage from '@/pages/management/announcements';
+import ManagementQueriesPage from '@/pages/management/queries';
 
 // Future imports for Mgmt
 import EmployeesPage from '@/pages/management/employees';
@@ -192,6 +193,7 @@ function Router() {
         ["/fund-requests", ManagementFundRequestsPage],
         ["/invoices", ManagementInvoicesPage],
         ["/work-reports", ManagementWorkReportsPage],
+        ["/queries", ManagementQueriesPage],
         ["/announcements", ManagementAnnouncementsPage],
         ["/knowledge-base", ManagementKnowledgeBasePage],
         ["/chat", TeamChatPage],

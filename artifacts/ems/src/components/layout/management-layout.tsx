@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGetCurrentSession, useLogout, useGetPendingCounts, getGetPendingCountsQueryKey } from "@workspace/api-client-react";
 import logo from "@/assets/logo.svg";
 import { Badge } from "@/components/ui/badge";
-import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck, NotebookPen, ReceiptText } from "lucide-react";
+import { LayoutDashboard, Users, UserSquare2, Building2, Settings, Building, LogOut, FileText, CalendarClock, Palmtree, FolderKanban, Wallet, ScrollText, Megaphone, BookOpen, MessagesSquare, ClipboardCheck, NotebookPen, ReceiptText, FileWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
@@ -83,6 +83,17 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
 
                   {(hasPerm("manage_employees") || isSuperAdmin) && (
                     <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/queries"} asChild>
+                        <Link href="/queries">
+                          <FileWarning className="h-4 w-4" />
+                          <span>Queries</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+
+                  {(hasPerm("manage_employees") || isSuperAdmin) && (
+                    <SidebarMenuItem>
                       <SidebarMenuButton isActive={location === "/appraisals"} asChild>
                         <Link href="/appraisals">
                           <ClipboardCheck className="h-4 w-4" />
@@ -109,22 +120,6 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                         <Link href="/attendance">
                           <CalendarClock className="h-4 w-4" />
                           <span>Attendance</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )}
-
-                  {(hasPerm("manage_leave") || isSuperAdmin) && (
-                    <SidebarMenuItem>
-                      <SidebarMenuButton isActive={location === "/leave"} asChild>
-                        <Link href="/leave">
-                          <Palmtree className="h-4 w-4" />
-                          <span>Leave</span>
-                          {(pendingCounts?.leave ?? 0) > 0 && (
-                            <Badge variant="secondary" className="ml-auto h-5 min-w-5 justify-center px-1.5 text-xs">
-                              {pendingCounts!.leave}
-                            </Badge>
-                          )}
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -201,6 +196,29 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                     </SidebarMenuItem>
                   )}
 
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Company</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {(hasPerm("manage_leave") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/leave"} asChild>
+                        <Link href="/leave">
+                          <Palmtree className="h-4 w-4" />
+                          <span>Leave</span>
+                          {(pendingCounts?.leave ?? 0) > 0 && (
+                            <Badge variant="secondary" className="ml-auto h-5 min-w-5 justify-center px-1.5 text-xs">
+                              {pendingCounts!.leave}
+                            </Badge>
+                          )}
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

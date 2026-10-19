@@ -20,7 +20,6 @@ import {
   Building2,
   Users,
   FolderKanban,
-  Palmtree,
   Wallet,
   MessagesSquare,
   NotebookPen,
@@ -40,7 +39,6 @@ export default function ManagementDashboard() {
   const canManageEmployees = hasPerm("manage_employees");
   const canManageDepartments = hasPerm("manage_departments");
   const canManageProjects = hasPerm("manage_projects");
-  const canManageLeave = hasPerm("manage_leave");
   const canManageFinance = hasPerm("manage_finance");
   const canViewReports = hasPerm("view_reports");
   const canManageInvoices = hasPerm("manage_invoices") || canManageFinance;
@@ -100,15 +98,6 @@ export default function ManagementDashboard() {
     0;
 
   const modules = [
-    {
-      title: "Leave Requests",
-      description: "Review and manage employee time off.",
-      icon: Palmtree,
-      href: "/leave",
-      count: pendingCounts?.leave,
-      pending: true,
-      show: canManageLeave
-    },
     {
       title: "Fund Requests",
       description: "Approve and track financial requests.",

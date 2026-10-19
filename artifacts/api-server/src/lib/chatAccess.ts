@@ -1,8 +1,11 @@
 export const CREATIVE_TEAM_GROUP_ID = "team-creative";
 export const CREATIVE_TEAM_KEY = "brand-social-creative";
+export const GROWTH_TEAM_GROUP_ID = "team-growth";
+export const GROWTH_TEAM_KEY = "growth";
 
 const CREATIVE_TEAM_TITLE =
   /(brand.*manager|social.*manager|copy\s*(?:writer|righter)|designer|team\s*lead|team\s*leader)/i;
+const GROWTH_TEAM_TITLE = /growth/i;
 
 export interface CreativeTeamUser {
   id: number;
@@ -42,6 +45,28 @@ export function canAccessCreativeTeam(
     user.role === "super_admin" ||
     isCreativeTeamEmployee(user)
   );
+}
+
+export function isGrowthTeamEmployee(user: {
+  role: string;
+  status: string;
+  archived: boolean;
+  jobTitle?: string | null;
+}): boolean {
+  return (
+    user.role === "employee" &&
+    user.status === "active" &&
+    !user.archived &&
+    GROWTH_TEAM_TITLE.test(user.jobTitle || "")
+  );
+}
+
+export function canAccessGrowthTeam(
+  user: CreativeTeamUser,
+  resourceCompanyId: number,
+): boolean {
+  if (user.companyId !== resourceCompanyId) return false;
+  return user.role === "super_admin" || isGrowthTeamEmployee(user);
 }
 
 export function canonicalPrivatePair(

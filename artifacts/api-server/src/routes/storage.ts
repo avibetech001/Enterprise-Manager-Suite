@@ -23,8 +23,10 @@ import {
 } from '../lib/objectStorage';
 import {
   canAccessCreativeTeam,
+  canAccessGrowthTeam,
   canAccessPrivateConversation,
   CREATIVE_TEAM_KEY,
+  GROWTH_TEAM_KEY,
 } from '../lib/chatAccess';
 
 const router: IRouter = Router();
@@ -183,6 +185,19 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
               { ...me, jobTitle: emp?.jobTitle },
               chatMsg.companyId,
               chatMsg.teamKey,
+            );
+          }
+        } else if (chatMsg.teamKey === GROWTH_TEAM_KEY) {
+          if (me.role === "super_admin") {
+            allowed = canAccessGrowthTeam(me, chatMsg.companyId);
+          } else {
+            const [emp] = await db
+              .select({ jobTitle: employmentInfoTable.jobTitle })
+              .from(employmentInfoTable)
+              .where(eq(employmentInfoTable.userId, me.id));
+            allowed = canAccessGrowthTeam(
+              { ...me, jobTitle: emp?.jobTitle },
+              chatMsg.companyId,
             );
           }
         } else if (chatMsg.teamKey) {

@@ -91,6 +91,7 @@ import type {
   PushSubscriptionInput,
   PushUnsubscribeInput,
   QueryInput,
+  QueryIssueResponse,
   Requisition,
   RequisitionInput,
   RequisitionWithUser,
@@ -6876,9 +6877,9 @@ export const getCreateQueryUrl = () => {
 /**
  * @summary Issue a query/deduction/fine against an employee (management)
  */
-export const createQuery = async (queryInput: QueryInput, options?: RequestInit): Promise<EmployeeQuery> => {
+export const createQuery = async (queryInput: QueryInput, options?: RequestInit): Promise<QueryIssueResponse> => {
 
-  return customFetch<EmployeeQuery>(getCreateQueryUrl(),
+  return customFetch<QueryIssueResponse>(getCreateQueryUrl(),
   {
     ...options,
     method: 'POST',

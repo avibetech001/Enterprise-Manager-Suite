@@ -30,7 +30,10 @@ import {
   canonicalPrivatePair,
   CREATIVE_TEAM_GROUP_ID,
   CREATIVE_TEAM_KEY,
+  GROWTH_TEAM_GROUP_ID,
+  GROWTH_TEAM_KEY,
   findOrCreatePrivateConversation,
+  isGrowthTeamEmployee,
   isCreativeTeamEmployee,
 } from "../lib/chatAccess";
 import { notify } from "../lib/notify";
@@ -81,6 +84,31 @@ async function creativeTeamMemberIds(companyId: number): Promise<number[]> {
   ).map((row) => row.id);
 }
 
+async function growthTeamMemberIds(companyId: number): Promise<number[]> {
+  const rows = await db
+    .select({ id: usersTable.id, jobTitle: employmentInfoTable.jobTitle })
+    .from(usersTable)
+    .innerJoin(employmentInfoTable, eq(employmentInfoTable.userId, usersTable.id))
+    .where(
+      and(
+        eq(usersTable.companyId, companyId),
+        eq(usersTable.role, "employee"),
+        eq(usersTable.status, "active"),
+        eq(usersTable.archived, false),
+      ),
+    );
+  return rows
+    .filter((row) =>
+      isGrowthTeamEmployee({
+        role: "employee",
+        status: "active",
+        archived: false,
+        jobTitle: row.jobTitle,
+      }),
+    )
+    .map((row) => row.id);
+}
+
 async function isCreativeTeamMember(me: CurrentUser): Promise<boolean> {
   if (canAccessCreativeTeam(me, me.companyId)) return true;
   return (await creativeTeamMemberIds(me.companyId)).includes(me.id);
@@ -114,6 +142,20 @@ async function resolveGroup(
       name: "Brand, Social & Creative Team",
       departmentId: null,
       teamKey: CREATIVE_TEAM_KEY,
+    };
+  }
+  if (groupId === GROWTH_TEAM_GROUP_ID) {
+    if (
+      me.role !== "super_admin" &&
+      !(await growthTeamMemberIds(me.companyId)).includes(me.id)
+    ) {
+      return null;
+    }
+    return {
+      id: GROWTH_TEAM_GROUP_ID,
+      name: "Growth Team",
+      departmentId: null,
+      teamKey: GROWTH_TEAM_KEY,
     };
   }
   const match = /^dept-(\d+)$/.exec(groupId);
@@ -165,6 +207,12 @@ router.get(
         kind: "team",
       });
     }
+    if (
+      me.role === "super_admin" ||
+      (await growthTeamMemberIds(me.companyId)).includes(me.id)
+    ) {
+      groups.push({ id: GROWTH_TEAM_GROUP_ID, name: "Growth Team", kind: "team" });
+    }
     res.json(groups.map((g) => ChatGroup.parse(g)));
   },
 );
@@ -194,7 +242,11 @@ router.get(
       .where(eq(usersTable.companyId, me.companyId))
       .orderBy(asc(usersTable.fullName));
     const teamMemberIds = group.teamKey
-      ? new Set(await creativeTeamMemberIds(me.companyId))
+      ? new Set(
+          group.teamKey === CREATIVE_TEAM_KEY
+            ? await creativeTeamMemberIds(me.companyId)
+            : await growthTeamMemberIds(me.companyId),
+        )
       : null;
     const members = rows.filter((u) =>
       teamMemberIds
@@ -338,14 +390,18 @@ router.post(
         eq(employmentInfoTable.userId, usersTable.id),
       )
       .where(eq(usersTable.companyId, me.companyId));
-    const creativeIds = group.teamKey
-      ? new Set(await creativeTeamMemberIds(me.companyId))
+    const teamIds = group.teamKey
+      ? new Set(
+          group.teamKey === CREATIVE_TEAM_KEY
+            ? await creativeTeamMemberIds(me.companyId)
+            : await growthTeamMemberIds(me.companyId),
+        )
       : null;
     const memberIds = new Set(
       allMembers
         .filter((u) =>
-          creativeIds
-            ? creativeIds.has(u.id)
+          teamIds
+            ? teamIds.has(u.id)
             : group.departmentId === null || u.departmentId === group.departmentId,
         )
         .map((u) => u.id),

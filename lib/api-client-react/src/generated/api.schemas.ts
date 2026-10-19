@@ -1176,6 +1176,22 @@ export interface EmployeeQuery {
   issuedByName: string | null;
 }
 
+export interface QueryIssueResponse {
+  id: number;
+  companyId: number;
+  userId: number;
+  category: string;
+  /** @nullable */
+  amount: string | null;
+  reason: string;
+  createdAt: string;
+  employeeName: string;
+  /** @nullable */
+  issuedByName: string | null;
+  emailSent: boolean;
+  privateChatSent: boolean;
+}
+
 export type EmployeeOverviewLeave = {
   allocation: number;
   used: number;

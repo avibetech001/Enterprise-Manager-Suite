@@ -52,7 +52,6 @@ const NAV = [
     label: "Work",
     items: [
       { href: "/employee/attendance", icon: CalendarClock, title: "Attendance" },
-      { href: "/employee/leave", icon: Palmtree, title: "Leave" },
       { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
       { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
       { href: "/employee/work-reports", icon: NotebookPen, title: "Work Reports" },
@@ -64,6 +63,7 @@ const NAV = [
   {
     label: "Company",
     items: [
+      { href: "/employee/leave", icon: Palmtree, title: "Leave" },
       { href: "/employee/departments", icon: Building2, title: "Departments" },
       { href: "/employee/announcements", icon: Megaphone, title: "Announcements" },
       { href: "/employee/policies", icon: ScrollText, title: "Company Policies" },

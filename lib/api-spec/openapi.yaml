@@ -2106,7 +2106,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/EmployeeQuery"
+                $ref: "#/components/schemas/QueryIssueResponse"
 
   /queries/{id}:
     delete:
@@ -4221,6 +4221,35 @@ components:
           type: string
         issuedByName:
           type: ["string", "null"]
+
+    QueryIssueResponse:
+      type: object
+      required:
+        [id, companyId, userId, category, amount, reason, createdAt, employeeName, issuedByName, emailSent, privateChatSent]
+      properties:
+        id:
+          type: integer
+        companyId:
+          type: integer
+        userId:
+          type: integer
+        category:
+          type: string
+        amount:
+          type: ["string", "null"]
+        reason:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        employeeName:
+          type: string
+        issuedByName:
+          type: ["string", "null"]
+        emailSent:
+          type: boolean
+        privateChatSent:
+          type: boolean
 
     EmployeeOverview:
       type: object
