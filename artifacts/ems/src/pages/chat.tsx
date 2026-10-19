@@ -500,7 +500,8 @@ function MessageBubble({
   const fileUrl = m.filePath
     ? `${import.meta.env.BASE_URL}api/storage${m.filePath}`
     : null;
-  const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp)$/i.test(m.fileName || "");
+  const isImageAttachment = /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(m.fileName || "");
+  const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp|avif)$/i.test(m.fileName || "");
 
   return (
     <div className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}>
@@ -563,18 +564,42 @@ function MessageBubble({
           <audio controls preload="none" src={fileUrl} className="mt-1 max-w-full h-9" />
         ) : (
           fileUrl && (
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <a
-                href={fileUrl}
-                target="_blank"
-                rel="noreferrer"
-                className={`flex items-center gap-1.5 text-xs underline break-all ${
-                  mine ? "text-primary-foreground" : "text-foreground"
-                }`}
-              >
-                <FileText className="h-3.5 w-3.5 shrink-0" />
-                {m.fileName || "Attachment"}
-              </a>
+            <div
+              className={`mt-1 ${
+                isImageAttachment
+                  ? "flex flex-col items-start gap-1.5"
+                  : "flex flex-wrap items-center gap-x-3 gap-y-1"
+              }`}
+            >
+              {isImageAttachment ? (
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block max-w-full"
+                  aria-label={`Open image ${m.fileName || "attachment"}`}
+                >
+                  <img
+                    src={fileUrl}
+                    alt={m.fileName || "Image attachment"}
+                    loading="lazy"
+                    decoding="async"
+                    className="max-h-72 max-w-full rounded-md object-contain"
+                  />
+                </a>
+              ) : (
+                <a
+                  href={fileUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={`flex items-center gap-1.5 text-xs underline break-all ${
+                    mine ? "text-primary-foreground" : "text-foreground"
+                  }`}
+                >
+                  <FileText className="h-3.5 w-3.5 shrink-0" />
+                  {m.fileName || "Attachment"}
+                </a>
+              )}
               {canSaveToDevice && (
                 <a
                   href={fileUrl}
