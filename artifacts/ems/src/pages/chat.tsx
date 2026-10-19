@@ -88,6 +88,14 @@ function Linkify({ text }: { text: string }) {
   );
 }
 
+type LinkPreviewData = {
+  url: string;
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  siteName: string | null;
+};
+
 function LinkPreviewCard({ text, mine }: { text: string; mine: boolean }) {
   const match = text.match(/(https?:\/\/[^\s<>"']+|www\.[^\s<>"']+)/i)?.[0];
   const rawUrl = match?.replace(/[),.!?;:]+$/, "");
@@ -101,30 +109,78 @@ function LinkPreviewCard({ text, mine }: { text: string; mine: boolean }) {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") return null;
 
+  const [preview, setPreview] = useState<LinkPreviewData | null>(null);
+  const [imageFailed, setImageFailed] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setPreview(null);
+    setImageFailed(false);
+
+    fetch(
+      `${import.meta.env.BASE_URL}api/chat/link-preview?url=${encodeURIComponent(url.toString())}`,
+      { credentials: "include" },
+    )
+      .then((response) => {
+        if (!response.ok) throw new Error("Link preview unavailable");
+        return response.json() as Promise<LinkPreviewData>;
+      })
+      .then((data) => {
+        if (!cancelled) setPreview(data);
+      })
+      .catch(() => {
+        // Keep the domain card available even if the page blocks metadata fetches.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url.toString()]);
+
   return (
     <a
       href={url.toString()}
       target="_blank"
       rel="noopener noreferrer"
       onClick={(event) => event.stopPropagation()}
-      className={`mt-2 block max-w-[340px] rounded-md border px-3 py-2 no-underline transition-colors ${
+      className={`mt-2 block max-w-[340px] overflow-hidden rounded-md border no-underline transition-colors ${
         mine
           ? "border-primary-foreground/25 bg-primary-foreground/10 hover:bg-primary-foreground/15"
           : "border-border bg-background/70 hover:bg-background"
       }`}
-      aria-label={`Open link to ${url.hostname}`}
+      aria-label={`Open link to ${preview?.title || preview?.siteName || url.hostname}`}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <Globe2 className="h-4 w-4 shrink-0 opacity-75" />
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold">
-          {url.hostname}
-        </span>
-        <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
-      </div>
-      {url.pathname !== "/" && (
-        <p className="mt-1 truncate text-xs opacity-75">{url.pathname}</p>
+      {preview?.image && !imageFailed && (
+        <img
+          src={preview.image}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          referrerPolicy="no-referrer"
+          onError={() => setImageFailed(true)}
+          className="max-h-44 w-full object-cover"
+        />
       )}
-      <p className="mt-1 text-[10px] opacity-70">Open link</p>
+      <div className="p-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <Globe2 className="h-4 w-4 shrink-0 opacity-75" />
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+            {preview?.siteName || url.hostname}
+          </span>
+          <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        </div>
+        {preview?.title ? (
+          <p className="mt-1 line-clamp-2 text-xs font-semibold">{preview.title}</p>
+        ) : url.pathname !== "/" ? (
+          <p className="mt-1 truncate text-xs opacity-75">{url.pathname}</p>
+        ) : null}
+        {preview?.description && (
+          <p className="mt-1 line-clamp-2 text-xs opacity-75">
+            {preview.description}
+          </p>
+        )}
+        <p className="mt-1 text-[10px] opacity-70">{url.hostname}</p>
+      </div>
     </a>
   );
 }
@@ -461,14 +517,12 @@ function DaySeparator({ label }: { label: string }) {
 function MessageBubble({
   m,
   mine,
-  showLinkPreview,
   canDelete,
   onReply,
   onDelete,
 }: {
   m: ChatMessage;
   mine: boolean;
-  showLinkPreview: boolean;
   canDelete: boolean;
   onReply: () => void;
   onDelete: () => void;
@@ -544,7 +598,7 @@ function MessageBubble({
             <Linkify text={m.body} />
           </p>
         )}
-        {showLinkPreview && m.body && (
+        {m.body && (
           <LinkPreviewCard text={m.body} mine={mine} />
         )}
         {readByNames.length > 0 && (
@@ -951,8 +1005,7 @@ function GroupChat({
                 <MessageBubble
                   m={m}
                   mine={mine}
-                  showLinkPreview={!privateConversationId}
-                   canDelete={mine || (isManagement && !privateConversationId)}
+                  canDelete={mine || (isManagement && !privateConversationId)}
                   onReply={() => setReplyTo(m)}
                   onDelete={() => handleDelete(m)}
                 />

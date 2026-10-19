@@ -43,12 +43,31 @@ import {
 } from "../lib/chatAccess";
 import { notify } from "../lib/notify";
 import { sendPush } from "../lib/push";
+import { getChatLinkPreview } from "../lib/chatLinkPreview";
 
 const router: IRouter = Router();
 
 type CurrentUser = NonNullable<Request["currentUser"]>;
 const ONLINE_WINDOW_MS = 90_000;
 const managedTeamLead = alias(usersTable, "managed_team_lead");
+
+router.get(
+  "/chat/link-preview",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const rawUrl = req.query.url;
+    if (typeof rawUrl !== "string" || rawUrl.length > 2_048) {
+      res.status(400).json({ error: "A valid link URL is required" });
+      return;
+    }
+
+    try {
+      res.json(await getChatLinkPreview(rawUrl));
+    } catch {
+      res.status(422).json({ error: "Link preview unavailable" });
+    }
+  },
+);
 
 function canManageTeamChats(user: CurrentUser): boolean {
   return (
