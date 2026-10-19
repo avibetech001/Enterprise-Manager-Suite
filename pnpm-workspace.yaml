@@ -77,14 +77,17 @@ onlyBuiltDependencies:
 overrides:
   # Security: pin vulnerable transitive dependencies to fixed versions
   browserslist: "4.28.7"
-  brace-expansion: ">=5.0.9"
-  dompurify: "3.4.13"
-  fast-uri: ">=4.1.2"
+  brace-expansion: "^5.0.12"
+  dompurify: "^3.4.17"
+  fast-uri: "^4.2.2"
   js-yaml: ">=5.2.3"
   nanoid: "3.3.18"
   # orval (dev-only codegen tool) requires js-yaml v4's default export
-  "orval>js-yaml": "^4.1.0"
+  "orval>js-yaml": "^4.3.2"
+  # typography's latest release still pins the vulnerable v6 parser.
+  "@tailwindcss/typography>postcss-selector-parser": "^7.1.6"
   postcss: ">=8.5.25"
+  source-map-js: "^1.2.2"
   # replit uses linux-x64 only, we can exclude all other platforms
   "esbuild>@esbuild/darwin-arm64": "-"
   "esbuild>@esbuild/darwin-x64": "-"
