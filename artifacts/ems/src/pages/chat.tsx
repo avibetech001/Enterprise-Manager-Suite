@@ -109,10 +109,26 @@ function LinkPreviewCard({ text, mine }: { text: string; mine: boolean }) {
   }
   if (url.protocol !== "http:" && url.protocol !== "https:") return null;
 
+  const cardRef = useRef<HTMLAnchorElement | null>(null);
+  const [isVisible, setIsVisible] = useState(false);
   const [preview, setPreview] = useState<LinkPreviewData | null>(null);
   const [imageFailed, setImageFailed] = useState(false);
 
   useEffect(() => {
+    const element = cardRef.current;
+    if (!element || isVisible) return;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [isVisible, url.toString()]);
+
+  useEffect(() => {
+    if (!isVisible) return;
     let cancelled = false;
     setPreview(null);
     setImageFailed(false);
@@ -135,10 +151,11 @@ function LinkPreviewCard({ text, mine }: { text: string; mine: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [url.toString()]);
+  }, [isVisible, url.toString()]);
 
   return (
     <a
+      ref={cardRef}
       href={url.toString()}
       target="_blank"
       rel="noopener noreferrer"
@@ -554,8 +571,8 @@ function MessageBubble({
   const fileUrl = m.filePath
     ? `${import.meta.env.BASE_URL}api/storage${m.filePath}`
     : null;
-  const isImageAttachment = /\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(m.fileName || "");
-  const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp|avif)$/i.test(m.fileName || "");
+  const isImageAttachment = /\.(png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "");
+  const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "");
 
   return (
     <div className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}>

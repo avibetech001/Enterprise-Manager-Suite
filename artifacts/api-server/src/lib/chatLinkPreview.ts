@@ -302,6 +302,26 @@ export async function getChatLinkPreview(
   if (cached && cached.expiresAt > Date.now()) return cached.preview;
   if (cached) previewCache.delete(cacheKey);
 
+  if (/\.(png|jpe?g|gif|webp|bmp|avif)$/i.test(url.pathname)) {
+    await resolvePublicAddresses(url);
+    const directImagePreview: ChatLinkPreview = {
+      url: url.toString(),
+      title: decodeHtmlEntities(url.pathname.split("/").pop() || url.hostname),
+      description: null,
+      image: url.toString(),
+      siteName: url.hostname,
+    };
+    previewCache.set(cacheKey, {
+      expiresAt: Date.now() + PREVIEW_TTL_MS,
+      preview: directImagePreview,
+    });
+    if (previewCache.size > MAX_CACHE_SIZE) {
+      const oldestKey = previewCache.keys().next().value;
+      if (oldestKey) previewCache.delete(oldestKey);
+    }
+    return directImagePreview;
+  }
+
   for (let redirects = 0; redirects <= 3; redirects += 1) {
     const [address] = await resolvePublicAddresses(url);
     const response = await requestHtml(url, address);
