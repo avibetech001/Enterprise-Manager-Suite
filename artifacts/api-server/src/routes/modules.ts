@@ -352,7 +352,7 @@ router.get(
   requireEmployee,
   async (req, res): Promise<void> => {
     const me = req.currentUser!;
-    const [attendanceRows, balance, projects, funds, reqs, announcements] =
+  const [attendanceRows, balance, projects, funds, reqs, announcementRows] =
       await Promise.all([
         db
           .select()
@@ -384,8 +384,12 @@ router.get(
             ),
           ),
         db
-          .select()
+          .select({
+            post: companyPostsTable,
+            createdByName: usersTable.fullName,
+          })
           .from(companyPostsTable)
+          .leftJoin(usersTable, eq(usersTable.id, companyPostsTable.createdBy))
           .where(
             and(
               eq(companyPostsTable.companyId, me.companyId),
@@ -404,7 +408,10 @@ router.get(
         activeProjects: projects.filter((p) => p.status !== "completed").length,
         pendingFundRequests: funds.length,
         pendingRequisitions: reqs.length,
-        announcements,
+        announcements: announcementRows.map(({ post, createdByName }) => ({
+          ...post,
+          createdByName,
+        })),
       }),
     );
   },
