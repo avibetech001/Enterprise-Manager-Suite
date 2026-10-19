@@ -1074,7 +1074,7 @@ function GroupChat({
             type="button"
             variant="outline"
             size="icon"
-            className="hidden sm:inline-flex shrink-0"
+            className="inline-flex shrink-0"
             disabled={isUploading || isRecording}
             onClick={() => fileInputRef.current?.click()}
             title="Attach a file"
@@ -1085,7 +1085,7 @@ function GroupChat({
             type="button"
             variant={isRecording ? "destructive" : "outline"}
             size="icon"
-            className="hidden sm:inline-flex shrink-0"
+            className="inline-flex shrink-0"
             disabled={isUploading || sendMessage.isPending}
             onClick={isRecording ? stopRecording : startRecording}
             title={isRecording ? "Stop and send" : "Record a voice note"}
