@@ -15,7 +15,15 @@ export interface CompanyPost {
   title: string;
   body: string;
   /** @nullable */
-  link?: string | null;
+  link: string | null;
+  /** @nullable */
+  attachmentPath: string | null;
+  /** @nullable */
+  attachmentFileName: string | null;
+  /** @nullable */
+  attachmentContentType: string | null;
+  /** @nullable */
+  createdByName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

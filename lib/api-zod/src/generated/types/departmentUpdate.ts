@@ -10,4 +10,6 @@ export interface DepartmentUpdate {
   /** @minLength 1 */
   name?: string;
   description?: string;
+  /** @nullable */
+  teamLeadUserId?: number | null;
 }

@@ -1,5 +1,8 @@
 import { useMemo, useState } from "react";
-import { useListWorkReports } from "@workspace/api-client-react";
+import {
+  useListWorkReports,
+  getListWorkReportsQueryKey,
+} from "@workspace/api-client-react";
 import { useNotificationFocus } from "@/lib/use-notification-focus";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +45,12 @@ function formatDateStr(d: string, style: "short" | "long" = "short") {
 }
 
 export default function ManagementWorkReports() {
-  const { data: reports, isLoading } = useListWorkReports();
+  const { data: reports, isLoading } = useListWorkReports({
+    query: {
+      queryKey: getListWorkReportsQueryKey(),
+      refetchInterval: 15_000,
+    },
+  });
   useNotificationFocus(!!reports);
 
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -75,7 +83,7 @@ export default function ManagementWorkReports() {
           Work Reports
         </h1>
         <p className="text-muted-foreground mt-1">
-          Daily, weekly, and monthly reports submitted by employees.
+          Daily, weekly, and monthly team reports submitted by assigned Team Leads.
         </p>
       </div>
 
@@ -138,6 +146,9 @@ export default function ManagementWorkReports() {
                     >
                       {PERIOD_LABEL[r.period] || r.period}
                     </Badge>
+                    {r.departmentName && (
+                      <Badge variant="outline">{r.departmentName} team</Badge>
+                    )}
                     <span className="flex items-center gap-1 text-sm font-normal text-muted-foreground ml-auto">
                       <CalendarDays className="h-3.5 w-3.5" />
                       {formatDateStr(r.reportDate)}
@@ -169,6 +180,9 @@ export default function ManagementWorkReports() {
                   >
                     {PERIOD_LABEL[detail.period] || detail.period}
                   </Badge>
+                  {detail.departmentName && (
+                    <Badge variant="outline">{detail.departmentName} team</Badge>
+                  )}
                   <span className="text-sm font-normal text-muted-foreground">
                     {formatDateStr(detail.reportDate, "long")}
                     {detail.endDate

@@ -389,7 +389,9 @@ export const ListDepartmentsResponseItem = zod.object({
   "id": zod.number(),
   "fullName": zod.string(),
   "jobTitle": zod.string().nullable()
-}))
+})),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable()
 })
 export const ListDepartmentsResponse = zod.array(ListDepartmentsResponseItem)
 
@@ -415,7 +417,9 @@ export const CreateDepartmentResponse = zod.object({
   "id": zod.number(),
   "fullName": zod.string(),
   "jobTitle": zod.string().nullable()
-}))
+})),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable()
 })
 
 
@@ -431,7 +435,8 @@ export const UpdateDepartmentParams = zod.object({
 
 export const UpdateDepartmentBody = zod.object({
   "name": zod.string().min(1).optional(),
-  "description": zod.string().optional()
+  "description": zod.string().optional(),
+  "teamLeadUserId": zod.number().nullish()
 })
 
 export const UpdateDepartmentResponse = zod.object({
@@ -444,7 +449,9 @@ export const UpdateDepartmentResponse = zod.object({
   "id": zod.number(),
   "fullName": zod.string(),
   "jobTitle": zod.string().nullable()
-}))
+})),
+  "teamLeadUserId": zod.number().nullable(),
+  "teamLeadName": zod.string().nullable()
 })
 
 
@@ -1141,7 +1148,11 @@ export const GetMySummaryResponse = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
-  "link": zod.string().nullish(),
+  "link": zod.string().nullable(),
+  "attachmentPath": zod.string().nullable(),
+  "attachmentFileName": zod.string().nullable(),
+  "attachmentContentType": zod.string().nullable(),
+  "createdByName": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 }))
@@ -2670,6 +2681,7 @@ export const ListMyWorkReportsResponseItem = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "userId": zod.number(),
+  "departmentId": zod.number().nullable(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
   "endDate": zod.string().nullish(),
@@ -2698,6 +2710,7 @@ export const CreateWorkReportResponse = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "userId": zod.number(),
+  "departmentId": zod.number().nullable(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
   "endDate": zod.string().nullish(),
@@ -2713,6 +2726,7 @@ export const ListWorkReportsResponseItem = zod.object({
   "id": zod.number(),
   "companyId": zod.number(),
   "userId": zod.number(),
+  "departmentId": zod.number().nullable(),
   "period": zod.enum(['daily', 'weekly', 'monthly']),
   "reportDate": zod.string(),
   "endDate": zod.string().nullish(),
@@ -2720,7 +2734,8 @@ export const ListWorkReportsResponseItem = zod.object({
   "createdAt": zod.coerce.date()
 }).and(zod.object({
   "employeeName": zod.string(),
-  "employeeCode": zod.string().nullable()
+  "employeeCode": zod.string().nullable(),
+  "departmentName": zod.string().nullable()
 }))
 export const ListWorkReportsResponse = zod.array(ListWorkReportsResponseItem)
 
@@ -2831,7 +2846,11 @@ export const ListPostsResponseItem = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
-  "link": zod.string().nullish(),
+  "link": zod.string().nullable(),
+  "attachmentPath": zod.string().nullable(),
+  "attachmentFileName": zod.string().nullable(),
+  "attachmentContentType": zod.string().nullable(),
+  "createdByName": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -2844,13 +2863,15 @@ export const ListPostsResponse = zod.array(ListPostsResponseItem)
 
 
 
-
 export const CreatePostBody = zod.object({
   "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
   "category": zod.union([zod.literal('idea_dump'),zod.literal('samples'),zod.literal('strategy'),zod.literal(null)]).nullish(),
   "title": zod.string().min(1),
-  "body": zod.string().min(1),
-  "link": zod.string().nullish()
+  "body": zod.string(),
+  "link": zod.string().nullish(),
+  "attachmentPath": zod.string().nullish(),
+  "attachmentFileName": zod.string().nullish(),
+  "attachmentContentType": zod.string().nullish()
 })
 
 export const CreatePostResponse = zod.object({
@@ -2860,7 +2881,11 @@ export const CreatePostResponse = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
-  "link": zod.string().nullish(),
+  "link": zod.string().nullable(),
+  "attachmentPath": zod.string().nullable(),
+  "attachmentFileName": zod.string().nullable(),
+  "attachmentContentType": zod.string().nullable(),
+  "createdByName": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -2876,13 +2901,15 @@ export const UpdatePostParams = zod.object({
 
 
 
-
 export const UpdatePostBody = zod.object({
   "kind": zod.enum(['announcement', 'policy', 'knowledge_base']),
   "category": zod.union([zod.literal('idea_dump'),zod.literal('samples'),zod.literal('strategy'),zod.literal(null)]).nullish(),
   "title": zod.string().min(1),
-  "body": zod.string().min(1),
-  "link": zod.string().nullish()
+  "body": zod.string(),
+  "link": zod.string().nullish(),
+  "attachmentPath": zod.string().nullish(),
+  "attachmentFileName": zod.string().nullish(),
+  "attachmentContentType": zod.string().nullish()
 })
 
 export const UpdatePostResponse = zod.object({
@@ -2892,7 +2919,11 @@ export const UpdatePostResponse = zod.object({
   "category": zod.string().nullable(),
   "title": zod.string(),
   "body": zod.string(),
-  "link": zod.string().nullish(),
+  "link": zod.string().nullable(),
+  "attachmentPath": zod.string().nullable(),
+  "attachmentFileName": zod.string().nullable(),
+  "attachmentContentType": zod.string().nullable(),
+  "createdByName": zod.string().nullable(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
 })
@@ -3018,6 +3049,14 @@ export const GetEmployeeOverviewResponse = zod.object({
 
 
 /**
+ * @summary Record the current user's active session for online presence
+ */
+export const HeartbeatChatPresenceResponse = zod.object({
+  "lastSeenAt": zod.coerce.date()
+})
+
+
+/**
  * @summary List chat groups available to the current user
  */
 export const ListChatGroupsResponseItem = zod.object({
@@ -3037,7 +3076,9 @@ export const ListChatGroupMembersParams = zod.object({
 
 export const ListChatGroupMembersResponseItem = zod.object({
   "id": zod.number(),
-  "fullName": zod.string()
+  "fullName": zod.string(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.coerce.date().nullable()
 })
 export const ListChatGroupMembersResponse = zod.array(ListChatGroupMembersResponseItem)
 
@@ -3058,6 +3099,7 @@ export const ListChatMessagesResponseItem = zod.object({
   "filePath": zod.string().nullable(),
   "fileName": zod.string().nullable(),
   "mentionUserIds": zod.array(zod.number()),
+  "readByNames": zod.array(zod.string()),
   "kind": zod.string().optional(),
   "replyToId": zod.number().nullish(),
   "replyToBody": zod.string().nullish(),
@@ -3097,6 +3139,7 @@ export const SendChatMessageResponse = zod.object({
   "filePath": zod.string().nullable(),
   "fileName": zod.string().nullable(),
   "mentionUserIds": zod.array(zod.number()),
+  "readByNames": zod.array(zod.string()),
   "kind": zod.string().optional(),
   "replyToId": zod.number().nullish(),
   "replyToBody": zod.string().nullish(),
@@ -3123,7 +3166,9 @@ export const DeleteChatMessageResponse = zod.object({
  */
 export const ListPrivateChatContactsResponseItem = zod.object({
   "id": zod.number(),
-  "fullName": zod.string()
+  "fullName": zod.string(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.coerce.date().nullable()
 })
 export const ListPrivateChatContactsResponse = zod.array(ListPrivateChatContactsResponseItem)
 
@@ -3135,7 +3180,9 @@ export const ListPrivateConversationsResponseItem = zod.object({
   "id": zod.number(),
   "otherUserId": zod.number(),
   "otherUserName": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.coerce.date().nullable()
 })
 export const ListPrivateConversationsResponse = zod.array(ListPrivateConversationsResponseItem)
 
@@ -3151,7 +3198,9 @@ export const CreatePrivateConversationResponse = zod.object({
   "id": zod.number(),
   "otherUserId": zod.number(),
   "otherUserName": zod.string(),
-  "createdAt": zod.coerce.date()
+  "createdAt": zod.coerce.date(),
+  "isOnline": zod.boolean(),
+  "lastSeenAt": zod.coerce.date().nullable()
 })
 
 
@@ -3171,6 +3220,7 @@ export const ListPrivateMessagesResponseItem = zod.object({
   "filePath": zod.string().nullable(),
   "fileName": zod.string().nullable(),
   "mentionUserIds": zod.array(zod.number()),
+  "readByNames": zod.array(zod.string()),
   "kind": zod.string().optional(),
   "replyToId": zod.number().nullish(),
   "replyToBody": zod.string().nullish(),
@@ -3210,6 +3260,7 @@ export const SendPrivateMessageResponse = zod.object({
   "filePath": zod.string().nullable(),
   "fileName": zod.string().nullable(),
   "mentionUserIds": zod.array(zod.number()),
+  "readByNames": zod.array(zod.string()),
   "kind": zod.string().optional(),
   "replyToId": zod.number().nullish(),
   "replyToBody": zod.string().nullish(),

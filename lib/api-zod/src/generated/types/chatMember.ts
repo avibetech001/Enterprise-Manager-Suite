@@ -9,4 +9,7 @@
 export interface ChatMember {
   id: number;
   fullName: string;
+  isOnline: boolean;
+  /** @nullable */
+  lastSeenAt: Date | null;
 }

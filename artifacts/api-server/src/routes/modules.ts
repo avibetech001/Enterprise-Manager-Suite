@@ -1,8 +1,12 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import crypto from "node:crypto";
-import { and, desc, eq, gte, inArray, lte, or, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, lte, ne, or, sql } from "drizzle-orm";
 import {
   db,
+  chatMessagesTable,
+  clientMaterialsTable,
+  directChatMessagesTable,
+  departmentsTable,
   employmentInfoTable,
   attendanceCodesTable,
   attendanceRecordsTable,
@@ -12,7 +16,7 @@ import {
   companiesTable,
   companyHolidaysTable,
   companyPostsTable,
-  directChatMessagesTable,
+  employeeProfilesTable,
   fundRequestsTable,
   invoicesTable,
   leaveRequestsTable,
@@ -108,6 +112,7 @@ import { canonicalPrivatePair, findOrCreatePrivateConversation } from "../lib/ch
 import { sendQueryIssuedEmail } from "../lib/email";
 
 const router: IRouter = Router();
+const postObjectStorage = new ObjectStorageService();
 
 function requireEmployee(
   req: Request,
@@ -131,14 +136,32 @@ async function requireTeamLead(
   next: NextFunction,
 ): Promise<void> {
   try {
-    const [employment] = await db
-      .select({ jobTitle: employmentInfoTable.jobTitle })
-      .from(employmentInfoTable)
-      .where(eq(employmentInfoTable.userId, req.currentUser!.id));
-    if (!/\bteam\s*lead(?:er)?\b/i.test(employment?.jobTitle || "")) {
-      res.status(403).json({ error: "Only a Team Lead can submit work reports." });
+    const me = req.currentUser!;
+    const [assignment] = await db
+      .select({ departmentId: departmentsTable.id })
+      .from(departmentsTable)
+      .innerJoin(
+        employmentInfoTable,
+        eq(employmentInfoTable.departmentId, departmentsTable.id),
+      )
+      .innerJoin(usersTable, eq(usersTable.id, employmentInfoTable.userId))
+      .where(
+        and(
+          eq(departmentsTable.companyId, me.companyId),
+          eq(departmentsTable.teamLeadUserId, me.id),
+          eq(usersTable.id, me.id),
+          eq(usersTable.role, "employee"),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      );
+    if (!assignment) {
+      res.status(403).json({
+        error: "Only the assigned Team Lead for a department can submit team reports.",
+      });
       return;
     }
+    res.locals.teamLeadDepartmentId = assignment.departmentId;
     next();
   } catch (error) {
     next(error);
@@ -2240,6 +2263,7 @@ router.post(
       .values({
         companyId: me.companyId,
         userId: me.id,
+        departmentId: res.locals.teamLeadDepartmentId,
         period: parsed.data.period,
         reportDate: parsed.data.reportDate,
         endDate,
@@ -2267,9 +2291,14 @@ router.get(
         report: workReportsTable,
         employeeName: usersTable.fullName,
         employeeCode: usersTable.employeeCode,
+        departmentName: departmentsTable.name,
       })
       .from(workReportsTable)
       .innerJoin(usersTable, eq(workReportsTable.userId, usersTable.id))
+      .leftJoin(
+        departmentsTable,
+        eq(workReportsTable.departmentId, departmentsTable.id),
+      )
       .where(eq(workReportsTable.companyId, req.currentUser!.companyId))
       .orderBy(desc(workReportsTable.createdAt));
     res.json(
@@ -2278,6 +2307,7 @@ router.get(
           ...r.report,
           employeeName: r.employeeName,
           employeeCode: r.employeeCode,
+          departmentName: r.departmentName,
         })),
       ),
     );
@@ -2426,6 +2456,101 @@ function isValidPostLink(raw: string): boolean {
   }
 }
 
+function isValidPostObjectPath(path: string): boolean {
+  if (!path.startsWith("/objects/")) return false;
+  const segments = path.slice("/objects/".length).split("/");
+  return (
+    segments.length > 0 &&
+    segments.every(
+      (segment) =>
+        segment.length > 0 &&
+        segment !== "." &&
+        segment !== ".." &&
+        /^[A-Za-z0-9._-]+$/.test(segment),
+    )
+  );
+}
+
+async function isPostAttachmentAlreadyUsed(
+  objectPath: string,
+  exceptPostId?: number,
+): Promise<boolean> {
+  const postConditions = [eq(companyPostsTable.attachmentPath, objectPath)];
+  if (exceptPostId !== undefined) {
+    postConditions.push(ne(companyPostsTable.id, exceptPostId));
+  }
+  const [
+    post,
+    project,
+    clientMaterial,
+    groupMessage,
+    directMessage,
+    profilePhoto,
+  ] = await Promise.all([
+    db
+      .select({ id: companyPostsTable.id })
+      .from(companyPostsTable)
+      .where(and(...postConditions))
+      .limit(1),
+    db
+      .select({ id: projectsTable.id })
+      .from(projectsTable)
+      .where(eq(projectsTable.submissionFilePath, objectPath))
+      .limit(1),
+    db
+      .select({ id: clientMaterialsTable.id })
+      .from(clientMaterialsTable)
+      .where(eq(clientMaterialsTable.filePath, objectPath))
+      .limit(1),
+    db
+      .select({ id: chatMessagesTable.id })
+      .from(chatMessagesTable)
+      .where(eq(chatMessagesTable.filePath, objectPath))
+      .limit(1),
+    db
+      .select({ id: directChatMessagesTable.id })
+      .from(directChatMessagesTable)
+      .where(eq(directChatMessagesTable.filePath, objectPath))
+      .limit(1),
+    db
+      .select({ userId: employeeProfilesTable.userId })
+      .from(employeeProfilesTable)
+      .where(eq(employeeProfilesTable.profilePhotoUrl, objectPath))
+      .limit(1),
+  ]);
+  return Boolean(
+    post.length ||
+      project.length ||
+      clientMaterial.length ||
+      groupMessage.length ||
+      directMessage.length ||
+      profilePhoto.length,
+  );
+}
+
+async function validatePostAttachment(
+  objectPath: string | null | undefined,
+  fileName: string | null | undefined,
+  contentType: string | null | undefined,
+  exceptPostId?: number,
+): Promise<string | null> {
+  if (!objectPath) {
+    return fileName || contentType ? "File metadata needs an uploaded file." : null;
+  }
+  if (!isValidPostObjectPath(objectPath) || !fileName?.trim() || !contentType?.trim()) {
+    return "Invalid file attachment.";
+  }
+  if (await isPostAttachmentAlreadyUsed(objectPath, exceptPostId)) {
+    return "File is already attached elsewhere.";
+  }
+  try {
+    await postObjectStorage.getObjectEntityFile(objectPath);
+  } catch {
+    return "Uploaded file was not found.";
+  }
+  return null;
+}
+
 router.get("/posts", requireAuth, async (req, res): Promise<void> => {
   const kind = typeof req.query.kind === "string" ? req.query.kind : null;
   const conditions = [
@@ -2433,11 +2558,19 @@ router.get("/posts", requireAuth, async (req, res): Promise<void> => {
   ];
   if (kind) conditions.push(eq(companyPostsTable.kind, kind));
   const rows = await db
-    .select()
+    .select({
+      post: companyPostsTable,
+      createdByName: usersTable.fullName,
+    })
     .from(companyPostsTable)
+    .leftJoin(usersTable, eq(usersTable.id, companyPostsTable.createdBy))
     .where(and(...conditions))
     .orderBy(desc(companyPostsTable.createdAt));
-  res.json(ListPostsResponse.parse(rows));
+  res.json(
+    ListPostsResponse.parse(
+      rows.map(({ post, createdByName }) => ({ ...post, createdByName })),
+    ),
+  );
 });
 
 router.post(
@@ -2462,6 +2595,23 @@ router.post(
       res.status(400).json({ error: "Link must be a valid http(s) URL." });
       return;
     }
+    const attachmentError = await validatePostAttachment(
+      parsed.data.attachmentPath,
+      parsed.data.attachmentFileName,
+      parsed.data.attachmentContentType,
+    );
+    if (attachmentError) {
+      res.status(400).json({ error: attachmentError });
+      return;
+    }
+    if (
+      !parsed.data.body.trim() &&
+      !parsed.data.link?.trim() &&
+      !parsed.data.attachmentPath
+    ) {
+      res.status(400).json({ error: "Add content, a link, or a file." });
+      return;
+    }
     const me = req.currentUser!;
     const [post] = await db
       .insert(companyPostsTable)
@@ -2470,8 +2620,11 @@ router.post(
         kind: parsed.data.kind,
         category: parsed.data.category ?? null,
         title: parsed.data.title,
-        body: parsed.data.body,
+        body: parsed.data.body.trim(),
         link: parsed.data.link?.trim() || null,
+        attachmentPath: parsed.data.attachmentPath || null,
+        attachmentFileName: parsed.data.attachmentFileName?.trim() || null,
+        attachmentContentType: parsed.data.attachmentContentType?.trim() || null,
         createdBy: me.id,
       })
       .returning();
@@ -2496,7 +2649,9 @@ router.post(
         );
       }
     }
-    res.status(201).json(CreatePostResponse.parse(post));
+    res.status(201).json(
+      CreatePostResponse.parse({ ...post, createdByName: me.fullName }),
+    );
   },
 );
 
@@ -2515,14 +2670,50 @@ router.patch(
       res.status(400).json({ error: "Link must be a valid http(s) URL." });
       return;
     }
+    const [current] = await db
+      .select()
+      .from(companyPostsTable)
+      .where(
+        and(
+          eq(companyPostsTable.id, id),
+          eq(companyPostsTable.companyId, req.currentUser!.companyId),
+        ),
+      )
+      .limit(1);
+    if (!current) {
+      res.status(404).json({ error: "Post not found." });
+      return;
+    }
+    const attachmentError = await validatePostAttachment(
+      parsed.data.attachmentPath,
+      parsed.data.attachmentFileName,
+      parsed.data.attachmentContentType,
+      id,
+    );
+    if (attachmentError) {
+      res.status(400).json({ error: attachmentError });
+      return;
+    }
+    if (
+      !parsed.data.body.trim() &&
+      !parsed.data.link?.trim() &&
+      !parsed.data.attachmentPath
+    ) {
+      res.status(400).json({ error: "Add content, a link, or a file." });
+      return;
+    }
     const [post] = await db
       .update(companyPostsTable)
       .set({
         kind: parsed.data.kind,
         category: parsed.data.category ?? null,
         title: parsed.data.title,
-        body: parsed.data.body,
+        body: parsed.data.body.trim(),
         link: parsed.data.link?.trim() || null,
+        attachmentPath: parsed.data.attachmentPath || null,
+        attachmentFileName: parsed.data.attachmentFileName?.trim() || null,
+        attachmentContentType:
+          parsed.data.attachmentContentType?.trim() || null,
       })
       .where(
         and(
@@ -2535,7 +2726,27 @@ router.patch(
       res.status(404).json({ error: "Post not found." });
       return;
     }
-    res.json(UpdatePostResponse.parse(post));
+    const [creator] =
+      post.createdBy === null
+        ? []
+        : await db
+            .select({ fullName: usersTable.fullName })
+            .from(usersTable)
+            .where(eq(usersTable.id, post.createdBy))
+            .limit(1);
+    if (current.attachmentPath && current.attachmentPath !== post.attachmentPath) {
+      postObjectStorage
+        .deleteObjectEntity(current.attachmentPath)
+        .catch((error) =>
+          req.log.warn({ error }, "Failed to delete replaced company post file"),
+        );
+    }
+    res.json(
+      UpdatePostResponse.parse({
+        ...post,
+        createdByName: creator?.fullName ?? null,
+      }),
+    );
   },
 );
 
@@ -2545,6 +2756,20 @@ router.delete(
   requireManagementPermission("manage_content"),
   async (req, res): Promise<void> => {
     const id = Number(req.params.id);
+    const [post] = await db
+      .select()
+      .from(companyPostsTable)
+      .where(
+        and(
+          eq(companyPostsTable.id, id),
+          eq(companyPostsTable.companyId, req.currentUser!.companyId),
+        ),
+      )
+      .limit(1);
+    if (!post) {
+      res.status(404).json({ error: "Post not found." });
+      return;
+    }
     await db
       .delete(companyPostsTable)
       .where(
@@ -2553,6 +2778,13 @@ router.delete(
           eq(companyPostsTable.companyId, req.currentUser!.companyId),
         ),
       );
+    if (post.attachmentPath) {
+      postObjectStorage
+        .deleteObjectEntity(post.attachmentPath)
+        .catch((error) =>
+          req.log.warn({ error }, "Failed to delete company post file"),
+        );
+    }
     res.status(204).end();
   },
 );

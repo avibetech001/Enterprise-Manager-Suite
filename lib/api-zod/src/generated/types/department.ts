@@ -14,4 +14,8 @@ export interface Department {
   description: string;
   employeeCount: number;
   members: DepartmentMember[];
+  /** @nullable */
+  teamLeadUserId: number | null;
+  /** @nullable */
+  teamLeadName: string | null;
 }

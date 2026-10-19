@@ -11,4 +11,6 @@ export type WorkReportWithUser = WorkReport & ({
   employeeName: string;
   /** @nullable */
   employeeCode: string | null;
+  /** @nullable */
+  departmentName: string | null;
 });

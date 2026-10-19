@@ -11,4 +11,7 @@ export interface PrivateConversation {
   otherUserId: number;
   otherUserName: string;
   createdAt: Date;
+  isOnline: boolean;
+  /** @nullable */
+  lastSeenAt: Date | null;
 }

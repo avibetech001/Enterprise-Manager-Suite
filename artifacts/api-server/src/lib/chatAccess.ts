@@ -4,7 +4,7 @@ export const GROWTH_TEAM_GROUP_ID = "team-growth";
 export const GROWTH_TEAM_KEY = "growth";
 
 const CREATIVE_TEAM_TITLE =
-  /(brand.*manager|social.*manager|copy\s*(?:writer|righter)|designer|team\s*lead|team\s*leader)/i;
+  /(brand|branding|social|copy\s*(?:writers?|righters?)|design(?:ers?)?|team\s*(?:leads?|leaders?))/i;
 const GROWTH_TEAM_TITLE = /growth/i;
 
 export interface CreativeTeamUser {

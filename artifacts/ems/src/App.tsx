@@ -37,6 +37,7 @@ import ManagementFundRequestsPage from '@/pages/management/fund-requests';
 import ManagementInvoicesPage from '@/pages/management/invoices';
 import ManagementAnnouncementsPage from '@/pages/management/announcements';
 import ManagementQueriesPage from '@/pages/management/queries';
+import ManagementPoliciesPage from '@/pages/management/policies';
 
 // Future imports for Mgmt
 import EmployeesPage from '@/pages/management/employees';
@@ -199,6 +200,7 @@ function Router() {
         ["/clients", ManagementClientsPage],
         ["/announcements", ManagementAnnouncementsPage],
         ["/knowledge-base", ManagementKnowledgeBasePage],
+        ["/policies", ManagementPoliciesPage],
         ["/chat", TeamChatPage],
         ["/appraisals", ManagementAppraisalsPage],
       ] as const).map(([path, Page]) => (

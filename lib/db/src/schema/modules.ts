@@ -9,6 +9,7 @@ import {
   timestamp,
 } from "drizzle-orm/pg-core";
 import { companiesTable } from "./companies";
+import { departmentsTable } from "./departments";
 import { usersTable } from "./users";
 
 // ---------------------------------------------------------------------------
@@ -328,6 +329,9 @@ export const companyPostsTable = pgTable("company_posts", {
   title: text("title").notNull(),
   body: text("body").notNull(),
   link: text("link"),
+  attachmentPath: text("attachment_path"),
+  attachmentFileName: text("attachment_file_name"),
+  attachmentContentType: text("attachment_content_type"),
   createdBy: integer("created_by").references(() => usersTable.id, {
     onDelete: "set null",
   }),
@@ -374,6 +378,9 @@ export const workReportsTable = pgTable("work_reports", {
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
+  departmentId: integer("department_id").references(() => departmentsTable.id, {
+    onDelete: "set null",
+  }),
   period: text("period").notNull(),
   // The day (daily), week start (weekly), or month start (monthly) covered.
   reportDate: date("report_date").notNull(),

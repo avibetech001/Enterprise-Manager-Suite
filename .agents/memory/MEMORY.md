@@ -12,3 +12,5 @@
 - [Invoice letterhead & naira PDFs](invoice-letterhead.md) — invoices match the official letterhead; jsPDF needs embedded Noto fonts for ₦; legacy invoices with empty items fall back to stored amount.
 - [Notification deep links](notification-links.md) — notifications store role-agnostic `link` suffix; bell prefixes by role; pages must react to useSearch() for query params.
 - [Internal client workspace](client-workspace-access.md) — client records stay company-only; staff roles and client accounts remain separate.
+- [Artifact workflow port conflicts](artifact-workflow-port-conflicts.md) — a failed restart can leave an older app listener alive; check and clear the exact port owner before retrying.
+- [Department team leads](department-team-leads.md) — team-lead assignment is API-validated rather than a foreign key; preserve its validation and cleanup rules.

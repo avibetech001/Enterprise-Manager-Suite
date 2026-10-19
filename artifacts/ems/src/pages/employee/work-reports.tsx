@@ -5,6 +5,8 @@ import {
   useCreateWorkReport,
   getListMyWorkReportsQueryKey,
   useGetMyProfile,
+  useListDepartments,
+  getListDepartmentsQueryKey,
 } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,8 +64,15 @@ export default function EmployeeWorkReports() {
   const queryClient = useQueryClient();
   const { data: reports, isLoading } = useListMyWorkReports();
   const { data: profile } = useGetMyProfile();
-  const canSubmit = /\bteam\s*lead(?:er)?\b/i.test(
-    profile?.employment?.jobTitle || "",
+  const { data: departments } = useListDepartments({
+    query: {
+      queryKey: getListDepartmentsQueryKey(),
+      refetchInterval: 15_000,
+    },
+  });
+  const canSubmit = Boolean(
+    profile &&
+      departments?.some((department) => department.teamLeadUserId === profile.id),
   );
 
   const [open, setOpen] = useState(false);
@@ -139,7 +148,7 @@ export default function EmployeeWorkReports() {
           <p className="text-muted-foreground mt-1">
             {canSubmit
               ? "Submit daily, weekly, or monthly reports for management."
-              : "Work reports are submitted by your Team Lead and reviewed by management."}
+              : "Only the assigned Team Lead can submit team reports. Management can assign a lead under Departments."}
           </p>
         </div>
         {canSubmit && (
@@ -161,7 +170,7 @@ export default function EmployeeWorkReports() {
           <p className="text-muted-foreground text-sm mt-1">
             {canSubmit
               ? "Submit your first report so management can follow your work."
-              : "Your Team Lead will submit work reports for management to review."}
+              : "Your assigned Team Lead will submit team reports for management to review."}
           </p>
         </div>
       ) : (

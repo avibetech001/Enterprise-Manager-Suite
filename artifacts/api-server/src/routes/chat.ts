@@ -3,14 +3,18 @@ import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import {
   db,
   chatMessagesTable,
+  chatMessageReadReceiptsTable,
   chatConversationsTable,
   chatConversationParticipantsTable,
   directChatMessagesTable,
+  directChatMessageReadReceiptsTable,
   departmentsTable,
   employmentInfoTable,
+  userPresenceTable,
   usersTable,
 } from "@workspace/db";
 import {
+  HeartbeatChatPresenceResponse,
   SendChatMessageBody,
   ListChatGroupsResponseItem as ChatGroup,
   ListChatGroupMembersResponseItem as ChatMember,
@@ -42,6 +46,125 @@ import { sendPush } from "../lib/push";
 const router: IRouter = Router();
 
 type CurrentUser = NonNullable<Request["currentUser"]>;
+const ONLINE_WINDOW_MS = 90_000;
+
+async function presenceByUserId(
+  companyId: number,
+  userIds: number[],
+): Promise<Map<number, Date>> {
+  if (userIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      userId: userPresenceTable.userId,
+      lastSeenAt: userPresenceTable.lastSeenAt,
+    })
+    .from(userPresenceTable)
+    .where(
+      and(
+        eq(userPresenceTable.companyId, companyId),
+        inArray(userPresenceTable.userId, userIds),
+      ),
+    );
+  return new Map(rows.map((row) => [row.userId, row.lastSeenAt]));
+}
+
+function presenceFields(userId: number, presence: Map<number, Date>) {
+  const lastSeenAt = presence.get(userId) ?? null;
+  return {
+    isOnline:
+      lastSeenAt !== null &&
+      Date.now() - lastSeenAt.getTime() <= ONLINE_WINDOW_MS,
+    lastSeenAt: lastSeenAt?.toISOString() ?? null,
+  };
+}
+
+async function recordGroupMessageReads(
+  userId: number,
+  rows: Array<{ id: number; userId: number }>,
+): Promise<Map<number, string[]>> {
+  const messageIds = rows.map((row) => row.id);
+  if (messageIds.length === 0) return new Map();
+  const unreadMessages = rows.filter((row) => row.userId !== userId);
+  if (unreadMessages.length > 0) {
+    await db
+      .insert(chatMessageReadReceiptsTable)
+      .values(
+        unreadMessages.map((row) => ({
+          messageId: row.id,
+          userId,
+        })),
+      )
+      .onConflictDoNothing();
+  }
+  const authoredMessageIds = rows
+    .filter((row) => row.userId === userId)
+    .map((row) => row.id);
+  if (authoredMessageIds.length === 0) return new Map();
+  const receipts = await db
+    .select({
+      messageId: chatMessageReadReceiptsTable.messageId,
+      fullName: usersTable.fullName,
+    })
+    .from(chatMessageReadReceiptsTable)
+    .innerJoin(
+      usersTable,
+      eq(usersTable.id, chatMessageReadReceiptsTable.userId),
+    )
+    .where(
+      inArray(chatMessageReadReceiptsTable.messageId, authoredMessageIds),
+    );
+  const names = new Map<number, string[]>();
+  for (const receipt of receipts) {
+    const viewers = names.get(receipt.messageId) ?? [];
+    viewers.push(receipt.fullName);
+    names.set(receipt.messageId, viewers);
+  }
+  return names;
+}
+
+async function recordPrivateMessageReads(
+  userId: number,
+  rows: Array<{ id: number; userId: number }>,
+): Promise<Map<number, string[]>> {
+  const messageIds = rows.map((row) => row.id);
+  if (messageIds.length === 0) return new Map();
+  const unreadMessages = rows.filter((row) => row.userId !== userId);
+  if (unreadMessages.length > 0) {
+    await db
+      .insert(directChatMessageReadReceiptsTable)
+      .values(
+        unreadMessages.map((row) => ({
+          messageId: row.id,
+          userId,
+        })),
+      )
+      .onConflictDoNothing();
+  }
+  const authoredMessageIds = rows
+    .filter((row) => row.userId === userId)
+    .map((row) => row.id);
+  if (authoredMessageIds.length === 0) return new Map();
+  const receipts = await db
+    .select({
+      messageId: directChatMessageReadReceiptsTable.messageId,
+      fullName: usersTable.fullName,
+    })
+    .from(directChatMessageReadReceiptsTable)
+    .innerJoin(
+      usersTable,
+      eq(usersTable.id, directChatMessageReadReceiptsTable.userId),
+    )
+    .where(
+      inArray(directChatMessageReadReceiptsTable.messageId, authoredMessageIds),
+    );
+  const names = new Map<number, string[]>();
+  for (const receipt of receipts) {
+    const viewers = names.get(receipt.messageId) ?? [];
+    viewers.push(receipt.fullName);
+    names.set(receipt.messageId, viewers);
+  }
+  return names;
+}
 
 // An employee's department lives in employment_info (managed from the
 // Employees/Departments pages) — that is the source of truth for which
@@ -53,6 +176,31 @@ async function departmentIdOf(userId: number): Promise<number | null> {
     .where(eq(employmentInfoTable.userId, userId));
   return row?.departmentId ?? null;
 }
+
+router.post(
+  "/chat/presence/heartbeat",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const lastSeenAt = new Date();
+    await db
+      .insert(userPresenceTable)
+      .values({
+        userId: me.id,
+        companyId: me.companyId,
+        lastSeenAt,
+      })
+      .onConflictDoUpdate({
+        target: userPresenceTable.userId,
+        set: { companyId: me.companyId, lastSeenAt },
+      });
+    res.json(
+      HeartbeatChatPresenceResponse.parse({
+        lastSeenAt: lastSeenAt.toISOString(),
+      }),
+    );
+  },
+);
 
 interface ResolvedGroup {
   id: string;
@@ -253,8 +401,18 @@ router.get(
         ? teamMemberIds.has(u.id) || (me.role === "super_admin" && u.id === me.id)
         : group.departmentId === null || u.departmentId === group.departmentId,
     );
+    const presence = await presenceByUserId(
+      me.companyId,
+      members.map((member) => member.id),
+    );
     res.json(
-      members.map((m) => ChatMember.parse({ id: m.id, fullName: m.fullName })),
+      members.map((m) =>
+        ChatMember.parse({
+          id: m.id,
+          fullName: m.fullName,
+          ...presenceFields(m.id, presence),
+        }),
+      ),
     );
   },
 );
@@ -296,6 +454,7 @@ router.get(
       .orderBy(desc(chatMessagesTable.createdAt))
       .limit(200);
     rows.reverse(); // newest 200, displayed oldest-first
+    const readByNames = await recordGroupMessageReads(me.id, rows);
     res.json(
       rows.map((r) =>
         ChatMessage.parse({
@@ -307,6 +466,7 @@ router.get(
           filePath: r.filePath,
           fileName: r.fileName,
           mentionUserIds: r.mentionUserIds,
+          readByNames: readByNames.get(r.id) ?? [],
           kind: r.kind,
           replyToId: r.replyToId,
           replyToBody:
@@ -474,6 +634,7 @@ router.post(
         filePath: inserted.filePath,
         fileName: inserted.fileName,
         mentionUserIds: inserted.mentionUserIds,
+        readByNames: [],
         kind: inserted.kind,
         replyToId,
         replyToBody: replyPreview ? replyPreview.body : null,
@@ -568,10 +729,18 @@ router.get(
         ),
       )
       .orderBy(asc(usersTable.fullName));
+    const visibleContacts = contacts.filter((contact) => contact.id !== me.id);
+    const presence = await presenceByUserId(
+      me.companyId,
+      visibleContacts.map((contact) => contact.id),
+    );
     res.json(
-      contacts
-        .filter((contact) => contact.id !== me.id)
-        .map((contact) => PrivateEmployee.parse(contact)),
+      visibleContacts.map((contact) =>
+        PrivateEmployee.parse({
+          ...contact,
+          ...presenceFields(contact.id, presence),
+        }),
+      ),
     );
   },
 );
@@ -608,6 +777,11 @@ router.get(
       .from(chatConversationParticipantsTable)
       .innerJoin(usersTable, eq(usersTable.id, chatConversationParticipantsTable.userId))
       .where(inArray(chatConversationParticipantsTable.conversationId, conversations.map((c) => c.id)));
+    const otherUsers = participantRows.filter((row) => row.userId !== me.id);
+    const presence = await presenceByUserId(
+      me.companyId,
+      otherUsers.map((user) => user.userId),
+    );
     res.json(
       conversations.map((conversation) => {
         const other = participantRows.find(
@@ -619,6 +793,7 @@ router.get(
           otherUserId: other.userId,
           otherUserName: other.fullName,
           createdAt: conversation.createdAt.toISOString(),
+          ...presenceFields(other.userId, presence),
         });
       }).filter((conversation): conversation is NonNullable<typeof conversation> => conversation !== null),
     );
@@ -690,11 +865,13 @@ router.post(
       res.status(500).json({ error: "Could not open the private conversation." });
       return;
     }
+    const presence = await presenceByUserId(me.companyId, [recipient.id]);
     res.json(PrivateConversation.parse({
       id: conversation.id,
       otherUserId: recipient.id,
       otherUserName: recipient.fullName,
       createdAt: conversation.createdAt.toISOString(),
+      ...presenceFields(recipient.id, presence),
     }));
   },
 );
@@ -738,10 +915,12 @@ router.get(
       return;
     }
     const rows = await privateMessageRows(conversationId);
+    const readByNames = await recordPrivateMessageReads(me.id, rows);
     res.json(rows.map((row) => ChatMessage.parse({
       ...row,
       groupId: `dm-${conversationId}`,
       mentionUserIds: [],
+      readByNames: readByNames.get(row.id) ?? [],
       replyToBody: row.replyToId != null ? row.replyToBody || row.replyToFileName || "" : null,
       replyToUserName: row.replyToId != null ? row.replyToUserName : null,
       createdAt: row.createdAt.toISOString(),
@@ -831,6 +1010,7 @@ router.post(
       filePath: inserted.filePath,
       fileName: inserted.fileName,
       mentionUserIds: [],
+      readByNames: [],
       kind: inserted.kind,
       replyToId,
       replyToBody: replyPreview?.body ?? null,

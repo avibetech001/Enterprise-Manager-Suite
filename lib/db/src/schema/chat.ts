@@ -31,6 +31,40 @@ export const chatMessagesTable = pgTable("chat_messages", {
 
 export type ChatMessageRow = typeof chatMessagesTable.$inferSelect;
 
+export const userPresenceTable = pgTable("user_presence", {
+  userId: integer("user_id")
+    .primaryKey()
+    .references(() => usersTable.id, { onDelete: "cascade" }),
+  companyId: integer("company_id")
+    .notNull()
+    .references(() => companiesTable.id, { onDelete: "cascade" }),
+  lastSeenAt: timestamp("last_seen_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const chatMessageReadReceiptsTable = pgTable(
+  "chat_message_read_receipts",
+  {
+    id: serial("id").primaryKey(),
+    messageId: integer("message_id")
+      .notNull()
+      .references(() => chatMessagesTable.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("chat_message_read_receipts_message_user_unique").on(
+      table.messageId,
+      table.userId,
+    ),
+  ],
+);
+
 // Direct messages deliberately use their own conversation/participant/message
 // model so they can never be confused with company or department groups.
 export const chatConversationsTable = pgTable(
@@ -91,3 +125,25 @@ export const directChatMessagesTable = pgTable("direct_chat_messages", {
   kind: text("kind").notNull().default("text"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const directChatMessageReadReceiptsTable = pgTable(
+  "direct_chat_message_read_receipts",
+  {
+    id: serial("id").primaryKey(),
+    messageId: integer("message_id")
+      .notNull()
+      .references(() => directChatMessagesTable.id, { onDelete: "cascade" }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => usersTable.id, { onDelete: "cascade" }),
+    readAt: timestamp("read_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("direct_chat_message_read_receipts_message_user_unique").on(
+      table.messageId,
+      table.userId,
+    ),
+  ],
+);

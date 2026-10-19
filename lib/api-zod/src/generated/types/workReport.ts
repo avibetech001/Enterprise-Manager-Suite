@@ -11,6 +11,8 @@ export interface WorkReport {
   id: number;
   companyId: number;
   userId: number;
+  /** @nullable */
+  departmentId: number | null;
   period: WorkReportPeriod;
   reportDate: string;
   /** @nullable */

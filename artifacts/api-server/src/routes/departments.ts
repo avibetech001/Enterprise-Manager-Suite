@@ -52,6 +52,7 @@ router.get("/departments", requireAuth, async (req, res): Promise<void> => {
       id: usersTable.id,
       fullName: usersTable.fullName,
       jobTitle: usersTable.jobTitle,
+      status: usersTable.status,
     })
     .from(employmentInfoTable)
     .innerJoin(usersTable, eq(employmentInfoTable.userId, usersTable.id))
@@ -68,6 +69,18 @@ router.get("/departments", requireAuth, async (req, res): Promise<void> => {
       departments.map((d) => ({
         ...d,
         employeeCount: countByDepartment.get(d.id) ?? 0,
+        teamLeadUserId:
+          memberRows.some(
+            (member) =>
+              member.id === d.teamLeadUserId && member.status === "active",
+          )
+            ? d.teamLeadUserId
+            : null,
+        teamLeadName:
+          memberRows.find(
+            (member) =>
+              member.id === d.teamLeadUserId && member.status === "active",
+          )?.fullName ?? null,
         members: memberRows
           .filter((m) => m.departmentId === d.id)
           .map(({ id, fullName, jobTitle }) => ({ id, fullName, jobTitle })),
@@ -104,6 +117,8 @@ router.post(
         CreateDepartmentResponse.parse({
           ...department,
           employeeCount: 0,
+        teamLeadUserId: null,
+        teamLeadName: null,
           members: [],
         }),
       );
@@ -124,6 +139,32 @@ router.patch(
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.message });
       return;
+    }
+
+    if (parsed.data.teamLeadUserId != null) {
+      const [eligibleLead] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .innerJoin(
+          employmentInfoTable,
+          eq(employmentInfoTable.userId, usersTable.id),
+        )
+        .where(
+          and(
+            eq(usersTable.id, parsed.data.teamLeadUserId),
+            eq(usersTable.companyId, req.currentUser!.companyId),
+            eq(usersTable.role, "employee"),
+            eq(usersTable.status, "active"),
+            eq(usersTable.archived, false),
+            eq(employmentInfoTable.departmentId, params.data.id),
+          ),
+        );
+      if (!eligibleLead) {
+        res.status(400).json({
+          error: "Team Lead must be an active employee in this department.",
+        });
+        return;
+      }
     }
 
     const [department] = await db
@@ -158,6 +199,7 @@ router.patch(
         id: usersTable.id,
         fullName: usersTable.fullName,
         jobTitle: usersTable.jobTitle,
+        status: usersTable.status,
       })
       .from(employmentInfoTable)
       .innerJoin(usersTable, eq(employmentInfoTable.userId, usersTable.id))
@@ -169,8 +211,23 @@ router.patch(
         ),
       );
 
+    const teamLeadName =
+      members.find(
+        (member) =>
+          member.id === department.teamLeadUserId && member.status === "active",
+      )?.fullName ?? null;
     res.json(
-      UpdateDepartmentResponse.parse({ ...department, employeeCount, members }),
+      UpdateDepartmentResponse.parse({
+        ...department,
+        teamLeadUserId: teamLeadName ? department.teamLeadUserId : null,
+        teamLeadName,
+        employeeCount,
+        members: members.map(({ id, fullName, jobTitle }) => ({
+          id,
+          fullName,
+          jobTitle,
+        })),
+      }),
     );
   },
 );

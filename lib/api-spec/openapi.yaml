@@ -2341,6 +2341,25 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /chat/presence/heartbeat:
+    post:
+      operationId: heartbeatChatPresence
+      tags: [chat]
+      summary: Record the current user's active session for online presence
+      responses:
+        "200":
+          description: Presence timestamp
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatPresenceHeartbeat"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /chat/groups:
     get:
       operationId: listChatGroups
@@ -2776,16 +2795,29 @@ components:
 
     ChatMember:
       type: object
-      required: [id, fullName]
+      required: [id, fullName, isOnline, lastSeenAt]
       properties:
         id:
           type: integer
         fullName:
           type: string
+        isOnline:
+          type: boolean
+        lastSeenAt:
+          type: ["string", "null"]
+          format: date-time
+
+    ChatPresenceHeartbeat:
+      type: object
+      required: [lastSeenAt]
+      properties:
+        lastSeenAt:
+          type: string
+          format: date-time
 
     PrivateConversation:
       type: object
-      required: [id, otherUserId, otherUserName, createdAt]
+      required: [id, otherUserId, otherUserName, createdAt, isOnline, lastSeenAt]
       properties:
         id:
           type: integer
@@ -2795,6 +2827,11 @@ components:
           type: string
         createdAt:
           type: string
+          format: date-time
+        isOnline:
+          type: boolean
+        lastSeenAt:
+          type: ["string", "null"]
           format: date-time
 
     PrivateConversationInput:
@@ -2807,7 +2844,7 @@ components:
     ChatMessage:
       type: object
       required:
-        [id, groupId, userId, userName, body, filePath, fileName, mentionUserIds, createdAt]
+        [id, groupId, userId, userName, body, filePath, fileName, mentionUserIds, readByNames, createdAt]
       properties:
         id:
           type: integer
@@ -2829,6 +2866,10 @@ components:
           type: array
           items:
             type: integer
+        readByNames:
+          type: array
+          items:
+            type: string
         kind:
           type: string
         replyToId:
@@ -3187,7 +3228,7 @@ components:
 
     Department:
       type: object
-      required: [id, companyId, name, description, employeeCount, members]
+      required: [id, companyId, name, description, employeeCount, members, teamLeadUserId, teamLeadName]
       properties:
         id:
           type: integer
@@ -3203,6 +3244,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DepartmentMember"
+        teamLeadUserId:
+          type: ["integer", "null"]
+        teamLeadName:
+          type: ["string", "null"]
 
     DepartmentMember:
       type: object
@@ -3233,6 +3278,8 @@ components:
           minLength: 1
         description:
           type: string
+        teamLeadUserId:
+          type: ["integer", "null"]
 
     EmergencyContact:
       type: object
@@ -4413,7 +4460,7 @@ components:
 
     WorkReport:
       type: object
-      required: [id, companyId, userId, period, reportDate, content, createdAt]
+      required: [id, companyId, userId, departmentId, period, reportDate, content, createdAt]
       properties:
         id:
           type: integer
@@ -4421,6 +4468,8 @@ components:
           type: integer
         userId:
           type: integer
+        departmentId:
+          type: ["integer", "null"]
         period:
           type: string
           enum: [daily, weekly, monthly]
@@ -4438,11 +4487,13 @@ components:
       allOf:
         - $ref: "#/components/schemas/WorkReport"
         - type: object
-          required: [employeeName, employeeCode]
+          required: [employeeName, employeeCode, departmentName]
           properties:
             employeeName:
               type: string
             employeeCode:
+              type: ["string", "null"]
+            departmentName:
               type: ["string", "null"]
 
     RequisitionInput:
@@ -4644,13 +4695,18 @@ components:
           minLength: 1
         body:
           type: string
-          minLength: 1
         link:
+          type: ["string", "null"]
+        attachmentPath:
+          type: ["string", "null"]
+        attachmentFileName:
+          type: ["string", "null"]
+        attachmentContentType:
           type: ["string", "null"]
 
     CompanyPost:
       type: object
-      required: [id, companyId, kind, category, title, body, createdAt, updatedAt]
+      required: [id, companyId, kind, category, title, body, link, attachmentPath, attachmentFileName, attachmentContentType, createdByName, createdAt, updatedAt]
       properties:
         id:
           type: integer
@@ -4665,6 +4721,14 @@ components:
         body:
           type: string
         link:
+          type: ["string", "null"]
+        attachmentPath:
+          type: ["string", "null"]
+        attachmentFileName:
+          type: ["string", "null"]
+        attachmentContentType:
+          type: ["string", "null"]
+        createdByName:
           type: ["string", "null"]
         createdAt:
           type: string

@@ -57,6 +57,13 @@ export interface ChatGroup {
 export interface ChatMember {
   id: number;
   fullName: string;
+  isOnline: boolean;
+  /** @nullable */
+  lastSeenAt: string | null;
+}
+
+export interface ChatPresenceHeartbeat {
+  lastSeenAt: string;
 }
 
 export interface PrivateConversation {
@@ -64,6 +71,9 @@ export interface PrivateConversation {
   otherUserId: number;
   otherUserName: string;
   createdAt: string;
+  isOnline: boolean;
+  /** @nullable */
+  lastSeenAt: string | null;
 }
 
 export interface PrivateConversationInput {
@@ -79,6 +89,7 @@ export interface ChatMessage {
   filePath: string | null;
   fileName: string | null;
   mentionUserIds: number[];
+  readByNames: string[];
   kind?: string;
   /** @nullable */
   replyToId?: number | null;
@@ -351,6 +362,10 @@ export interface Department {
   description: string;
   employeeCount: number;
   members: DepartmentMember[];
+  /** @nullable */
+  teamLeadUserId: number | null;
+  /** @nullable */
+  teamLeadName: string | null;
 }
 
 export interface DepartmentInput {
@@ -363,6 +378,8 @@ export interface DepartmentUpdate {
   /** @minLength 1 */
   name?: string;
   description?: string;
+  /** @nullable */
+  teamLeadUserId?: number | null;
 }
 
 export interface EmergencyContact {
@@ -598,7 +615,15 @@ export interface CompanyPost {
   title: string;
   body: string;
   /** @nullable */
-  link?: string | null;
+  link: string | null;
+  /** @nullable */
+  attachmentPath: string | null;
+  /** @nullable */
+  attachmentFileName: string | null;
+  /** @nullable */
+  attachmentContentType: string | null;
+  /** @nullable */
+  createdByName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -1211,6 +1236,8 @@ export interface WorkReport {
   id: number;
   companyId: number;
   userId: number;
+  /** @nullable */
+  departmentId: number | null;
   period: WorkReportPeriod;
   reportDate: string;
   /** @nullable */
@@ -1223,6 +1250,8 @@ export type WorkReportWithUser = WorkReport & ({
   employeeName: string;
   /** @nullable */
   employeeCode: string | null;
+  /** @nullable */
+  departmentName: string | null;
 });
 
 export interface RequisitionInput {
@@ -1369,10 +1398,15 @@ export interface CompanyPostInput {
   category?: CompanyPostInputCategory;
   /** @minLength 1 */
   title: string;
-  /** @minLength 1 */
   body: string;
   /** @nullable */
   link?: string | null;
+  /** @nullable */
+  attachmentPath?: string | null;
+  /** @nullable */
+  attachmentFileName?: string | null;
+  /** @nullable */
+  attachmentContentType?: string | null;
 }
 
 export type ListEmployeesParams = {

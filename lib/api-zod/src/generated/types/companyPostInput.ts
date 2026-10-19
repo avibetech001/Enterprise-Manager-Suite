@@ -14,8 +14,13 @@ export interface CompanyPostInput {
   category?: CompanyPostInputCategory;
   /** @minLength 1 */
   title: string;
-  /** @minLength 1 */
   body: string;
   /** @nullable */
   link?: string | null;
+  /** @nullable */
+  attachmentPath?: string | null;
+  /** @nullable */
+  attachmentFileName?: string | null;
+  /** @nullable */
+  attachmentContentType?: string | null;
 }

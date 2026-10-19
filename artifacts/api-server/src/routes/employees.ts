@@ -635,6 +635,17 @@ router.patch(
       employmentChanges.startDate = input.startDate;
     if (input.employmentStatus !== undefined)
       employmentChanges.employmentStatus = input.employmentStatus;
+    const departmentChanged =
+      input.departmentId !== undefined &&
+      input.departmentId !== (rel.employment?.departmentId ?? null);
+    const accountDeactivated =
+      input.accountStatus !== undefined && input.accountStatus !== "active";
+    if (departmentChanged || accountDeactivated) {
+      await tx
+        .update(departmentsTable)
+        .set({ teamLeadUserId: null })
+        .where(eq(departmentsTable.teamLeadUserId, user.id));
+    }
     if (Object.keys(employmentChanges).length > 0) {
       if (rel.employment) {
         await tx
@@ -771,12 +782,19 @@ router.post(
       res.status(404).json({ error: "Not found" });
       return;
     }
-    const [updated] = await db
-      .update(usersTable)
-      .set({ archived: true, status: "inactive" })
-      .where(eq(usersTable.id, user.id))
-      .returning();
-    res.json(ArchiveEmployeeResponse.parse(await loadFullEmployee(updated!)));
+    const updated = await db.transaction(async (tx) => {
+      const [archivedUser] = await tx
+        .update(usersTable)
+        .set({ archived: true, status: "inactive" })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+      await tx
+        .update(departmentsTable)
+        .set({ teamLeadUserId: null })
+        .where(eq(departmentsTable.teamLeadUserId, user.id));
+      return archivedUser;
+    });
+    res.json(ArchiveEmployeeResponse.parse(await loadFullEmployee(updated)));
   },
 );
 
@@ -800,7 +818,13 @@ router.delete(
     }
     // Permanent removal; related records (attendance, leave, chat messages,
     // appraisals, ...) are removed via ON DELETE CASCADE.
-    await db.delete(usersTable).where(eq(usersTable.id, user.id));
+    await db.transaction(async (tx) => {
+      await tx
+        .update(departmentsTable)
+        .set({ teamLeadUserId: null })
+        .where(eq(departmentsTable.teamLeadUserId, user.id));
+      await tx.delete(usersTable).where(eq(usersTable.id, user.id));
+    });
     await notifyCompany(
       req.currentUser!.companyId,
       "employee_deleted",

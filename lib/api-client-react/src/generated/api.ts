@@ -34,6 +34,7 @@ import type {
   ChatMessage,
   ChatMessageDeleteResult,
   ChatMessageInput,
+  ChatPresenceHeartbeat,
   CheckInInput,
   CheckOutInput,
   Client,
@@ -7531,6 +7532,77 @@ export function useGetEmployeeOverview<TData = Awaited<ReturnType<typeof getEmpl
 
 
 
+
+export const getHeartbeatChatPresenceUrl = () => {
+
+
+
+
+  return `/api/chat/presence/heartbeat`
+}
+
+/**
+ * @summary Record the current user's active session for online presence
+ */
+export const heartbeatChatPresence = async ( options?: RequestInit): Promise<ChatPresenceHeartbeat> => {
+
+  return customFetch<ChatPresenceHeartbeat>(getHeartbeatChatPresenceUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getHeartbeatChatPresenceMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heartbeatChatPresence>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof heartbeatChatPresence>>, TError,void, TContext> => {
+
+const mutationKey = ['heartbeatChatPresence'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof heartbeatChatPresence>>, void> = () => {
+
+
+          return  heartbeatChatPresence(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type HeartbeatChatPresenceMutationResult = NonNullable<Awaited<ReturnType<typeof heartbeatChatPresence>>>
+
+    export type HeartbeatChatPresenceMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Record the current user's active session for online presence
+ */
+export const useHeartbeatChatPresence = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof heartbeatChatPresence>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof heartbeatChatPresence>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getHeartbeatChatPresenceMutationOptions(options));
+    }
 
 export const getListChatGroupsUrl = () => {
 

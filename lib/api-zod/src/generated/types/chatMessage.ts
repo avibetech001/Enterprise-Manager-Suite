@@ -15,6 +15,7 @@ export interface ChatMessage {
   filePath: string | null;
   fileName: string | null;
   mentionUserIds: number[];
+  readByNames: string[];
   kind?: string;
   /** @nullable */
   replyToId?: number | null;

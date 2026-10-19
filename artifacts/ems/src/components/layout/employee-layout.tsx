@@ -39,6 +39,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ChatPresenceHeartbeat } from "@/components/chat-presence-heartbeat";
 
 const NAV = [
   {
@@ -52,24 +53,24 @@ const NAV = [
     label: "Work",
     items: [
       { href: "/employee/attendance", icon: CalendarClock, title: "Attendance" },
-      { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
-      { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
-      { href: "/employee/work-reports", icon: NotebookPen, title: "Work Reports" },
-      { href: "/employee/queries", icon: FileWarning, title: "My Queries" },
       { href: "/employee/chat", icon: MessagesSquare, title: "Team Chat" },
+      { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
+      { href: "/employee/knowledge-base", icon: BookOpen, title: "Idea Dump" },
       { href: "/employee/appraisals", icon: ClipboardCheck, title: "My Appraisals" },
+      { href: "/employee/queries", icon: FileWarning, title: "My Queries" },
+      { href: "/employee/work-reports", icon: NotebookPen, title: "Work Reports" },
     ],
   },
   {
     label: "Company",
     items: [
-      { href: "/employee/leave", icon: Palmtree, title: "Leave" },
-      { href: "/employee/clients", icon: Building2, title: "Clients" },
       { href: "/employee/departments", icon: Building2, title: "Departments" },
       { href: "/employee/announcements", icon: Megaphone, title: "Announcements" },
       { href: "/employee/policies", icon: ScrollText, title: "Company Policies" },
-      { href: "/employee/knowledge-base", icon: BookOpen, title: "Knowledge Base" },
+      { href: "/employee/leave", icon: Palmtree, title: "Leave" },
+      { href: "/employee/fund-requests", icon: Wallet, title: "Fund Requests" },
       { href: "/employee/settings", icon: Settings, title: "Settings" },
+      { href: "/employee/clients", icon: Building2, title: "Clients" },
     ],
   },
 ];
@@ -95,6 +96,7 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
+      <ChatPresenceHeartbeat />
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <Sidebar variant="inset" className="bg-card border-r border-border">
           <SidebarHeader className="border-b border-border p-4 flex flex-row items-center gap-2">

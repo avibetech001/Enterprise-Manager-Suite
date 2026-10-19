@@ -3,8 +3,10 @@ import { useParams, useLocation, Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListDepartments,
+  getListDepartmentsQueryKey,
   useListEmployees,
   useUpdateEmployee,
+  useUpdateDepartment,
   useListQueries,
   useCreateQuery,
   useDeleteQuery,
@@ -71,6 +73,7 @@ export default function DepartmentDetailPage() {
   const memberUserIds = useMemo(() => new Set(members.map((m) => m.id)), [members]);
 
   const updateEmployee = useUpdateEmployee();
+  const updateDepartment = useUpdateDepartment();
   const [addUserId, setAddUserId] = useState<string>("");
   const nonMembers = useMemo(
     () =>
@@ -83,6 +86,33 @@ export default function DepartmentDetailPage() {
 
   const invalidateEmployees = () =>
     queryClient.invalidateQueries({ queryKey: getListEmployeesQueryKey() });
+
+  const handleTeamLeadChange = (value: string) => {
+    updateDepartment.mutate(
+      {
+        id,
+        data: { teamLeadUserId: value === "unassigned" ? null : Number(value) },
+      },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: getListDepartmentsQueryKey(),
+          });
+          toast.success(
+            value === "unassigned"
+              ? "Team Lead cleared"
+              : "Team Lead assigned",
+          );
+        },
+        onError: (error) =>
+          toast.error("Could not assign Team Lead", {
+            description:
+              (error as { data?: { error?: string } })?.data?.error ||
+              "Unknown error",
+          }),
+      },
+    );
+  };
 
   const handleAddMember = () => {
     const userId = Number(addUserId);
@@ -223,6 +253,36 @@ export default function DepartmentDetailPage() {
           </>
         )}
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Lead</CardTitle>
+          <CardDescription>
+            Assign an active member to submit reports for this team. Only the assigned lead can submit team reports for management.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select
+            value={department?.teamLeadUserId?.toString() || "unassigned"}
+            onValueChange={handleTeamLeadChange}
+            disabled={deptLoading || empLoading || updateDepartment.isPending}
+          >
+            <SelectTrigger className="max-w-sm">
+              <SelectValue placeholder="Choose a Team Lead" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {members
+                .filter((employee) => employee.accountStatus === "active")
+                .map((employee) => (
+                  <SelectItem key={employee.id} value={String(employee.id)}>
+                    {employee.fullName}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

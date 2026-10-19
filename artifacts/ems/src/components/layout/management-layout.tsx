@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { ChatPresenceHeartbeat } from "@/components/chat-presence-heartbeat";
 
 export function ManagementLayout({ children }: { children: ReactNode }) {
   const { data: session } = useGetCurrentSession();
@@ -39,6 +40,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
+      <ChatPresenceHeartbeat />
       <div className="flex min-h-screen w-full bg-background text-foreground">
         <Sidebar variant="inset" className="bg-card border-r border-border">
           <SidebarHeader className="border-b border-border p-4 flex flex-row items-center gap-2">
@@ -190,7 +192,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                       <SidebarMenuButton isActive={location === "/knowledge-base"} asChild>
                         <Link href="/knowledge-base">
                           <BookOpen className="h-4 w-4" />
-                          <span>Knowledge Base</span>
+                          <span>Idea Dump</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -210,6 +212,16 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                         <Link href="/clients">
                           <Building2 className="h-4 w-4" />
                           <span>Clients</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(hasPerm("manage_content") || isSuperAdmin) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton isActive={location === "/policies"} asChild>
+                        <Link href="/policies">
+                          <ScrollText className="h-4 w-4" />
+                          <span>Company Policies</span>
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

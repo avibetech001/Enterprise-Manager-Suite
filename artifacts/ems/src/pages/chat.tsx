@@ -92,6 +92,7 @@ export default function TeamChatPage() {
   const { data: privateContacts } = useListPrivateChatContacts({
     query: {
       queryKey: getListPrivateChatContactsQueryKey(),
+      refetchInterval: 15_000,
     },
   });
   const createPrivateConversation = useCreatePrivateConversation();
@@ -146,6 +147,8 @@ export default function TeamChatPage() {
           groupName={activeGroup?.name || activeConversation!.otherUserName}
           myUserId={session?.user?.id}
           isManagement={session?.user?.role !== "employee"}
+          privateIsOnline={activeConversation?.isOnline ?? false}
+          privateLastSeenAt={activeConversation?.lastSeenAt ?? null}
         />
       </div>
     );
@@ -217,7 +220,9 @@ export default function TeamChatPage() {
             >
               <option value="">Choose a coworker</option>
               {(privateContacts || []).map((contact) => (
-                <option key={contact.id} value={contact.id}>{contact.fullName}</option>
+                <option key={contact.id} value={contact.id}>
+                  {contact.fullName} — {presenceLabel(contact.isOnline, contact.lastSeenAt)}
+                </option>
               ))}
             </select>
             <Button
@@ -258,7 +263,15 @@ export default function TeamChatPage() {
               >
                 <div className="flex items-center gap-3">
                   <MessageCircle className="h-5 w-5 text-primary" />
-                  <span className="font-medium">{conversation.otherUserName}</span>
+                  <div className="min-w-0">
+                    <span className="font-medium block truncate">
+                      {conversation.otherUserName}
+                    </span>
+                    <PresenceStatus
+                      isOnline={conversation.isOnline}
+                      lastSeenAt={conversation.lastSeenAt}
+                    />
+                  </div>
                 </div>
               </button>
             ))}
@@ -285,6 +298,48 @@ function dayLabel(iso: string): string {
   if (diffDays === 0) return `Today · ${dateStr}`;
   if (diffDays === 1) return `Yesterday · ${dateStr}`;
   return dateStr;
+}
+
+function presenceLabel(
+  isOnline: boolean,
+  lastSeenAt: Date | string | null | undefined,
+): string {
+  if (isOnline) return "Online";
+  if (!lastSeenAt) return "Last seen unavailable";
+  const timestamp = new Date(lastSeenAt).getTime();
+  if (!Number.isFinite(timestamp)) return "Last seen unavailable";
+
+  const elapsedMinutes = Math.max(
+    0,
+    Math.floor((Date.now() - timestamp) / 60_000),
+  );
+  if (elapsedMinutes < 1) return "Last seen just now";
+  if (elapsedMinutes < 60) return `Last seen ${elapsedMinutes}m ago`;
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `Last seen ${elapsedHours}h ago`;
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 7) return `Last seen ${elapsedDays}d ago`;
+  return `Last seen ${new Date(timestamp).toLocaleDateString()}`;
+}
+
+function PresenceStatus({
+  isOnline,
+  lastSeenAt,
+}: {
+  isOnline: boolean;
+  lastSeenAt: Date | string | null | undefined;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <span
+        aria-label={isOnline ? "Online" : "Offline"}
+        className={`h-2 w-2 shrink-0 rounded-full ${
+          isOnline ? "bg-emerald-500" : "bg-muted-foreground/50"
+        }`}
+      />
+      {presenceLabel(isOnline, lastSeenAt)}
+    </span>
+  );
 }
 
 function DaySeparator({ label }: { label: string }) {
@@ -317,6 +372,7 @@ function MessageBubble({
   const [dragX, setDragX] = useState(0);
   const startX = useRef<number | null>(null);
   const triggered = useRef(false);
+  const readByNames = m.readByNames ?? [];
 
   const onPointerDown = (e: React.PointerEvent) => {
     startX.current = e.clientX;
@@ -382,6 +438,19 @@ function MessageBubble({
           <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] select-text">
             <Linkify text={m.body} />
           </p>
+        )}
+        {mine && readByNames.length > 0 && (
+          <details className="mt-1 max-w-full text-[10px] opacity-80">
+            <summary className="cursor-pointer break-words [overflow-wrap:anywhere]">
+              Seen by {readByNames.slice(0, 2).join(", ")}
+              {readByNames.length > 2
+                ? ` + ${readByNames.length - 2} more`
+                : ""}
+            </summary>
+            <p className="pt-1 break-words [overflow-wrap:anywhere]">
+              {readByNames.join(", ")}
+            </p>
+          </details>
         )}
         {fileUrl && m.kind === "voice" ? (
           <audio controls preload="none" src={fileUrl} className="mt-1 max-w-full h-9" />
@@ -476,12 +545,16 @@ function GroupChat({
   groupName,
   myUserId,
   isManagement,
+  privateIsOnline,
+  privateLastSeenAt,
 }: {
   groupId?: string;
   privateConversationId?: number;
   groupName: string;
   myUserId?: number;
   isManagement: boolean;
+  privateIsOnline: boolean;
+  privateLastSeenAt: Date | string | null;
 }) {
   const queryClient = useQueryClient();
   const groupMessages = useListChatMessages(groupId || "", {
@@ -503,6 +576,7 @@ function GroupChat({
     query: {
       queryKey: getListChatGroupMembersQueryKey(groupId || ""),
       enabled: Boolean(groupId),
+      refetchInterval: 15_000,
     },
   });
   const sendMessage = useSendChatMessage();
@@ -704,6 +778,7 @@ function GroupChat({
   };
 
   const memberOptions = useMemo(() => members || [], [members]);
+  const onlineMemberCount = memberOptions.filter((member) => member.isOnline).length;
 
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
@@ -713,8 +788,10 @@ function GroupChat({
           {groupName}
           <span className="text-xs text-muted-foreground font-normal">
             {privateConversationId
-              ? "Private conversation"
-              : `${memberOptions.length} ${memberOptions.length === 1 ? "member" : "members"}`}
+              ? <PresenceStatus isOnline={privateIsOnline} lastSeenAt={privateLastSeenAt} />
+              : members
+                ? `${onlineMemberCount} online · ${memberOptions.length} ${memberOptions.length === 1 ? "member" : "members"}`
+                : "Checking who is online…"}
           </span>
         </p>
       </div>
@@ -852,7 +929,16 @@ function GroupChat({
                       setTagOpen(false);
                     }}
                   >
-                    {m.fullName}
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="truncate">{m.fullName}</span>
+                      <span
+                        className={`shrink-0 text-[10px] ${
+                          m.isOnline ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"
+                        }`}
+                      >
+                        {presenceLabel(m.isOnline, m.lastSeenAt)}
+                      </span>
+                    </span>
                   </button>
                 ))}
               </div>

@@ -9,6 +9,7 @@ import {
   db,
   projectsTable,
   clientMaterialsTable,
+  companyPostsTable,
   chatMessagesTable,
   directChatMessagesTable,
   chatConversationsTable,
@@ -141,8 +142,8 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
     const wildcardPath = Array.isArray(raw) ? raw.join('/') : raw;
     const objectPath = `/objects/${wildcardPath}`;
 
-    // Object entities are project submissions, client materials, or chat
-    // attachments. Only serve company-owned files (and respect chat group ACLs).
+    // Object entities are project submissions, client materials, company posts,
+    // or chat attachments. Only serve company-owned files (and respect chat ACLs).
     const [owningProject] = await db
       .select({ id: projectsTable.id })
       .from(projectsTable)
@@ -161,7 +162,18 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
           eq(clientMaterialsTable.companyId, me.companyId),
         ),
       );
-    let allowed = Boolean(owningProject || owningClientMaterial);
+    const [owningCompanyPost] = await db
+      .select({ id: companyPostsTable.id })
+      .from(companyPostsTable)
+      .where(
+        and(
+          eq(companyPostsTable.attachmentPath, objectPath),
+          eq(companyPostsTable.companyId, me.companyId),
+        ),
+      );
+    let allowed = Boolean(
+      owningProject || owningClientMaterial || owningCompanyPost,
+    );
     if (!allowed) {
       const [chatMsg] = await db
         .select({

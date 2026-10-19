@@ -27,6 +27,7 @@ export * from './chatMessage';
 export * from './chatMessageDeleteResult';
 export * from './chatMessageInput';
 export * from './chatMessageInputKind';
+export * from './chatPresenceHeartbeat';
 export * from './checkInInput';
 export * from './checkOutInput';
 export * from './client';
