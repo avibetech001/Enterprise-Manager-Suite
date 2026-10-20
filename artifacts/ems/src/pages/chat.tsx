@@ -817,10 +817,12 @@ function GroupChat({
   const deleteMessage = useDeleteChatMessage();
   const deletePrivateMessage = useDeletePrivateMessage();
   const [text, setText] = useState("");
-  const [attachment, setAttachment] = useState<{
+  const [attachments, setAttachments] = useState<Array<{
     objectPath: string;
     fileName: string;
-  } | null>(null);
+  }>>([]);
+  const [isBatchUploading, setIsBatchUploading] = useState(false);
+  const [isSendingBatch, setIsSendingBatch] = useState(false);
   const [mentionIds, setMentionIds] = useState<number[]>([]);
   const [mentionAll, setMentionAll] = useState(false);
   const [mentionSearch, setMentionSearch] = useState<{
@@ -866,11 +868,24 @@ function GroupChat({
   });
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const res = await uploadFile(file);
-    if (res) setAttachment({ objectPath: res.objectPath, fileName: file.name });
-    e.target.value = "";
+    const input = e.currentTarget;
+    const files = Array.from(input.files || []);
+    input.value = "";
+    if (files.length === 0) return;
+
+    setIsBatchUploading(true);
+    const uploadedFiles: Array<{ objectPath: string; fileName: string }> = [];
+    try {
+      for (const file of files) {
+        const res = await uploadFile(file);
+        if (res) uploadedFiles.push({ objectPath: res.objectPath, fileName: file.name });
+      }
+      if (uploadedFiles.length > 0) {
+        setAttachments((current) => [...current, ...uploadedFiles]);
+      }
+    } finally {
+      setIsBatchUploading(false);
+    }
   };
 
   const handleTag = (userIdStr: string) => {
@@ -917,7 +932,55 @@ function GroupChat({
     });
   };
 
-  const doSend = (
+  const sendPayload = async (
+    payload: {
+      body?: string;
+      objectPath?: string;
+      fileName?: string;
+      kind?: "text" | "voice";
+    },
+    includeContext = true,
+  ): Promise<boolean> => {
+    const variables = {
+      data: {
+        ...payload,
+        mentionUserIds:
+          privateConversationId || !includeContext || !mentionIds.length
+            ? undefined
+            : mentionIds,
+        mentionAll:
+          privateConversationId || !includeContext ? undefined : mentionAll || undefined,
+        replyToId: includeContext ? replyTo?.id : undefined,
+      },
+    };
+    try {
+      if (privateConversationId) {
+        await sendPrivateMessage.mutateAsync({
+          conversationId: privateConversationId,
+          ...variables,
+        });
+      } else {
+        await sendMessage.mutateAsync({ groupId: groupId!, ...variables });
+      }
+      invalidate();
+      return true;
+    } catch (err: any) {
+      toast.error("Failed to send message", {
+        description: err?.data?.error || err?.response?.data?.error || "Unknown error",
+      });
+      return false;
+    }
+  };
+
+  const clearComposer = () => {
+    setText("");
+    setAttachments([]);
+    setMentionIds([]);
+    setMentionAll(false);
+    setReplyTo(null);
+  };
+
+  const doSend = async (
     payload: {
       body?: string;
       objectPath?: string;
@@ -926,48 +989,51 @@ function GroupChat({
     },
     onDone?: () => void,
   ) => {
-    const variables = {
-      data: {
-          ...payload,
-          mentionUserIds: privateConversationId ? undefined : (mentionIds.length ? mentionIds : undefined),
-          mentionAll: privateConversationId ? undefined : (mentionAll || undefined),
-          replyToId: replyTo?.id,
-      },
-    };
-    const callbacks = {
-        onSuccess: () => {
-          setText("");
-          setAttachment(null);
+    if (!(await sendPayload(payload))) return;
+    clearComposer();
+    onDone?.();
+  };
+
+  const handleSend = async () => {
+    const body = text.trim();
+    const queuedAttachments = attachments;
+    if (!body && queuedAttachments.length === 0) return;
+
+    if (queuedAttachments.length === 0) {
+      await doSend({ body: body || undefined });
+      return;
+    }
+
+    setIsSendingBatch(true);
+    let bodyPending = Boolean(body);
+    let firstMessage = true;
+    try {
+      for (const file of queuedAttachments) {
+        const sent = await sendPayload(
+          {
+            body: bodyPending ? body : undefined,
+            objectPath: file.objectPath,
+            fileName: file.fileName,
+          },
+          firstMessage,
+        );
+        if (!sent) break;
+
+        setAttachments((current) =>
+          current.filter((attachment) => attachment.objectPath !== file.objectPath),
+        );
+        if (bodyPending) setText("");
+        if (firstMessage) {
           setMentionIds([]);
           setMentionAll(false);
           setReplyTo(null);
-          invalidate();
-          onDone?.();
-        },
-        onError: (err: any) => {
-          toast.error("Failed to send message", {
-            description: err?.data?.error || "Unknown error",
-          });
-        },
-      };
-    if (privateConversationId) {
-      sendPrivateMessage.mutate(
-        { conversationId: privateConversationId, ...variables },
-        callbacks,
-      );
-    } else {
-      sendMessage.mutate({ groupId: groupId!, ...variables }, callbacks);
+        }
+        bodyPending = false;
+        firstMessage = false;
+      }
+    } finally {
+      setIsSendingBatch(false);
     }
-  };
-
-  const handleSend = () => {
-    const body = text.trim();
-    if (!body && !attachment) return;
-    doSend({
-      body: body || undefined,
-      objectPath: attachment?.objectPath,
-      fileName: attachment?.fileName,
-    });
   };
 
   const startRecording = async () => {
@@ -1105,14 +1171,31 @@ function GroupChat({
             </button>
           </div>
         )}
-        {attachment && (
-          <Badge variant="secondary" className="gap-1.5 max-w-full">
-            <Paperclip className="h-3 w-3 shrink-0" />
-            <span className="truncate">{attachment.fileName}</span>
-            <button onClick={() => setAttachment(null)} aria-label="Remove attachment">
-              <X className="h-3 w-3" />
-            </button>
-          </Badge>
+        {attachments.length > 0 && (
+          <div className="flex max-h-24 flex-wrap gap-1.5 overflow-y-auto">
+            {attachments.map((attachment) => (
+              <Badge
+                key={attachment.objectPath}
+                variant="secondary"
+                className="max-w-full gap-1.5"
+              >
+                <Paperclip className="h-3 w-3 shrink-0" />
+                <span className="max-w-40 truncate">{attachment.fileName}</span>
+                <button
+                  type="button"
+                  disabled={isSendingBatch}
+                  onClick={() =>
+                    setAttachments((current) =>
+                      current.filter((file) => file.objectPath !== attachment.objectPath),
+                    )
+                  }
+                  aria-label={`Remove ${attachment.fileName}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            ))}
+          </div>
         )}
         {isRecording && (
           <div className="flex items-center gap-2 text-xs text-destructive">
@@ -1124,6 +1207,7 @@ function GroupChat({
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             onChange={handleFileChange}
           />
@@ -1132,7 +1216,7 @@ function GroupChat({
             variant="outline"
             size="icon"
             className="inline-flex shrink-0"
-            disabled={isUploading || isRecording}
+            disabled={isUploading || isBatchUploading || isSendingBatch || isRecording}
             onClick={() => fileInputRef.current?.click()}
             title="Attach a file"
           >
@@ -1143,7 +1227,15 @@ function GroupChat({
             variant={isRecording ? "destructive" : "outline"}
             size="icon"
             className="inline-flex shrink-0"
-            disabled={isUploading || sendMessage.isPending}
+            disabled={
+              isUploading ||
+              isBatchUploading ||
+              isSendingBatch ||
+              isRecording ||
+              attachments.length > 0 ||
+              sendMessage.isPending ||
+              sendPrivateMessage.isPending
+            }
             onClick={isRecording ? stopRecording : startRecording}
             title={isRecording ? "Stop and send" : "Record a voice note"}
           >
@@ -1224,7 +1316,10 @@ function GroupChat({
                     handleSend();
                   }
                 }}
-                placeholder={isUploading ? "Uploading file..." : "Type a message..."}
+                disabled={isSendingBatch}
+                placeholder={
+                  isUploading || isBatchUploading ? "Uploading files..." : "Type a message..."
+                }
                 className="flex-1 min-w-0 w-full min-h-11 sm:min-h-9 max-h-44 resize-none overflow-y-hidden rounded-[1.5rem] bg-background px-4 py-2.5 sm:rounded-md sm:px-3 sm:py-2"
               />
             </PopoverAnchor>
@@ -1275,7 +1370,7 @@ function GroupChat({
             variant="outline"
             className="hidden sm:inline-flex shrink-0"
             onClick={insertLineBreak}
-            disabled={isUploading || isRecording}
+            disabled={isUploading || isBatchUploading || isSendingBatch || isRecording}
             title="New line (Shift + Enter)"
             aria-label="Insert a new line"
           >
@@ -1286,7 +1381,15 @@ function GroupChat({
             size="icon"
             className="h-11 w-11 shrink-0 rounded-full bg-[#25D366] p-0 text-white hover:bg-[#20bd5a] sm:h-10 sm:w-10 sm:rounded-md sm:bg-primary sm:text-primary-foreground sm:hover:bg-primary/90"
             onClick={handleSend}
-            disabled={sendMessage.isPending || sendPrivateMessage.isPending || isUploading || isRecording || (!text.trim() && !attachment)}
+            disabled={
+              sendMessage.isPending ||
+              sendPrivateMessage.isPending ||
+              isUploading ||
+              isBatchUploading ||
+              isSendingBatch ||
+              isRecording ||
+              (!text.trim() && attachments.length === 0)
+            }
             title="Send"
             aria-label="Send message"
           >
