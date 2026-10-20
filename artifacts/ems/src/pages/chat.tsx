@@ -1210,6 +1210,7 @@ function GroupChat({
             multiple
             className="hidden"
             onChange={handleFileChange}
+            aria-label="Choose multiple files"
           />
           <Button
             type="button"
@@ -1218,7 +1219,8 @@ function GroupChat({
             className="inline-flex shrink-0"
             disabled={isUploading || isBatchUploading || isSendingBatch || isRecording}
             onClick={() => fileInputRef.current?.click()}
-            title="Attach a file"
+            title="Attach files or photos"
+            aria-label="Attach files or photos"
           >
             <Paperclip className="h-4 w-4" />
           </Button>
