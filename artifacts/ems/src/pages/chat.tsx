@@ -226,6 +226,35 @@ export default function TeamChatPage() {
   const createPrivateConversation = useCreatePrivateConversation();
   const queryClient = useQueryClient();
   const search = useSearch();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const viewport = window.visualViewport;
+    const updateChatViewport = () => {
+      root.style.setProperty(
+        "--chat-viewport-height",
+        `${viewport?.height ?? window.innerHeight}px`,
+      );
+      root.style.setProperty(
+        "--chat-viewport-top",
+        `${viewport?.offsetTop ?? 0}px`,
+      );
+    };
+
+    updateChatViewport();
+    window.addEventListener("resize", updateChatViewport);
+    viewport?.addEventListener("resize", updateChatViewport);
+    viewport?.addEventListener("scroll", updateChatViewport);
+
+    return () => {
+      window.removeEventListener("resize", updateChatViewport);
+      viewport?.removeEventListener("resize", updateChatViewport);
+      viewport?.removeEventListener("scroll", updateChatViewport);
+      root.style.removeProperty("--chat-viewport-height");
+      root.style.removeProperty("--chat-viewport-top");
+    };
+  }, []);
+
   const [activeGroupId, setActiveGroupId] = useState<string | null>(() => {
     // Support deep links from notifications: ...chat?group=dept-3
     return new URLSearchParams(window.location.search).get("group");

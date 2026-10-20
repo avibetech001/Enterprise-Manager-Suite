@@ -78,6 +78,7 @@ const NAV = [
 export function EmployeeLayout({ children }: { children: ReactNode }) {
   const { data: session } = useGetCurrentSession();
   const [location, setLocation] = useLocation();
+  const isTeamChat = location === "/employee/chat";
   const logout = useLogout();
   const queryClient = useQueryClient();
 
@@ -97,7 +98,19 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
   return (
     <SidebarProvider>
       <ChatPresenceHeartbeat />
-      <div className="flex min-h-screen w-full bg-background text-foreground">
+      <div
+        className={`flex w-full bg-background text-foreground ${
+          isTeamChat ? "fixed inset-x-0 min-h-0" : "min-h-screen"
+        }`}
+        style={
+          isTeamChat
+            ? {
+                top: "var(--chat-viewport-top, 0px)",
+                height: "var(--chat-viewport-height, 100dvh)",
+              }
+            : undefined
+        }
+      >
         <Sidebar variant="inset" className="bg-card border-r border-border">
           <SidebarHeader className="border-b border-border p-4 flex flex-row items-center gap-2">
             <img src={logo} alt="5th Element" className="h-7 w-auto" />
@@ -147,14 +160,14 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
           </SidebarFooter>
         </Sidebar>
 
-        <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
-          <header className="h-14 border-b border-border flex items-center justify-between px-4 gap-4 sticky top-0 bg-background z-10">
+        <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden bg-background">
+          <header className="h-14 shrink-0 border-b border-border flex items-center justify-between px-4 gap-4 sticky top-0 bg-background z-10">
             <SidebarTrigger className="md:hidden" />
             <div className="flex-1" />
             <ThemeToggle />
             <NotificationsBell />
           </header>
-          <div className="flex-1 overflow-auto">{children}</div>
+          <div className="flex-1 min-h-0 overflow-auto">{children}</div>
         </main>
       </div>
     </SidebarProvider>
