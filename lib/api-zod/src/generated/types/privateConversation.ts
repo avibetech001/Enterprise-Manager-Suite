@@ -14,4 +14,6 @@ export interface PrivateConversation {
   isOnline: boolean;
   /** @nullable */
   lastSeenAt: Date | null;
+  /** @minimum 0 */
+  unreadCount: number;
 }

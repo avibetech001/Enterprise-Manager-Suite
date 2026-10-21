@@ -2983,7 +2983,7 @@ components:
 
     PrivateConversation:
       type: object
-      required: [id, otherUserId, otherUserName, createdAt, isOnline, lastSeenAt]
+      required: [id, otherUserId, otherUserName, createdAt, isOnline, lastSeenAt, unreadCount]
       properties:
         id:
           type: integer
@@ -2999,6 +2999,9 @@ components:
         lastSeenAt:
           type: ["string", "null"]
           format: date-time
+        unreadCount:
+          type: integer
+          minimum: 0
 
     PrivateConversationInput:
       type: object

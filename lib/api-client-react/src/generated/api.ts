@@ -6345,7 +6345,7 @@ export const getListMyWorkReportsUrl = () => {
 }
 
 /**
- * @summary List the current employee's work reports
+ * @summary List the current employee's and team's work reports
  */
 export const listMyWorkReports = async ( options?: RequestInit): Promise<WorkReport[]> => {
 
@@ -6392,7 +6392,7 @@ export type ListMyWorkReportsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List the current employee's work reports
+ * @summary List the current employee's and team's work reports
  */
 
 export function useListMyWorkReports<TData = Awaited<ReturnType<typeof listMyWorkReports>>, TError = ErrorType<unknown>>(

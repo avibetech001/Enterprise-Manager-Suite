@@ -114,6 +114,8 @@ export interface PrivateConversation {
   isOnline: boolean;
   /** @nullable */
   lastSeenAt: string | null;
+  /** @minimum 0 */
+  unreadCount: number;
 }
 
 export interface PrivateConversationInput {

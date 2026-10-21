@@ -38,6 +38,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
+import { PrivateChatUnreadBadge } from "./private-chat-unread-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ChatPresenceHeartbeat } from "@/components/chat-presence-heartbeat";
 
@@ -130,6 +131,7 @@ export function EmployeeLayout({ children }: { children: ReactNode }) {
                             <item.icon className="h-4 w-4" />
                             <span>{item.title}</span>
                             {item.href === "/employee" && <UnreadNavBadge />}
+                            {item.href === "/employee/chat" && <PrivateChatUnreadBadge />}
                           </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>

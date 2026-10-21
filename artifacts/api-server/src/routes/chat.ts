@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import {
   db,
   chatMessagesTable,
@@ -245,13 +245,59 @@ async function recordGroupMessageReads(
   return names;
 }
 
+async function unreadPrivateMessageCounts(
+  userId: number,
+  conversationIds: number[],
+): Promise<Map<number, number>> {
+  if (conversationIds.length === 0) return new Map();
+  const rows = await db
+    .select({
+      conversationId: directChatMessagesTable.conversationId,
+      unreadCount: sql<number>`count(*)::int`,
+    })
+    .from(directChatMessagesTable)
+    .leftJoin(
+      directChatMessageReadReceiptsTable,
+      and(
+        eq(directChatMessageReadReceiptsTable.messageId, directChatMessagesTable.id),
+        eq(directChatMessageReadReceiptsTable.userId, userId),
+      ),
+    )
+    .where(
+      and(
+        inArray(directChatMessagesTable.conversationId, conversationIds),
+        ne(directChatMessagesTable.userId, userId),
+        isNull(directChatMessageReadReceiptsTable.id),
+      ),
+    )
+    .groupBy(directChatMessagesTable.conversationId);
+  return new Map(rows.map((row) => [row.conversationId, row.unreadCount]));
+}
+
 async function recordPrivateMessageReads(
   userId: number,
+  conversationId: number,
   rows: Array<{ id: number; userId: number }>,
 ): Promise<Map<number, string[]>> {
   const messageIds = rows.map((row) => row.id);
   if (messageIds.length === 0) return new Map();
-  const unreadMessages = rows.filter((row) => row.userId !== userId);
+  const unreadMessages = await db
+    .select({ id: directChatMessagesTable.id })
+    .from(directChatMessagesTable)
+    .leftJoin(
+      directChatMessageReadReceiptsTable,
+      and(
+        eq(directChatMessageReadReceiptsTable.messageId, directChatMessagesTable.id),
+        eq(directChatMessageReadReceiptsTable.userId, userId),
+      ),
+    )
+    .where(
+      and(
+        eq(directChatMessagesTable.conversationId, conversationId),
+        ne(directChatMessagesTable.userId, userId),
+        isNull(directChatMessageReadReceiptsTable.id),
+      ),
+    );
   if (unreadMessages.length > 0) {
     await db
       .insert(directChatMessageReadReceiptsTable)
@@ -1130,6 +1176,10 @@ router.get(
       me.companyId,
       otherUsers.map((user) => user.userId),
     );
+    const unreadCounts = await unreadPrivateMessageCounts(
+      me.id,
+      conversations.map((conversation) => conversation.id),
+    );
     res.json(
       conversations.map((conversation) => {
         const other = participantRows.find(
@@ -1141,6 +1191,7 @@ router.get(
           otherUserId: other.userId,
           otherUserName: other.fullName,
           createdAt: conversation.createdAt.toISOString(),
+          unreadCount: unreadCounts.get(conversation.id) ?? 0,
           ...presenceFields(other.userId, presence),
         });
       }).filter((conversation): conversation is NonNullable<typeof conversation> => conversation !== null),
@@ -1214,11 +1265,13 @@ router.post(
       return;
     }
     const presence = await presenceByUserId(me.companyId, [recipient.id]);
+    const unreadCounts = await unreadPrivateMessageCounts(me.id, [conversation.id]);
     res.json(PrivateConversation.parse({
       id: conversation.id,
       otherUserId: recipient.id,
       otherUserName: recipient.fullName,
       createdAt: conversation.createdAt.toISOString(),
+      unreadCount: unreadCounts.get(conversation.id) ?? 0,
       ...presenceFields(recipient.id, presence),
     }));
   },
@@ -1263,7 +1316,7 @@ router.get(
       return;
     }
     const rows = await privateMessageRows(conversationId);
-    const readByNames = await recordPrivateMessageReads(me.id, rows);
+    const readByNames = await recordPrivateMessageReads(me.id, conversationId, rows);
     res.json(rows.map((row) => ChatMessage.parse({
       ...row,
       groupId: `dm-${conversationId}`,

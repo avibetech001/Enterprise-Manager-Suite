@@ -2675,7 +2675,7 @@ export const SendInvoiceReceiptResponse = zod.object({
 
 
 /**
- * @summary List the current employee's work reports
+ * @summary List the current employee's and team's work reports
  */
 export const ListMyWorkReportsResponseItem = zod.object({
   "id": zod.number(),
@@ -3286,13 +3286,18 @@ export const ListPrivateChatContactsResponse = zod.array(ListPrivateChatContacts
 /**
  * @summary List private conversations in which the current user participates
  */
+export const listPrivateConversationsResponseUnreadCountMin = 0;
+
+
+
 export const ListPrivateConversationsResponseItem = zod.object({
   "id": zod.number(),
   "otherUserId": zod.number(),
   "otherUserName": zod.string(),
   "createdAt": zod.coerce.date(),
   "isOnline": zod.boolean(),
-  "lastSeenAt": zod.coerce.date().nullable()
+  "lastSeenAt": zod.coerce.date().nullable(),
+  "unreadCount": zod.number().min(listPrivateConversationsResponseUnreadCountMin)
 })
 export const ListPrivateConversationsResponse = zod.array(ListPrivateConversationsResponseItem)
 
@@ -3304,13 +3309,18 @@ export const CreatePrivateConversationBody = zod.object({
   "recipientUserId": zod.number()
 })
 
+export const createPrivateConversationResponseUnreadCountMin = 0;
+
+
+
 export const CreatePrivateConversationResponse = zod.object({
   "id": zod.number(),
   "otherUserId": zod.number(),
   "otherUserName": zod.string(),
   "createdAt": zod.coerce.date(),
   "isOnline": zod.boolean(),
-  "lastSeenAt": zod.coerce.date().nullable()
+  "lastSeenAt": zod.coerce.date().nullable(),
+  "unreadCount": zod.number().min(createPrivateConversationResponseUnreadCountMin)
 })
 
 

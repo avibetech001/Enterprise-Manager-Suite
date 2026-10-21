@@ -462,7 +462,7 @@ export default function TeamChatPage() {
               >
                 <div className="flex items-center gap-3">
                   <MessageCircle className="h-5 w-5 text-primary" />
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                     <span className="font-medium truncate">
                       {conversation.otherUserName}
                     </span>
@@ -471,6 +471,15 @@ export default function TeamChatPage() {
                       lastSeenAt={conversation.lastSeenAt}
                     />
                   </div>
+                  {conversation.unreadCount > 0 && (
+                    <Badge
+                      variant="destructive"
+                      aria-label={`${conversation.unreadCount} unread private messages`}
+                      className="ml-auto h-5 min-w-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                    >
+                      {conversation.unreadCount > 99 ? "99+" : conversation.unreadCount}
+                    </Badge>
+                  )}
                 </div>
               </button>
             ))}
@@ -861,11 +870,18 @@ function GroupChat({
     };
   }, []);
 
-  const invalidate = () => queryClient.invalidateQueries({
-    queryKey: privateConversationId
-      ? getListPrivateMessagesQueryKey(privateConversationId)
-      : getListChatMessagesQueryKey(groupId || ""),
-  });
+  const invalidate = () => {
+    void queryClient.invalidateQueries({
+      queryKey: privateConversationId
+        ? getListPrivateMessagesQueryKey(privateConversationId)
+        : getListChatMessagesQueryKey(groupId || ""),
+    });
+    if (privateConversationId) {
+      void queryClient.invalidateQueries({
+        queryKey: getListPrivateConversationsQueryKey(),
+      });
+    }
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
