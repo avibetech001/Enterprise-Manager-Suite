@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useListDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment, getListDepartmentsQueryKey } from "@workspace/api-client-react";
+import { useListDepartments, useListEmployees, useCreateDepartment, useUpdateDepartment, useDeleteDepartment, getListDepartmentsQueryKey } from "@workspace/api-client-react";
 import { Department } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,10 +28,18 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const departmentSchema = z.object({
   name: z.string().min(1, "Department name is required"),
   description: z.string().optional(),
+  teamLeadUserId: z.string(),
 });
 
 type DepartmentFormValues = z.infer<typeof departmentSchema>;
@@ -39,6 +47,7 @@ type DepartmentFormValues = z.infer<typeof departmentSchema>;
 export default function DepartmentsPage() {
   const queryClient = useQueryClient();
   const { data: departments, isLoading } = useListDepartments();
+  const { data: employees, isLoading: employeesLoading } = useListEmployees();
   const createDepartment = useCreateDepartment();
   const updateDepartment = useUpdateDepartment();
   const deleteDepartment = useDeleteDepartment();
@@ -51,6 +60,7 @@ export default function DepartmentsPage() {
     defaultValues: {
       name: "",
       description: "",
+      teamLeadUserId: "unassigned",
     },
   });
 
@@ -60,21 +70,31 @@ export default function DepartmentsPage() {
       form.reset({
         name: dept.name,
         description: dept.description || "",
+        teamLeadUserId: dept.teamLeadUserId?.toString() || "unassigned",
       });
     } else {
       setEditingDepartment(null);
       form.reset({
         name: "",
         description: "",
+        teamLeadUserId: "unassigned",
       });
     }
     setIsDialogOpen(true);
   };
 
   const onSubmit = (data: DepartmentFormValues) => {
+    const { teamLeadUserId, ...departmentData } = data;
     if (editingDepartment) {
       updateDepartment.mutate(
-        { id: editingDepartment.id, data },
+        {
+          id: editingDepartment.id,
+          data: {
+            ...departmentData,
+            teamLeadUserId:
+              teamLeadUserId === "unassigned" ? null : Number(teamLeadUserId),
+          },
+        },
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
@@ -90,7 +110,7 @@ export default function DepartmentsPage() {
       );
     } else {
       createDepartment.mutate(
-        { data },
+        { data: departmentData },
         {
           onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: getListDepartmentsQueryKey() });
@@ -233,6 +253,52 @@ export default function DepartmentsPage() {
                   </FormItem>
                 )}
               />
+
+              {editingDepartment && (
+                <FormField
+                  control={form.control}
+                  name="teamLeadUserId"
+                  render={({ field }) => {
+                    const eligibleLeads = (employees || []).filter(
+                      (employee) =>
+                        employee.employment.departmentId === editingDepartment.id &&
+                        employee.accountStatus === "active" &&
+                        !employee.archived,
+                    );
+
+                    return (
+                      <FormItem>
+                        <FormLabel>Team Lead</FormLabel>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={employeesLoading || updateDepartment.isPending}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Choose a team lead" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="unassigned">Unassigned</SelectItem>
+                            {eligibleLeads.map((employee) => (
+                              <SelectItem key={employee.id} value={String(employee.id)}>
+                                {employee.fullName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {eligibleLeads.length > 0
+                            ? "Choose an active employee in this department. The lead can submit team reports."
+                            : "Add an active employee to this department before assigning a Team Lead."}
+                        </p>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
+              )}
 
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
