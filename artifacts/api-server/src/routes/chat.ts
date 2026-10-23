@@ -42,7 +42,6 @@ import {
   findOrCreatePrivateConversation,
 } from "../lib/chatAccess";
 import { notify } from "../lib/notify";
-import { sendPush } from "../lib/push";
 import { getChatLinkPreview } from "../lib/chatLinkPreview";
 
 const router: IRouter = Router();
@@ -988,8 +987,8 @@ router.post(
 
     const link = `chat?group=${group.id}`;
 
-    // Push a phone notification for every new message to the other group
-    // members (mentioned members get a richer mention notification below).
+    // Save an in-app notification and send a device push for every new group
+    // message. Mentioned members get the more specific notification copy.
     const mentionSet = new Set(mentionIds);
     const preview =
       body ||
@@ -997,24 +996,20 @@ router.post(
         ? "Voice note"
         : inserted.fileName || "Attachment");
     for (const uid of memberIds) {
-      if (uid === me.id || mentionSet.has(uid)) continue;
-      void sendPush(
-        me.companyId,
-        `${me.fullName} in "${group.name}": ${preview}`,
-        uid,
-      );
-    }
-
-    for (const uid of mentionIds) {
       if (uid === me.id) continue;
+      const isMentioned = mentionSet.has(uid);
       void notify(
         me.companyId,
-        "chat_mention",
-        mentionAll
-          ? `${me.fullName} mentioned everyone in the "${group.name}" chat.`
-          : `${me.fullName} mentioned you in the "${group.name}" chat.`,
+        isMentioned ? "chat_mention" : "chat_group_message",
+        isMentioned
+          ? mentionAll
+            ? `${me.fullName} mentioned everyone in the "${group.name}" chat.`
+            : `${me.fullName} mentioned you in the "${group.name}" chat.`
+          : `${me.fullName} in "${group.name}": ${preview}`,
         uid,
         link,
+      ).catch((err) =>
+        req.log.warn({ err, recipientId: uid, groupId: group.id }, "Failed to notify group chat member"),
       );
     }
 
@@ -1399,8 +1394,9 @@ router.post(
         `${me.fullName} sent you a private message: ${preview}`,
         recipient.userId,
         `chat?conversation=${conversationId}`,
+      ).catch((err) =>
+        req.log.warn({ err, recipientId: recipient.userId, conversationId }, "Failed to notify private chat recipient"),
       );
-      void sendPush(me.companyId, `${me.fullName}: ${preview}`, recipient.userId);
     }
     res.json(ChatMessage.parse({
       id: inserted.id,

@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import { db, notificationsTable, type User } from "@workspace/db";
 import {
@@ -18,7 +18,13 @@ function feedFilter(user: User): SQL {
   if (user.role === "employee") {
     return and(base, eq(notificationsTable.userId, user.id))!;
   }
-  return and(base, isNull(notificationsTable.userId))!;
+  return and(
+    base,
+    or(
+      isNull(notificationsTable.userId),
+      eq(notificationsTable.userId, user.id),
+    ),
+  )!;
 }
 
 router.get("/notifications", requireAuth, async (req, res): Promise<void> => {

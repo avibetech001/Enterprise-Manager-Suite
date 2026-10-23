@@ -28,7 +28,12 @@ export function NotificationsBell() {
   const [, navigate] = useLocation();
   const queryClient = useQueryClient();
   const { data: session } = useGetCurrentSession();
-  const { data: notifications } = useListNotifications();
+  const { data: notifications } = useListNotifications({
+    query: {
+      queryKey: getListNotificationsQueryKey(),
+      refetchInterval: 30_000,
+    },
+  });
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
