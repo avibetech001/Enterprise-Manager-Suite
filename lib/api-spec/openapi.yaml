@@ -2510,6 +2510,58 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /chat/messages/lookup:
+    get:
+      operationId: lookupChatMessages
+      tags: [chat]
+      summary: Search prior messages or retrieve a referenced message in an authorized chat
+      parameters:
+        - name: groupId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: conversationId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: search
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 200
+        - name: aroundMessageId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Matching or referenced messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatMessage"
+        "400":
+          description: Invalid lookup
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Chat or message not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /chat/groups/{groupId}/messages:
     get:
       operationId: listChatMessages

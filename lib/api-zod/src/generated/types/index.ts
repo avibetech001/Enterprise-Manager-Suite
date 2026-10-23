@@ -97,6 +97,7 @@ export * from './listPostsKind';
 export * from './listPostsParams';
 export * from './listQueriesParams';
 export * from './loginInput';
+export * from './lookupChatMessagesParams';
 export * from './managedChatTeam';
 export * from './managedChatTeamInput';
 export * from './managementUser';

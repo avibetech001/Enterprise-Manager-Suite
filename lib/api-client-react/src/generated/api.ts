@@ -80,6 +80,7 @@ import type {
   ListPostsParams,
   ListQueriesParams,
   LoginInput,
+  LookupChatMessagesParams,
   ManagedChatTeam,
   ManagedChatTeamInput,
   ManagementUser,
@@ -8117,6 +8118,90 @@ export function useListChatGroupMembers<TData = Awaited<ReturnType<typeof listCh
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListChatGroupMembersQueryOptions(groupId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getLookupChatMessagesUrl = (params?: LookupChatMessagesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/chat/messages/lookup?${stringifiedParams}` : `/api/chat/messages/lookup`
+}
+
+/**
+ * @summary Search prior messages or retrieve a referenced message in an authorized chat
+ */
+export const lookupChatMessages = async (params?: LookupChatMessagesParams, options?: RequestInit): Promise<ChatMessage[]> => {
+
+  return customFetch<ChatMessage[]>(getLookupChatMessagesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLookupChatMessagesQueryKey = (params?: LookupChatMessagesParams,) => {
+    return [
+    `/api/chat/messages/lookup`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getLookupChatMessagesQueryOptions = <TData = Awaited<ReturnType<typeof lookupChatMessages>>, TError = ErrorType<ErrorResponse>>(params?: LookupChatMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupChatMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLookupChatMessagesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof lookupChatMessages>>> = ({ signal }) => lookupChatMessages(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof lookupChatMessages>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LookupChatMessagesQueryResult = NonNullable<Awaited<ReturnType<typeof lookupChatMessages>>>
+export type LookupChatMessagesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Search prior messages or retrieve a referenced message in an authorized chat
+ */
+
+export function useLookupChatMessages<TData = Awaited<ReturnType<typeof lookupChatMessages>>, TError = ErrorType<ErrorResponse>>(
+ params?: LookupChatMessagesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupChatMessages>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLookupChatMessagesQueryOptions(params,options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

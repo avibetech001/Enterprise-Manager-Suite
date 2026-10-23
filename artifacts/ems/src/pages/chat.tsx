@@ -20,6 +20,10 @@ import {
   useSendPrivateMessage,
   useDeletePrivateMessage,
   useGetCurrentSession,
+  useLookupChatMessages,
+  getLookupChatMessagesQueryKey,
+  lookupChatMessages,
+  type LookupChatMessagesParams,
   type ChatMessage,
 } from "@workspace/api-client-react";
 import { useUpload } from "@workspace/object-storage-web";
@@ -54,6 +58,8 @@ import {
   Download,
   ExternalLink,
   Globe2,
+  Search,
+  Loader2,
 } from "lucide-react";
 
 // Render message text with clickable links.
@@ -576,12 +582,14 @@ function MessageBubble({
   canDelete,
   onReply,
   onDelete,
+  onJumpToReply,
 }: {
   m: ChatMessage;
   mine: boolean;
   canDelete: boolean;
   onReply: () => void;
   onDelete: () => void;
+  onJumpToReply: (messageId: number) => void;
 }) {
   const [dragX, setDragX] = useState(0);
   const startX = useRef<number | null>(null);
@@ -611,6 +619,7 @@ function MessageBubble({
     ? `${import.meta.env.BASE_URL}api/storage${m.filePath}`
     : null;
   const isImageAttachment = /\.(png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "");
+  const isPdfAttachment = /\.pdf$/i.test(m.fileName || "");
   const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "");
 
   return (
@@ -638,8 +647,16 @@ function MessageBubble({
           <p className="text-xs font-medium mb-0.5 opacity-80">{m.userName}</p>
         )}
         {m.replyToId != null && (
-          <div
-            className={`mb-1.5 rounded border-l-2 px-2 py-1 text-xs ${
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onJumpToReply(m.replyToId!);
+            }}
+            data-testid={`button-jump-to-reply-${m.id}`}
+            aria-label={`Jump to ${m.replyToUserName || "original"} message`}
+            title="Jump to original message"
+            className={`mb-1.5 block w-full rounded border-l-2 px-2 py-1 text-left text-xs hover:brightness-95 ${
               mine
                 ? "border-primary-foreground/50 bg-primary-foreground/10"
                 : "border-primary/50 bg-background/60"
@@ -647,7 +664,7 @@ function MessageBubble({
           >
             <p className="font-medium">{m.replyToUserName || "Deleted"}</p>
             <p className="truncate opacity-80">{m.replyToBody || "Message"}</p>
-          </div>
+          </button>
         )}
         {m.body && (
           <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere] select-text">
@@ -678,7 +695,9 @@ function MessageBubble({
               className={`mt-1 ${
                 isImageAttachment
                   ? "flex flex-col items-start gap-1.5"
-                  : "flex flex-wrap items-center gap-x-3 gap-y-1"
+                  : isPdfAttachment
+                    ? "flex flex-col items-start gap-1.5"
+                    : "flex flex-wrap items-center gap-x-3 gap-y-1"
               }`}
             >
               {isImageAttachment ? (
@@ -697,6 +716,26 @@ function MessageBubble({
                     className="max-h-72 max-w-full rounded-md object-contain"
                   />
                 </a>
+              ) : isPdfAttachment ? (
+                <div className="w-full max-w-[min(72vw,34rem)] space-y-1.5">
+                  <iframe
+                    src={`${fileUrl}?preview=pdf`}
+                    title={`PDF preview: ${m.fileName || "document"}`}
+                    loading="lazy"
+                    className="h-64 w-full rounded-md border bg-background"
+                  />
+                  <a
+                    href={fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex items-center gap-1.5 text-xs underline break-all ${
+                      mine ? "text-primary-foreground" : "text-foreground"
+                    }`}
+                  >
+                    <FileText className="h-3.5 w-3.5 shrink-0" />
+                    {m.fileName || "Open PDF"}
+                  </a>
+                </div>
               ) : (
                 <a
                   href={fileUrl}
@@ -840,12 +879,47 @@ function GroupChat({
     query: string;
   } | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [focusedMessage, setFocusedMessage] = useState<ChatMessage | null>(null);
+  const [jumpToMessageId, setJumpToMessageId] = useState<number | null>(null);
   const [tagOpen, setTagOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
+  const normalizedSearch = searchText.trim();
+  const lookupParams = useMemo<LookupChatMessagesParams>(
+    () => ({
+      ...(privateConversationId != null
+        ? { conversationId: privateConversationId }
+        : groupId
+          ? { groupId }
+          : {}),
+      ...(normalizedSearch ? { search: normalizedSearch } : {}),
+    }),
+    [groupId, normalizedSearch, privateConversationId],
+  );
+  const searchResultsQuery = useLookupChatMessages(lookupParams, {
+    query: {
+      queryKey: getLookupChatMessagesQueryKey(lookupParams),
+      enabled:
+        searchOpen &&
+        Boolean(normalizedSearch) &&
+        Boolean(privateConversationId != null || groupId),
+      staleTime: 30_000,
+    },
+  });
+  const visibleMessages = useMemo(() => {
+    const current = messages || [];
+    if (!focusedMessage || current.some((message) => message.id === focusedMessage.id)) {
+      return current;
+    }
+    return [...current, focusedMessage].sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+    );
+  }, [focusedMessage, messages]);
   useEffect(() => {
     const input = messageInputRef.current;
     if (!input) return;
@@ -860,8 +934,29 @@ function GroupChat({
   });
 
   useEffect(() => {
+    setSearchOpen(false);
+    setSearchText("");
+    setFocusedMessage(null);
+    setJumpToMessageId(null);
+  }, [groupId, privateConversationId]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [messages?.length]);
+
+  useEffect(() => {
+    if (jumpToMessageId == null) return;
+    const frame = requestAnimationFrame(() => {
+      document
+        .getElementById(`chat-message-${jumpToMessageId}`)
+        ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+    const timer = window.setTimeout(() => setJumpToMessageId(null), 2500);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(timer);
+    };
+  }, [jumpToMessageId]);
 
   // Stop the recorder if the user leaves the chat while recording.
   useEffect(() => {
@@ -1097,6 +1192,36 @@ function GroupChat({
     recorderRef.current?.stop();
   };
 
+  const jumpToMessage = async (
+    messageId: number,
+    knownMessage?: ChatMessage,
+  ) => {
+    let target =
+      knownMessage || visibleMessages.find((message) => message.id === messageId);
+    if (!target) {
+      const params: LookupChatMessagesParams = {
+        ...(privateConversationId != null
+          ? { conversationId: privateConversationId }
+          : groupId
+            ? { groupId }
+            : {}),
+        aroundMessageId: messageId,
+      };
+      try {
+        target = (await lookupChatMessages(params))[0];
+      } catch {
+        toast.error("Could not open the original message");
+        return;
+      }
+    }
+    if (!target) {
+      toast.error("That message is no longer available in this chat");
+      return;
+    }
+    setFocusedMessage(target);
+    setJumpToMessageId(target.id);
+  };
+
   const handleDelete = (m: ChatMessage) => {
     if (!window.confirm("Delete this message?")) return;
     const callbacks = {
@@ -1121,34 +1246,129 @@ function GroupChat({
   const showAllMentionOption =
     !mentionQuery || "all".includes(mentionQuery) || "everyone".includes(mentionQuery);
   const onlineMemberCount = memberOptions.filter((member) => member.isOnline).length;
+  const searchResults = searchResultsQuery.data || [];
 
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
       <div className="border-b px-3 sm:px-4 py-3">
-        <p className="font-medium text-sm flex items-center gap-2">
-          <MessagesSquare className="h-4 w-4" />
-          {groupName}
-          <span className="text-xs text-muted-foreground font-normal">
-            {privateConversationId
-              ? <PresenceStatus isOnline={privateIsOnline} lastSeenAt={privateLastSeenAt} />
-              : members
-                ? `${onlineMemberCount} online · ${memberOptions.length} ${memberOptions.length === 1 ? "member" : "members"}`
-                : "Checking who is online…"}
-          </span>
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="min-w-0 flex-1 font-medium text-sm flex items-center gap-2">
+            <MessagesSquare className="h-4 w-4 shrink-0" />
+            <span className="truncate">{groupName}</span>
+            <span className="shrink-0 text-xs text-muted-foreground font-normal">
+              {privateConversationId
+                ? <PresenceStatus isOnline={privateIsOnline} lastSeenAt={privateLastSeenAt} />
+                : members
+                  ? `${onlineMemberCount} online · ${memberOptions.length} ${memberOptions.length === 1 ? "member" : "members"}`
+                  : "Checking who is online…"}
+            </span>
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={() => {
+              if (searchOpen) {
+                setSearchText("");
+                setSearchOpen(false);
+              } else {
+                setSearchOpen(true);
+              }
+            }}
+            aria-label={searchOpen ? "Close chat search" : "Search chat messages"}
+            title={searchOpen ? "Close search" : "Search messages"}
+            data-testid="button-search-chat"
+          >
+            {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+          </Button>
+        </div>
+        {searchOpen && (
+          <div className="mt-2 flex items-center gap-2">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="search"
+                value={searchText}
+                maxLength={200}
+                onChange={(event) => setSearchText(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setSearchText("");
+                    setSearchOpen(false);
+                  } else if (event.key === "Enter" && searchResults[0]) {
+                    void jumpToMessage(searchResults[0].id, searchResults[0]);
+                    setSearchText("");
+                    setSearchOpen(false);
+                  }
+                }}
+                placeholder="Search messages in this chat"
+                aria-label="Search messages in this chat"
+                data-testid="input-search-chat"
+                className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                autoFocus
+              />
+            </div>
+          </div>
+        )}
       </div>
+      {searchOpen && normalizedSearch && (
+        <div className="max-h-56 shrink-0 overflow-y-auto border-b">
+          {searchResultsQuery.isFetching && (
+            <p className="flex items-center gap-2 px-3 py-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Searching previous messages…
+            </p>
+          )}
+          {searchResultsQuery.isError && (
+            <p className="px-3 py-2 text-xs text-destructive">
+              Could not search this chat. Try again.
+            </p>
+          )}
+          {!searchResultsQuery.isFetching &&
+            !searchResultsQuery.isError &&
+            searchResults.length === 0 && (
+              <p className="px-3 py-3 text-center text-xs text-muted-foreground">
+                No matching messages found.
+              </p>
+            )}
+          {searchResults.map((result) => (
+            <button
+              key={result.id}
+              type="button"
+              onClick={() => {
+                void jumpToMessage(result.id, result);
+                setSearchText("");
+                setSearchOpen(false);
+              }}
+              data-testid={`search-result-message-${result.id}`}
+              className="block w-full border-b px-3 py-2 text-left last:border-b-0 hover:bg-muted/70"
+            >
+              <span className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                <span className="truncate font-medium text-foreground">{result.userName}</span>
+                <span className="shrink-0">
+                  {new Date(result.createdAt).toLocaleString()}
+                </span>
+              </span>
+              <span className="mt-0.5 block truncate text-xs">
+                {result.body || result.fileName || "Attachment"}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Radix ScrollArea renders its content wrapper as display:table, which
           lets long messages expand it sideways and clip the chat on phones.
           Force it back to a normal block that fills the viewport width. */}
       <ScrollArea className="min-h-0 flex-1 px-3 sm:px-4 [&_[data-radix-scroll-area-viewport]>div]:!block">
         <div className="py-4 space-y-3">
-          {(messages || []).length === 0 && (
+          {visibleMessages.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">
               No messages yet. Say hello!
             </p>
           )}
-          {(messages || []).map((m, i, arr) => {
+          {visibleMessages.map((m, i, arr) => {
             const mine = m.userId === myUserId;
             const prev = arr[i - 1];
             const showDay =
@@ -1156,7 +1376,14 @@ function GroupChat({
               new Date(prev.createdAt).toDateString() !==
                 new Date(m.createdAt).toDateString();
             return (
-              <div key={m.id} className="space-y-3">
+              <div
+                key={m.id}
+                id={`chat-message-${m.id}`}
+                data-testid={`chat-message-${m.id}`}
+                className={`scroll-mt-4 space-y-3 rounded transition-colors ${
+                  jumpToMessageId === m.id ? "ring-2 ring-primary ring-offset-2" : ""
+                }`}
+              >
                 {showDay && <DaySeparator label={dayLabel(m.createdAt)} />}
                 <MessageBubble
                   m={m}
@@ -1164,6 +1391,7 @@ function GroupChat({
                   canDelete={mine || (isManagement && !privateConversationId)}
                   onReply={() => setReplyTo(m)}
                   onDelete={() => handleDelete(m)}
+                  onJumpToReply={(messageId) => void jumpToMessage(messageId)}
                 />
               </div>
             );

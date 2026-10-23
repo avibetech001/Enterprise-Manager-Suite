@@ -2,6 +2,7 @@
 - [Orval zod email format](orval-zod-email.md) — avoid `format: email` in openapi.yaml; orval emits zod-v4 `zod.email()` which breaks the zod v3 catalog build.
 - [connect-pg-simple in esbuild](session-store-esbuild.md) — keep createTableIfMissing false; bundled table.sql is missing, so sessions silently fail (login 200, then 401s).
 - [OpenAPI zod timestamps & enums](openapi-zod-timestamps.md) — nullable timestamps need `format: date-time`; new permission keys must also go into the openapi PermissionKey enum, or responses 500 at zod parse.
+- [Orval path and query params](orval-path-query-param-collision.md) — avoid combining path and query parameters in one operation when Orval emits duplicate `*Params` exports.
 - [Attendance timezone & geolocation](attendance-timezone.md) — all attendance day/time math must use the COMPANY_TZ helper; geolocation needs a hard timeout race or check-in hangs.
 - [SendGrid activation emails](sendgrid-activation-email.md) — only verified sender is info@contentafrica.com; sends are non-fatal; 401 "Maximum credits exceeded" means the SendGrid plan is out of credits.
 - [Trust proxy for secure cookies](session-cookie-trust-proxy.md) — production login 200 then 401s = secure cookie dropped; Express needs `trust proxy` behind Replit's proxy.

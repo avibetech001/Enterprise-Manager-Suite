@@ -1494,3 +1494,20 @@ export type ListQueriesParams = {
 userId?: number;
 };
 
+export type LookupChatMessagesParams = {
+groupId?: string;
+/**
+ * @minimum 1
+ */
+conversationId?: number;
+/**
+ * @minLength 1
+ * @maxLength 200
+ */
+search?: string;
+/**
+ * @minimum 1
+ */
+aroundMessageId?: number;
+};
+

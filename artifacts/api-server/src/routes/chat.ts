@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, asc, desc, eq, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import {
   db,
   chatMessagesTable,
@@ -30,6 +30,7 @@ import {
   CreateManagedChatTeamResponse,
   UpdateManagedChatTeamBody,
   UpdateManagedChatTeamResponse,
+  LookupChatMessagesQueryParams,
 } from "@workspace/api-zod";
 import {
   DeleteChatMessageResponse,
@@ -49,6 +50,10 @@ const router: IRouter = Router();
 type CurrentUser = NonNullable<Request["currentUser"]>;
 const ONLINE_WINDOW_MS = 90_000;
 const managedTeamLead = alias(usersTable, "managed_team_lead");
+
+function escapedSearchPattern(search: string): string {
+  return `%${search.replace(/[\\%_]/g, "\\$&")}%`;
+}
 
 router.get(
   "/chat/link-preview",
@@ -1272,9 +1277,15 @@ router.post(
   },
 );
 
-async function privateMessageRows(conversationId: number) {
+async function privateMessageRows(
+  conversationId: number,
+  lookup: { search?: string; aroundMessageId?: number } = {},
+) {
   const replyMsg = alias(directChatMessagesTable, "direct_reply_msg");
   const replyUser = alias(usersTable, "direct_reply_user");
+  const searchPattern = lookup.search
+    ? escapedSearchPattern(lookup.search)
+    : undefined;
   const rows = await db
     .select({
       id: directChatMessagesTable.id,
@@ -1294,11 +1305,170 @@ async function privateMessageRows(conversationId: number) {
     .innerJoin(usersTable, eq(usersTable.id, directChatMessagesTable.userId))
     .leftJoin(replyMsg, eq(replyMsg.id, directChatMessagesTable.replyToId))
     .leftJoin(replyUser, eq(replyUser.id, replyMsg.userId))
-    .where(eq(directChatMessagesTable.conversationId, conversationId))
+    .where(
+      and(
+        eq(directChatMessagesTable.conversationId, conversationId),
+        searchPattern
+          ? or(
+              ilike(directChatMessagesTable.body, searchPattern),
+              ilike(directChatMessagesTable.fileName, searchPattern),
+            )
+          : undefined,
+        lookup.aroundMessageId
+          ? eq(directChatMessagesTable.id, lookup.aroundMessageId)
+          : undefined,
+      ),
+    )
     .orderBy(desc(directChatMessagesTable.createdAt))
-    .limit(200);
+    .limit(lookup.aroundMessageId ? 1 : lookup.search ? 100 : 200);
   return rows.reverse();
 }
+
+router.get(
+  "/chat/messages/lookup",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const parsed = LookupChatMessagesQueryParams.safeParse(req.query);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid chat search." });
+      return;
+    }
+
+    const groupId = parsed.data.groupId?.trim();
+    const conversationId = parsed.data.conversationId;
+    const search = parsed.data.search?.trim();
+    const aroundMessageId = parsed.data.aroundMessageId;
+    const hasGroup = Boolean(groupId);
+    const hasConversation = conversationId != null;
+    const hasSearch = Boolean(search);
+    const hasTarget = aroundMessageId != null;
+
+    if (
+      hasGroup === hasConversation ||
+      hasSearch === hasTarget ||
+      (parsed.data.search != null && !search)
+    ) {
+      res.status(400).json({ error: "Choose one chat and provide a search or message ID." });
+      return;
+    }
+
+    if (hasGroup) {
+      const group = await resolveGroup(me, groupId!);
+      if (!group) {
+        res.status(404).json({ error: "Group not found." });
+        return;
+      }
+
+      const replyMsg = alias(chatMessagesTable, "lookup_reply_msg");
+      const replyUser = alias(usersTable, "lookup_reply_user");
+      const searchPattern = search ? escapedSearchPattern(search) : undefined;
+      const rows = await db
+        .select({
+          id: chatMessagesTable.id,
+          userId: chatMessagesTable.userId,
+          body: chatMessagesTable.body,
+          filePath: chatMessagesTable.filePath,
+          fileName: chatMessagesTable.fileName,
+          mentionUserIds: chatMessagesTable.mentionUserIds,
+          kind: chatMessagesTable.kind,
+          replyToId: chatMessagesTable.replyToId,
+          replyToBody: replyMsg.body,
+          replyToFileName: replyMsg.fileName,
+          replyToUserName: replyUser.fullName,
+          createdAt: chatMessagesTable.createdAt,
+          userName: usersTable.fullName,
+        })
+        .from(chatMessagesTable)
+        .innerJoin(usersTable, eq(usersTable.id, chatMessagesTable.userId))
+        .leftJoin(replyMsg, eq(replyMsg.id, chatMessagesTable.replyToId))
+        .leftJoin(replyUser, eq(replyUser.id, replyMsg.userId))
+        .where(
+          and(
+            eq(chatMessagesTable.companyId, me.companyId),
+            groupMessageScope(group),
+            searchPattern
+              ? or(
+                  ilike(chatMessagesTable.body, searchPattern),
+                  ilike(chatMessagesTable.fileName, searchPattern),
+                )
+              : undefined,
+            aroundMessageId
+              ? eq(chatMessagesTable.id, aroundMessageId)
+              : undefined,
+          ),
+        )
+        .orderBy(desc(chatMessagesTable.createdAt))
+        .limit(aroundMessageId ? 1 : 100);
+      rows.reverse();
+
+      if (aroundMessageId && rows.length === 0) {
+        res.status(404).json({ error: "Message not found in this chat." });
+        return;
+      }
+
+      const readByNames = await recordGroupMessageReads(me.id, rows);
+      res.json(
+        rows.map((row) =>
+          ChatMessage.parse({
+            id: row.id,
+            groupId: group.id,
+            userId: row.userId,
+            userName: row.userName,
+            body: row.body,
+            filePath: row.filePath,
+            fileName: row.fileName,
+            mentionUserIds: row.mentionUserIds,
+            readByNames: readByNames.get(row.id) ?? [],
+            kind: row.kind,
+            replyToId: row.replyToId,
+            replyToBody:
+              row.replyToId != null
+                ? row.replyToBody || row.replyToFileName || ""
+                : null,
+            replyToUserName:
+              row.replyToId != null ? row.replyToUserName : null,
+            createdAt: row.createdAt.toISOString(),
+          }),
+        ),
+      );
+      return;
+    }
+
+    if (!(await privateConversationFor(me, conversationId!))) {
+      res.status(404).json({ error: "Conversation not found." });
+      return;
+    }
+
+    const rows = await privateMessageRows(conversationId!, {
+      search,
+      aroundMessageId,
+    });
+    if (aroundMessageId && rows.length === 0) {
+      res.status(404).json({ error: "Message not found in this conversation." });
+      return;
+    }
+    const readByNames = await recordPrivateMessageReads(
+      me.id,
+      conversationId!,
+      rows,
+    );
+    res.json(
+      rows.map((row) =>
+        ChatMessage.parse({
+          ...row,
+          groupId: `dm-${conversationId}`,
+          mentionUserIds: [],
+          readByNames: readByNames.get(row.id) ?? [],
+          replyToBody:
+            row.replyToId != null ? row.replyToBody || row.replyToFileName || "" : null,
+          replyToUserName: row.replyToId != null ? row.replyToUserName : null,
+          createdAt: row.createdAt.toISOString(),
+        }),
+      ),
+    );
+  },
+);
 
 router.get(
   "/chat/private/conversations/:conversationId/messages",

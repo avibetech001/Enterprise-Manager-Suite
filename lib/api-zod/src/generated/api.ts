@@ -3194,6 +3194,41 @@ export const ListChatGroupMembersResponse = zod.array(ListChatGroupMembersRespon
 
 
 /**
+ * @summary Search prior messages or retrieve a referenced message in an authorized chat
+ */
+
+export const lookupChatMessagesQuerySearchMax = 200;
+
+
+
+
+export const LookupChatMessagesQueryParams = zod.object({
+  "groupId": zod.coerce.string().optional(),
+  "conversationId": zod.coerce.number().min(1).optional(),
+  "search": zod.coerce.string().min(1).max(lookupChatMessagesQuerySearchMax).optional(),
+  "aroundMessageId": zod.coerce.number().min(1).optional()
+})
+
+export const LookupChatMessagesResponseItem = zod.object({
+  "id": zod.number(),
+  "groupId": zod.string(),
+  "userId": zod.number(),
+  "userName": zod.string(),
+  "body": zod.string(),
+  "filePath": zod.string().nullable(),
+  "fileName": zod.string().nullable(),
+  "mentionUserIds": zod.array(zod.number()),
+  "readByNames": zod.array(zod.string()),
+  "kind": zod.string().optional(),
+  "replyToId": zod.number().nullish(),
+  "replyToBody": zod.string().nullish(),
+  "replyToUserName": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const LookupChatMessagesResponse = zod.array(LookupChatMessagesResponseItem)
+
+
+/**
  * @summary List recent messages in a chat group
  */
 export const ListChatMessagesParams = zod.object({
