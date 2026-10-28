@@ -13,6 +13,12 @@ General and department chat membership is derived at request time:
 
 **How to apply:** group access must go through `resolveGroup()`; mentions and team-report submissions must use the resolved/assigned member set. Keep private team attachment checks in the storage route synchronized with group access, including manager permission and active team membership. Messages query newest-200 desc then reverse. Team report rows retain a team-name snapshot if a managed team is deleted.
 
+The `@management` group-chat mention targets active super admins only. It does not grant HR or other management roles new access; super admins already have access to all department and managed-team chats.
+
+**Why:** the user specified that `@management` should mean “just super admin.”
+
+**How to apply:** include only active `super_admin` users as recipients of this special mention and preserve existing group access rules for other roles.
+
 Private management-to-employee conversations are intentionally separate from derived groups. Each conversation has exactly two explicit participants, and every message, reply, deletion, listing, and attachment download must verify participant membership plus company scope. Only management initiates; the employee participant may reply.
 
 **Why:** a null department already means the company-wide General room, so overloading group rows for direct messages would expose private content.

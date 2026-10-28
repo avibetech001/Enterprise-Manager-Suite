@@ -3271,6 +3271,7 @@ export const SendChatMessageBody = zod.object({
   "fileName": zod.string().min(1).optional(),
   "mentionUserIds": zod.array(zod.number()).optional(),
   "mentionAll": zod.boolean().optional(),
+  "mentionManagement": zod.boolean().optional(),
   "replyToId": zod.number().optional(),
   "kind": zod.enum(['text', 'voice']).optional()
 })
@@ -3402,6 +3403,7 @@ export const SendPrivateMessageBody = zod.object({
   "fileName": zod.string().min(1).optional(),
   "mentionUserIds": zod.array(zod.number()).optional(),
   "mentionAll": zod.boolean().optional(),
+  "mentionManagement": zod.boolean().optional(),
   "replyToId": zod.number().optional(),
   "kind": zod.enum(['text', 'voice']).optional()
 })

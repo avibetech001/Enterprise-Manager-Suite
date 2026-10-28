@@ -903,6 +903,7 @@ function GroupChat({
   const [isSendingBatch, setIsSendingBatch] = useState(false);
   const [mentionIds, setMentionIds] = useState<number[]>([]);
   const [mentionAll, setMentionAll] = useState(false);
+  const [mentionManagement, setMentionManagement] = useState(false);
   const [mentionSearch, setMentionSearch] = useState<{
     start: number;
     end: number;
@@ -1031,19 +1032,27 @@ function GroupChat({
 
   const handleTag = (userIdStr: string) => {
     const isAll = userIdStr === "__all__";
-    const userId = isAll ? null : Number(userIdStr);
+    const isManagementTag = userIdStr === "__management__";
+    const userId = isAll || isManagementTag ? null : Number(userIdStr);
     const member = userId === null ? null : members?.find((m) => m.id === userId);
-    if (!isAll && (!member || userId === null)) return;
+    if (!isAll && !isManagementTag && (!member || userId === null)) return;
 
     const input = messageInputRef.current;
     const start = mentionSearch?.start ?? input?.selectionStart ?? text.length;
     const end = mentionSearch?.end ?? input?.selectionEnd ?? start;
     const prefix = start > 0 && !/\s/.test(text[start - 1]) ? " " : "";
-    const insertion = `${prefix}@${isAll ? "all" : member!.fullName} `;
+    const mentionName = isAll
+      ? "all"
+      : isManagementTag
+        ? "management"
+        : member!.fullName;
+    const insertion = `${prefix}@${mentionName} `;
     const nextText = `${text.slice(0, start)}${insertion}${text.slice(end)}`;
 
     if (isAll) {
       setMentionAll(true);
+    } else if (isManagementTag) {
+      setMentionManagement(true);
     } else if (userId !== null && !mentionIds.includes(userId)) {
       setMentionIds((ids) => [...ids, userId]);
     }
@@ -1091,6 +1100,10 @@ function GroupChat({
             : mentionIds,
         mentionAll:
           privateConversationId || !includeContext ? undefined : mentionAll || undefined,
+        mentionManagement:
+          privateConversationId || !includeContext
+            ? undefined
+            : mentionManagement || undefined,
         replyToId: includeContext ? replyTo?.id : undefined,
       },
     };
@@ -1118,6 +1131,7 @@ function GroupChat({
     setAttachments([]);
     setMentionIds([]);
     setMentionAll(false);
+    setMentionManagement(false);
     setReplyTo(null);
   };
 
@@ -1286,6 +1300,10 @@ function GroupChat({
   );
   const showAllMentionOption =
     !mentionQuery || "all".includes(mentionQuery) || "everyone".includes(mentionQuery);
+  const showManagementMentionOption =
+    !mentionQuery ||
+    "management".includes(mentionQuery) ||
+    "managers".includes(mentionQuery);
   const onlineMemberCount = memberOptions.filter((member) => member.isOnline).length;
   const searchResults = searchResultsQuery.data || [];
 
@@ -1590,9 +1608,11 @@ function GroupChat({
                     if (tagOpen && mentionSearch) {
                       const firstSuggestion = showAllMentionOption
                         ? "__all__"
-                        : filteredMentionMembers[0]
-                          ? String(filteredMentionMembers[0].id)
-                          : null;
+                        : showManagementMentionOption
+                          ? "__management__"
+                          : filteredMentionMembers[0]
+                            ? String(filteredMentionMembers[0].id)
+                            : null;
                       if (firstSuggestion) {
                         e.preventDefault();
                         handleTag(firstSuggestion);
@@ -1628,6 +1648,16 @@ function GroupChat({
                     @ Everyone
                   </button>
                 )}
+                {showManagementMentionOption && (
+                  <button
+                    type="button"
+                    className="w-full rounded px-2.5 py-2 text-left text-sm font-medium hover:bg-accent"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => handleTag("__management__")}
+                  >
+                    @ Management
+                  </button>
+                )}
                 {filteredMentionMembers.map((m) => (
                   <button
                     key={m.id}
@@ -1645,9 +1675,13 @@ function GroupChat({
                     </span>
                   </button>
                 ))}
-                {!showAllMentionOption && filteredMentionMembers.length === 0 && (
-                  <p className="px-2.5 py-2 text-sm text-muted-foreground">No matching employees</p>
-                )}
+                {!showAllMentionOption &&
+                  !showManagementMentionOption &&
+                  filteredMentionMembers.length === 0 && (
+                    <p className="px-2.5 py-2 text-sm text-muted-foreground">
+                      No matching employees or management
+                    </p>
+                  )}
               </div>
             </PopoverContent>}
           </Popover>

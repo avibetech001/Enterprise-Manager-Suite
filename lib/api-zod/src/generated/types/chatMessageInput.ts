@@ -15,6 +15,7 @@ export interface ChatMessageInput {
   fileName?: string;
   mentionUserIds?: number[];
   mentionAll?: boolean;
+  mentionManagement?: boolean;
   replyToId?: number;
   kind?: ChatMessageInputKind;
 }

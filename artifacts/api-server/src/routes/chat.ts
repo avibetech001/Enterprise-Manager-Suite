@@ -939,6 +939,7 @@ router.post(
       .select({
         id: usersTable.id,
         departmentId: employmentInfoTable.departmentId,
+        role: usersTable.role,
       })
       .from(usersTable)
       .leftJoin(
@@ -964,14 +965,28 @@ router.post(
         )
         .map((u) => u.id),
     );
+    const superAdminIds = new Set(
+      allMembers.filter((user) => user.role === "super_admin").map((user) => user.id),
+    );
 
     const mentionAll = parsed.data.mentionAll === true;
+    const mentionManagement = parsed.data.mentionManagement === true;
+    const mentionableIds = new Set([
+      ...memberIds,
+      ...(mentionManagement ? superAdminIds : []),
+    ]);
     let mentionIds: number[];
     if (mentionAll) {
-      mentionIds = [...memberIds];
+      mentionIds = [...new Set([
+        ...memberIds,
+        ...(mentionManagement ? superAdminIds : []),
+      ])];
     } else {
       const requested = [...new Set(parsed.data.mentionUserIds || [])];
-      mentionIds = requested.filter((id) => memberIds.has(id));
+      mentionIds = requested.filter((id) => mentionableIds.has(id));
+      if (mentionManagement) {
+        mentionIds = [...new Set([...mentionIds, ...superAdminIds])];
+      }
     }
 
     const [inserted] = await db
@@ -1000,14 +1015,18 @@ router.post(
       (parsed.data.kind === "voice"
         ? "Voice note"
         : inserted.fileName || "Attachment");
-    for (const uid of memberIds) {
+    const notificationRecipientIds = new Set([
+      ...memberIds,
+      ...(mentionManagement ? superAdminIds : []),
+    ]);
+    for (const uid of notificationRecipientIds) {
       if (uid === me.id) continue;
       const isMentioned = mentionSet.has(uid);
       void notify(
         me.companyId,
         isMentioned ? "chat_mention" : "chat_group_message",
         isMentioned
-          ? mentionAll
+          ? mentionAll && memberIds.has(uid)
             ? `${me.fullName} mentioned everyone in the "${group.name}" chat.`
             : `${me.fullName} mentioned you in the "${group.name}" chat.`
           : `${me.fullName} in "${group.name}": ${preview}`,
