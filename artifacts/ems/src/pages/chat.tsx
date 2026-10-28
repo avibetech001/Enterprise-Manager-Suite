@@ -621,12 +621,30 @@ function MessageBubble({
   const isImageAttachment = /\.(png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "");
   const isPdfAttachment = /\.pdf$/i.test(m.fileName || "");
   const canSaveToDevice = /\.(pdf|png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "");
+  const deleteLabel = !m.filePath
+    ? "Delete message"
+    : m.kind === "voice"
+      ? "Delete voice note"
+      : isImageAttachment
+        ? "Delete image"
+        : isPdfAttachment
+          ? "Delete PDF"
+          : "Delete attachment";
 
   return (
     <div className={`group flex items-center gap-1 ${mine ? "justify-end" : "justify-start"}`}>
       {mine && (
-        <span className="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-          <ActionButtons canDelete={canDelete} onReply={onReply} onDelete={onDelete} />
+        <span
+          className={`hidden sm:flex gap-0.5 transition-opacity ${
+            m.filePath ? "" : "opacity-0 group-hover:opacity-100"
+          }`}
+        >
+          <ActionButtons
+            canDelete={canDelete}
+            deleteLabel={deleteLabel}
+            onReply={onReply}
+            onDelete={onDelete}
+          />
         </span>
       )}
       <div
@@ -774,12 +792,22 @@ function MessageBubble({
       </div>
       {!mine && (
         <span className="hidden sm:flex opacity-0 group-hover:opacity-100 transition-opacity gap-0.5">
-          <ActionButtons canDelete={canDelete} onReply={onReply} onDelete={onDelete} />
+          <ActionButtons
+            canDelete={canDelete}
+            deleteLabel={deleteLabel}
+            onReply={onReply}
+            onDelete={onDelete}
+          />
         </span>
       )}
       {/* Mobile: always-visible small actions */}
       <span className="flex sm:hidden gap-0.5">
-        <ActionButtons canDelete={canDelete} onReply={onReply} onDelete={onDelete} />
+        <ActionButtons
+          canDelete={canDelete}
+          deleteLabel={deleteLabel}
+          onReply={onReply}
+          onDelete={onDelete}
+        />
       </span>
     </div>
   );
@@ -787,10 +815,12 @@ function MessageBubble({
 
 function ActionButtons({
   canDelete,
+  deleteLabel,
   onReply,
   onDelete,
 }: {
   canDelete: boolean;
+  deleteLabel: string;
   onReply: () => void;
   onDelete: () => void;
 }) {
@@ -810,8 +840,8 @@ function ActionButtons({
           type="button"
           onClick={onDelete}
           className="p-1 rounded text-muted-foreground hover:text-destructive"
-          title="Delete"
-          aria-label="Delete message"
+          title={deleteLabel}
+          aria-label={deleteLabel}
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
@@ -1223,7 +1253,18 @@ function GroupChat({
   };
 
   const handleDelete = (m: ChatMessage) => {
-    if (!window.confirm("Delete this message?")) return;
+    const attachmentType =
+      m.kind === "voice"
+        ? "voice note"
+        : /\.(png|jpe?g|gif|webp|bmp|avif|heic|heif)$/i.test(m.fileName || "")
+          ? "image"
+          : /\.pdf$/i.test(m.fileName || "")
+            ? "PDF"
+            : "attachment";
+    const confirmation = m.filePath
+      ? `Delete this ${attachmentType} from the chat? The entire message will be removed.`
+      : "Delete this message?";
+    if (!window.confirm(confirmation)) return;
     const callbacks = {
         onSuccess: () => invalidate(),
         onError: () => toast.error("Failed to delete message"),
