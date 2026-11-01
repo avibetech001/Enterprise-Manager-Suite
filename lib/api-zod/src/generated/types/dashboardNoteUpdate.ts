@@ -7,11 +7,6 @@
  */
 
 export interface DashboardNoteUpdate {
-  /**
-     * @minLength 1
-     * @maxLength 120
-     */
-  title: string;
   /** @maxLength 50000 */
   content: string;
 }

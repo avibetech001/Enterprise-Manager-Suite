@@ -682,28 +682,17 @@ export interface EmployeeSummary {
 
 export interface DashboardNoteDraft {
   id: number;
-  title: string;
   content: string;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface DashboardNoteInput {
-  /**
-     * @minLength 1
-     * @maxLength 120
-     */
-  title: string;
   /** @maxLength 50000 */
   content: string;
 }
 
 export interface DashboardNoteUpdate {
-  /**
-     * @minLength 1
-     * @maxLength 120
-     */
-  title: string;
   /** @maxLength 50000 */
   content: string;
 }

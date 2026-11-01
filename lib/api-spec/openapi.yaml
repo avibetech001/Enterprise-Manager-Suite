@@ -3939,12 +3939,10 @@ components:
 
     DashboardNoteDraft:
       type: object
-      required: [id, title, content, createdAt, updatedAt]
+      required: [id, content, createdAt, updatedAt]
       properties:
         id:
           type: integer
-        title:
-          type: string
         content:
           type: string
         createdAt:
@@ -3956,24 +3954,16 @@ components:
 
     DashboardNoteInput:
       type: object
-      required: [title, content]
+      required: [content]
       properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 120
         content:
           type: string
           maxLength: 50000
 
     DashboardNoteUpdate:
       type: object
-      required: [title, content]
+      required: [content]
       properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 120
         content:
           type: string
           maxLength: 50000

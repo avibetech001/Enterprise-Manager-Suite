@@ -1164,7 +1164,6 @@ export const GetMySummaryResponse = zod.object({
  */
 export const ListMyNotesResponseItem = zod.object({
   "id": zod.number(),
-  "title": zod.string(),
   "content": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1175,20 +1174,16 @@ export const ListMyNotesResponse = zod.array(ListMyNotesResponseItem)
 /**
  * @summary Create a private dashboard note draft
  */
-export const createMyNoteBodyTitleMax = 120;
-
 export const createMyNoteBodyContentMax = 50000;
 
 
 
 export const CreateMyNoteBody = zod.object({
-  "title": zod.string().min(1).max(createMyNoteBodyTitleMax),
   "content": zod.string().max(createMyNoteBodyContentMax)
 })
 
 export const CreateMyNoteResponse = zod.object({
   "id": zod.number(),
-  "title": zod.string(),
   "content": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()
@@ -1205,20 +1200,16 @@ export const UpdateMyNoteParams = zod.object({
   "noteId": zod.coerce.number().min(1)
 })
 
-export const updateMyNoteBodyTitleMax = 120;
-
 export const updateMyNoteBodyContentMax = 50000;
 
 
 
 export const UpdateMyNoteBody = zod.object({
-  "title": zod.string().min(1).max(updateMyNoteBodyTitleMax),
   "content": zod.string().max(updateMyNoteBodyContentMax)
 })
 
 export const UpdateMyNoteResponse = zod.object({
   "id": zod.number(),
-  "title": zod.string(),
   "content": zod.string(),
   "createdAt": zod.coerce.date(),
   "updatedAt": zod.coerce.date()

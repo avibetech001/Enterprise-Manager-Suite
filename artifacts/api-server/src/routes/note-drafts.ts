@@ -13,6 +13,16 @@ import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
+function titleFromContent(content: string): string {
+  return (
+    content
+      .split("\n")
+      .map((line) => line.trim())
+      .find(Boolean)
+      ?.slice(0, 120) ?? "Untitled note"
+  );
+}
+
 router.get("/me/notes", requireAuth, async (req, res): Promise<void> => {
   const me = req.currentUser!;
   const notes = await db
@@ -30,7 +40,6 @@ router.get("/me/notes", requireAuth, async (req, res): Promise<void> => {
     notes.map((note) =>
       ListMyNotesResponseItem.parse({
         id: note.id,
-        title: note.title,
         content: note.content,
         createdAt: note.createdAt,
         updatedAt: note.updatedAt,
@@ -52,7 +61,7 @@ router.post("/me/notes", requireAuth, async (req, res): Promise<void> => {
     .values({
       companyId: me.companyId,
       userId: me.id,
-      title: parsed.data.title,
+      title: titleFromContent(parsed.data.content),
       content: parsed.data.content,
     })
     .returning();
@@ -60,7 +69,6 @@ router.post("/me/notes", requireAuth, async (req, res): Promise<void> => {
   res.status(201).json(
     CreateMyNoteResponse.parse({
       id: note.id,
-      title: note.title,
       content: note.content,
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
@@ -87,7 +95,7 @@ router.patch(
     const [note] = await db
       .update(noteDraftsTable)
       .set({
-        title: parsed.data.title,
+        title: titleFromContent(parsed.data.content),
         content: parsed.data.content,
         updatedAt: new Date(),
       })
@@ -108,7 +116,6 @@ router.patch(
     res.json(
       UpdateMyNoteResponse.parse({
         id: note.id,
-        title: note.title,
         content: note.content,
         createdAt: note.createdAt,
         updatedAt: note.updatedAt,
