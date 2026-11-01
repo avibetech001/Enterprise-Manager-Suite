@@ -46,6 +46,9 @@ import type {
   CompanyPost,
   CompanyPostInput,
   CompanyUpdate,
+  DashboardNoteDraft,
+  DashboardNoteInput,
+  DashboardNoteUpdate,
   Department,
   DepartmentInput,
   DepartmentUpdate,
@@ -87,8 +90,6 @@ import type {
   ManagementUserInput,
   ManagementUserUpdate,
   MyProfileUpdate,
-  NoteDraft,
-  NoteDraftInput,
   Notification,
   PendingCounts,
   PermissionDef,
@@ -3158,20 +3159,20 @@ export function useGetMySummary<TData = Awaited<ReturnType<typeof getMySummary>>
 
 
 
-export const getGetMyNoteDraftUrl = () => {
+export const getListMyNotesUrl = () => {
 
 
 
 
-  return `/api/me/note-draft`
+  return `/api/me/notes`
 }
 
 /**
- * @summary Get the current user's private dashboard note draft
+ * @summary List the current user's private dashboard notes
  */
-export const getMyNoteDraft = async ( options?: RequestInit): Promise<NoteDraft> => {
+export const listMyNotes = async ( options?: RequestInit): Promise<DashboardNoteDraft[]> => {
 
-  return customFetch<NoteDraft>(getGetMyNoteDraftUrl(),
+  return customFetch<DashboardNoteDraft[]>(getListMyNotesUrl(),
   {
     ...options,
     method: 'GET'
@@ -3184,45 +3185,45 @@ export const getMyNoteDraft = async ( options?: RequestInit): Promise<NoteDraft>
 
 
 
-export const getGetMyNoteDraftQueryKey = () => {
+export const getListMyNotesQueryKey = () => {
     return [
-    `/api/me/note-draft`
+    `/api/me/notes`
     ] as const;
     }
 
 
-export const getGetMyNoteDraftQueryOptions = <TData = Awaited<ReturnType<typeof getMyNoteDraft>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyNoteDraft>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export const getListMyNotesQueryOptions = <TData = Awaited<ReturnType<typeof listMyNotes>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 ) => {
 
 const {query: queryOptions, request: requestOptions} = options ?? {};
 
-  const queryKey =  queryOptions?.queryKey ?? getGetMyNoteDraftQueryKey();
+  const queryKey =  queryOptions?.queryKey ?? getListMyNotesQueryKey();
 
 
 
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyNoteDraft>>> = ({ signal }) => getMyNoteDraft({ signal, ...requestOptions });
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMyNotes>>> = ({ signal }) => listMyNotes({ signal, ...requestOptions });
 
 
 
 
 
-   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyNoteDraft>>, TError, TData> & { queryKey: QueryKey }
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMyNotes>>, TError, TData> & { queryKey: QueryKey }
 }
 
-export type GetMyNoteDraftQueryResult = NonNullable<Awaited<ReturnType<typeof getMyNoteDraft>>>
-export type GetMyNoteDraftQueryError = ErrorType<ErrorResponse>
+export type ListMyNotesQueryResult = NonNullable<Awaited<ReturnType<typeof listMyNotes>>>
+export type ListMyNotesQueryError = ErrorType<ErrorResponse>
 
 
 /**
- * @summary Get the current user's private dashboard note draft
+ * @summary List the current user's private dashboard notes
  */
 
-export function useGetMyNoteDraft<TData = Awaited<ReturnType<typeof getMyNoteDraft>>, TError = ErrorType<ErrorResponse>>(
-  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyNoteDraft>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+export function useListMyNotes<TData = Awaited<ReturnType<typeof listMyNotes>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMyNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
 
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
-  const queryOptions = getGetMyNoteDraftQueryOptions(options)
+  const queryOptions = getListMyNotesQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 
@@ -3235,25 +3236,25 @@ export function useGetMyNoteDraft<TData = Awaited<ReturnType<typeof getMyNoteDra
 
 
 
-export const getSaveMyNoteDraftUrl = () => {
+export const getCreateMyNoteUrl = () => {
 
 
 
 
-  return `/api/me/note-draft`
+  return `/api/me/notes`
 }
 
 /**
- * @summary Save the current user's private dashboard note draft
+ * @summary Create a private dashboard note draft
  */
-export const saveMyNoteDraft = async (noteDraftInput: NoteDraftInput, options?: RequestInit): Promise<NoteDraft> => {
+export const createMyNote = async (dashboardNoteInput: DashboardNoteInput, options?: RequestInit): Promise<DashboardNoteDraft> => {
 
-  return customFetch<NoteDraft>(getSaveMyNoteDraftUrl(),
+  return customFetch<DashboardNoteDraft>(getCreateMyNoteUrl(),
   {
     ...options,
-    method: 'PUT',
+    method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
-    body: JSON.stringify(noteDraftInput)
+    body: JSON.stringify(dashboardNoteInput)
   }
 );}
 
@@ -3261,11 +3262,11 @@ export const saveMyNoteDraft = async (noteDraftInput: NoteDraftInput, options?: 
 
 
 
-export const getSaveMyNoteDraftMutationOptions = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyNoteDraft>>, TError,{data: BodyType<NoteDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof saveMyNoteDraft>>, TError,{data: BodyType<NoteDraftInput>}, TContext> => {
+export const getCreateMyNoteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyNote>>, TError,{data: BodyType<DashboardNoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createMyNote>>, TError,{data: BodyType<DashboardNoteInput>}, TContext> => {
 
-const mutationKey = ['saveMyNoteDraft'];
+const mutationKey = ['createMyNote'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
       options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
       options
@@ -3275,10 +3276,10 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveMyNoteDraft>>, {data: BodyType<NoteDraftInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createMyNote>>, {data: BodyType<DashboardNoteInput>}> = (props) => {
           const {data} = props ?? {};
 
-          return  saveMyNoteDraft(data,requestOptions)
+          return  createMyNote(data,requestOptions)
         }
 
 
@@ -3288,22 +3289,94 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
   return  { mutationFn, ...mutationOptions }}
 
-    export type SaveMyNoteDraftMutationResult = NonNullable<Awaited<ReturnType<typeof saveMyNoteDraft>>>
-    export type SaveMyNoteDraftMutationBody = BodyType<NoteDraftInput>
-    export type SaveMyNoteDraftMutationError = ErrorType<ErrorResponse>
+    export type CreateMyNoteMutationResult = NonNullable<Awaited<ReturnType<typeof createMyNote>>>
+    export type CreateMyNoteMutationBody = BodyType<DashboardNoteInput>
+    export type CreateMyNoteMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Save the current user's private dashboard note draft
+ * @summary Create a private dashboard note draft
  */
-export const useSaveMyNoteDraft = <TError = ErrorType<ErrorResponse>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveMyNoteDraft>>, TError,{data: BodyType<NoteDraftInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+export const useCreateMyNote = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyNote>>, TError,{data: BodyType<DashboardNoteInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
-        Awaited<ReturnType<typeof saveMyNoteDraft>>,
+        Awaited<ReturnType<typeof createMyNote>>,
         TError,
-        {data: BodyType<NoteDraftInput>},
+        {data: BodyType<DashboardNoteInput>},
         TContext
       > => {
-      return useMutation(getSaveMyNoteDraftMutationOptions(options));
+      return useMutation(getCreateMyNoteMutationOptions(options));
+    }
+
+export const getUpdateMyNoteUrl = (noteId: number,) => {
+
+
+
+
+  return `/api/me/notes/${noteId}`
+}
+
+/**
+ * @summary Update one of the current user's private dashboard notes
+ */
+export const updateMyNote = async (noteId: number,
+    dashboardNoteUpdate: DashboardNoteUpdate, options?: RequestInit): Promise<DashboardNoteDraft> => {
+
+  return customFetch<DashboardNoteDraft>(getUpdateMyNoteUrl(noteId),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(dashboardNoteUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateMyNoteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyNote>>, TError,{noteId: number;data: BodyType<DashboardNoteUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMyNote>>, TError,{noteId: number;data: BodyType<DashboardNoteUpdate>}, TContext> => {
+
+const mutationKey = ['updateMyNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMyNote>>, {noteId: number;data: BodyType<DashboardNoteUpdate>}> = (props) => {
+          const {noteId,data} = props ?? {};
+
+          return  updateMyNote(noteId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMyNoteMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyNote>>>
+    export type UpdateMyNoteMutationBody = BodyType<DashboardNoteUpdate>
+    export type UpdateMyNoteMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Update one of the current user's private dashboard notes
+ */
+export const useUpdateMyNote = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyNote>>, TError,{noteId: number;data: BodyType<DashboardNoteUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMyNote>>,
+        TError,
+        {noteId: number;data: BodyType<DashboardNoteUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateMyNoteMutationOptions(options));
     }
 
 export const getChangeMyPasswordUrl = () => {

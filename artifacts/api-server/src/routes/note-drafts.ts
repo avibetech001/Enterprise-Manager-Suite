@@ -1,66 +1,120 @@
 import { Router, type IRouter } from "express";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db, noteDraftsTable } from "@workspace/db";
 import {
-  GetMyNoteDraftResponse,
-  SaveMyNoteDraftBody,
-  SaveMyNoteDraftResponse,
+  CreateMyNoteBody,
+  CreateMyNoteResponse,
+  ListMyNotesResponseItem,
+  UpdateMyNoteBody,
+  UpdateMyNoteParams,
+  UpdateMyNoteResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.get("/me/note-draft", requireAuth, async (req, res): Promise<void> => {
+router.get("/me/notes", requireAuth, async (req, res): Promise<void> => {
   const me = req.currentUser!;
-  const [draft] = await db
-    .select({
-      content: noteDraftsTable.content,
-      updatedAt: noteDraftsTable.updatedAt,
-    })
+  const notes = await db
+    .select()
     .from(noteDraftsTable)
     .where(
       and(
         eq(noteDraftsTable.userId, me.id),
         eq(noteDraftsTable.companyId, me.companyId),
       ),
-    );
+    )
+    .orderBy(desc(noteDraftsTable.updatedAt), desc(noteDraftsTable.id));
 
   res.json(
-    GetMyNoteDraftResponse.parse({
-      content: draft?.content ?? "",
-      updatedAt: draft?.updatedAt ?? null,
-    }),
+    notes.map((note) =>
+      ListMyNotesResponseItem.parse({
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+      }),
+    ),
   );
 });
 
-router.put("/me/note-draft", requireAuth, async (req, res): Promise<void> => {
-  const parsed = SaveMyNoteDraftBody.safeParse(req.body);
+router.post("/me/notes", requireAuth, async (req, res): Promise<void> => {
+  const parsed = CreateMyNoteBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid note draft." });
     return;
   }
 
   const me = req.currentUser!;
-  const [draft] = await db
+  const [note] = await db
     .insert(noteDraftsTable)
     .values({
       companyId: me.companyId,
       userId: me.id,
+      title: parsed.data.title,
       content: parsed.data.content,
     })
-    .onConflictDoUpdate({
-      target: noteDraftsTable.userId,
-      set: {
+    .returning();
+
+  res.status(201).json(
+    CreateMyNoteResponse.parse({
+      id: note.id,
+      title: note.title,
+      content: note.content,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt,
+    }),
+  );
+});
+
+router.patch(
+  "/me/notes/:noteId",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const params = UpdateMyNoteParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid note." });
+      return;
+    }
+    const parsed = UpdateMyNoteBody.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid note draft." });
+      return;
+    }
+
+    const me = req.currentUser!;
+    const [note] = await db
+      .update(noteDraftsTable)
+      .set({
+        title: parsed.data.title,
         content: parsed.data.content,
         updatedAt: new Date(),
-      },
-    })
-    .returning({
-      content: noteDraftsTable.content,
-      updatedAt: noteDraftsTable.updatedAt,
-    });
+      })
+      .where(
+        and(
+          eq(noteDraftsTable.id, params.data.noteId),
+          eq(noteDraftsTable.userId, me.id),
+          eq(noteDraftsTable.companyId, me.companyId),
+        ),
+      )
+      .returning();
 
-  res.json(SaveMyNoteDraftResponse.parse(draft));
-});
+    if (!note) {
+      res.status(404).json({ error: "Note not found." });
+      return;
+    }
+
+    res.json(
+      UpdateMyNoteResponse.parse({
+        id: note.id,
+        title: note.title,
+        content: note.content,
+        createdAt: note.createdAt,
+        updatedAt: note.updatedAt,
+      }),
+    );
+  },
+);
 
 export default router;

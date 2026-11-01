@@ -6,7 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface NoteDraftInput {
-  /** @maxLength 50000 */
+export interface DashboardNoteDraft {
+  id: number;
+  title: string;
   content: string;
+  createdAt: Date;
+  updatedAt: Date;
 }

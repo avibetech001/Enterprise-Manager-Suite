@@ -680,13 +680,30 @@ export interface EmployeeSummary {
   announcements: CompanyPost[];
 }
 
-export interface NoteDraft {
+export interface DashboardNoteDraft {
+  id: number;
+  title: string;
   content: string;
-  /** @nullable */
-  updatedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export interface NoteDraftInput {
+export interface DashboardNoteInput {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
+  /** @maxLength 50000 */
+  content: string;
+}
+
+export interface DashboardNoteUpdate {
+  /**
+     * @minLength 1
+     * @maxLength 120
+     */
+  title: string;
   /** @maxLength 50000 */
   content: string;
 }

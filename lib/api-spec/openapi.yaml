@@ -999,43 +999,89 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /me/note-draft:
+  /me/notes:
     get:
-      operationId: getMyNoteDraft
+      operationId: listMyNotes
       tags: [me]
-      summary: Get the current user's private dashboard note draft
+      summary: List the current user's private dashboard notes
       responses:
         "200":
-          description: Current user's note draft
+          description: Current user's saved drafts
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NoteDraft"
+                type: array
+                items:
+                  $ref: "#/components/schemas/DashboardNoteDraft"
         "401":
           description: Not authenticated
           content:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
-    put:
-      operationId: saveMyNoteDraft
+    post:
+      operationId: createMyNote
       tags: [me]
-      summary: Save the current user's private dashboard note draft
+      summary: Create a private dashboard note draft
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/NoteDraftInput"
+              $ref: "#/components/schemas/DashboardNoteInput"
       responses:
-        "200":
-          description: Saved note draft
+        "201":
+          description: Created note draft
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/NoteDraft"
+                $ref: "#/components/schemas/DashboardNoteDraft"
         "400":
           description: Invalid note draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /me/notes/{noteId}:
+    patch:
+      operationId: updateMyNote
+      tags: [me]
+      summary: Update one of the current user's private dashboard notes
+      parameters:
+        - name: noteId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DashboardNoteUpdate"
+      responses:
+        "200":
+          description: Updated note draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardNoteDraft"
+        "400":
+          description: Invalid note draft
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note not found
           content:
             application/json:
               schema:
@@ -3891,20 +3937,43 @@ components:
           items:
             $ref: "#/components/schemas/CompanyPost"
 
-    NoteDraft:
+    DashboardNoteDraft:
       type: object
-      required: [content, updatedAt]
+      required: [id, title, content, createdAt, updatedAt]
       properties:
+        id:
+          type: integer
+        title:
+          type: string
         content:
           type: string
+        createdAt:
+          type: string
+          format: date-time
         updatedAt:
-          type: ["string", "null"]
+          type: string
           format: date-time
 
-    NoteDraftInput:
+    DashboardNoteInput:
       type: object
-      required: [content]
+      required: [title, content]
       properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        content:
+          type: string
+          maxLength: 50000
+
+    DashboardNoteUpdate:
+      type: object
+      required: [title, content]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
         content:
           type: string
           maxLength: 50000
