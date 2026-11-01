@@ -18,8 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { FileText, NotebookPen, Plus, Save } from "lucide-react";
 
 function notePreview(content: string): string {
-  const preview = content.replace(/\s+/g, " ").trim();
-  return preview ? preview.slice(0, 80) : "Empty note";
+  return content.trim() || "Empty note";
 }
 
 export function DashboardNote() {
@@ -133,7 +132,7 @@ export function DashboardNote() {
                       activeNoteId === note.id && !isNewNote ? "bg-muted" : ""
                     }`}
                   >
-                    <span className="block text-sm leading-snug">
+                    <span className="line-clamp-3 block whitespace-pre-wrap break-words text-sm leading-snug">
                       {notePreview(note.content)}
                     </span>
                     <span className="mt-0.5 block text-xs text-muted-foreground">
