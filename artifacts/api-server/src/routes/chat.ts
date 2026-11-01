@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { and, asc, desc, eq, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, max, ne, or, sql } from "drizzle-orm";
 import {
   db,
   chatMessagesTable,
@@ -1181,6 +1181,31 @@ router.get(
         ),
       )
       .orderBy(desc(chatConversationsTable.createdAt));
+    if (conversations.length === 0) {
+      res.json([]);
+      return;
+    }
+    const latestMessages = await db
+      .select({
+        conversationId: directChatMessagesTable.conversationId,
+        lastMessageAt: max(directChatMessagesTable.createdAt),
+      })
+      .from(directChatMessagesTable)
+      .where(
+        inArray(
+          directChatMessagesTable.conversationId,
+          conversations.map((conversation) => conversation.id),
+        ),
+      )
+      .groupBy(directChatMessagesTable.conversationId);
+    const latestMessageAt = new Map(
+      latestMessages.map((row) => [row.conversationId, row.lastMessageAt]),
+    );
+    conversations.sort((a, b) => {
+      const aActivity = latestMessageAt.get(a.id)?.getTime() ?? a.createdAt.getTime();
+      const bActivity = latestMessageAt.get(b.id)?.getTime() ?? b.createdAt.getTime();
+      return bActivity - aActivity || b.id - a.id;
+    });
     const participantRows = await db
       .select({
         conversationId: chatConversationParticipantsTable.conversationId,
