@@ -31,6 +31,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Link } from "wouter";
+import { DashboardNote } from "@/components/dashboard-note";
 
 export default function ManagementDashboard() {
   const { data: session } = useGetCurrentSession();
@@ -242,6 +243,8 @@ export default function ManagementDashboard() {
           ))}
         </div>
       </div>
+
+      <DashboardNote />
 
       {canManageLeave && (
         <section className="rounded-xl border bg-card p-4 sm:p-5">

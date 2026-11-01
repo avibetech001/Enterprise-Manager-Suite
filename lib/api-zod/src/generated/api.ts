@@ -1160,6 +1160,32 @@ export const GetMySummaryResponse = zod.object({
 
 
 /**
+ * @summary Get the current user's private dashboard note draft
+ */
+export const GetMyNoteDraftResponse = zod.object({
+  "content": zod.string(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
+ * @summary Save the current user's private dashboard note draft
+ */
+export const saveMyNoteDraftBodyContentMax = 50000;
+
+
+
+export const SaveMyNoteDraftBody = zod.object({
+  "content": zod.string().max(saveMyNoteDraftBodyContentMax)
+})
+
+export const SaveMyNoteDraftResponse = zod.object({
+  "content": zod.string(),
+  "updatedAt": zod.coerce.date().nullable()
+})
+
+
+/**
  * @summary Change the current user's password
  */
 export const changeMyPasswordBodyNewPasswordMin = 8;

@@ -106,6 +106,8 @@ export * from './managementUserInputRole';
 export * from './managementUserUpdate';
 export * from './managementUserUpdateRole';
 export * from './myProfileUpdate';
+export * from './noteDraft';
+export * from './noteDraftInput';
 export * from './notification';
 export * from './pendingCounts';
 export * from './permissionDef';

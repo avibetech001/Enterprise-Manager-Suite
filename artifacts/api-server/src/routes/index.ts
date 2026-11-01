@@ -13,6 +13,7 @@ import pushRouter from "./push";
 import chatRouter from "./chat";
 import appraisalsRouter from "./appraisals";
 import clientsRouter from "./clients";
+import noteDraftsRouter from "./note-drafts";
 
 const router: IRouter = Router();
 
@@ -30,5 +31,6 @@ router.use(pushRouter);
 router.use(chatRouter);
 router.use(appraisalsRouter);
 router.use(clientsRouter);
+router.use(noteDraftsRouter);
 
 export default router;

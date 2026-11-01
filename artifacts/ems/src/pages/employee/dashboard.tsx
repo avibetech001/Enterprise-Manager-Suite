@@ -14,6 +14,7 @@ import {
   MessagesSquare,
   ChevronRight,
 } from "lucide-react";
+import { DashboardNote } from "@/components/dashboard-note";
 
 export default function EmployeeDashboard() {
   const {
@@ -187,6 +188,7 @@ export default function EmployeeDashboard() {
           </div>
         )}
       </section>
+      <DashboardNote />
     </div>
   );
 }

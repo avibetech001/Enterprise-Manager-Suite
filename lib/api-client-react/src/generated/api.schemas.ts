@@ -680,6 +680,17 @@ export interface EmployeeSummary {
   announcements: CompanyPost[];
 }
 
+export interface NoteDraft {
+  content: string;
+  /** @nullable */
+  updatedAt: string | null;
+}
+
+export interface NoteDraftInput {
+  /** @maxLength 50000 */
+  content: string;
+}
+
 export interface AttendanceCode {
   code: string;
 }
