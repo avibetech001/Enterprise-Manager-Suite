@@ -32,7 +32,7 @@ function notePreview(content: string): string {
   return content.trim() || "Empty note";
 }
 
-export function DashboardNote() {
+export function DashboardNote({ allNotesVisible = false }: { allNotesVisible?: boolean }) {
   const queryClient = useQueryClient();
   const {
     data: notes,
@@ -145,7 +145,11 @@ export function DashboardNote() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-[minmax(210px,0.8fr)_minmax(0,1.6fr)]">
-            <aside className="flex h-36 min-h-0 flex-col rounded-lg border p-3 md:h-64">
+            <aside
+              className={`flex min-h-0 flex-col rounded-lg border p-3 ${
+                allNotesVisible ? "" : "h-36 md:h-64"
+              }`}
+            >
               <div className="flex shrink-0 items-center justify-between gap-2">
                 <h3 className="text-sm font-semibold">Saved notes</h3>
                 <Button type="button" size="sm" variant="outline" onClick={beginNewNote}>
@@ -153,7 +157,11 @@ export function DashboardNote() {
                   New note
                 </Button>
               </div>
-              <div className="mt-3 min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+              <div
+                className={`mt-3 space-y-1 pr-1 ${
+                  allNotesVisible ? "" : "min-h-0 flex-1 overflow-y-auto"
+                }`}
+              >
                 {isError ? (
                   <p role="alert" className="text-sm text-destructive">
                     Saved notes could not be loaded.
@@ -204,7 +212,11 @@ export function DashboardNote() {
                     </div>
                   ))
                 ) : (
-                  <div className="flex h-full items-center gap-2 text-sm text-muted-foreground">
+                  <div
+                    className={`flex items-center gap-2 text-sm text-muted-foreground ${
+                      allNotesVisible ? "" : "h-full"
+                    }`}
+                  >
                     <FileText className="h-4 w-4 shrink-0" />
                     <p>{isLoading ? "Loading notes..." : "No saved notes yet."}</p>
                   </div>
