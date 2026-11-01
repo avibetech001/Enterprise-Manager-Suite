@@ -1217,6 +1217,19 @@ export const UpdateMyNoteResponse = zod.object({
 
 
 /**
+ * @summary Delete one of the current user's private dashboard notes
+ */
+
+
+
+export const DeleteMyNoteParams = zod.object({
+  "noteId": zod.coerce.number().min(1)
+})
+
+export const DeleteMyNoteResponse = zod.void()
+
+
+/**
  * @summary Change the current user's password
  */
 export const changeMyPasswordBodyNewPasswordMin = 8;

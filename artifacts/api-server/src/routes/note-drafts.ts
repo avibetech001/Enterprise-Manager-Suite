@@ -4,6 +4,7 @@ import { db, noteDraftsTable } from "@workspace/db";
 import {
   CreateMyNoteBody,
   CreateMyNoteResponse,
+  DeleteMyNoteParams,
   ListMyNotesResponseItem,
   UpdateMyNoteBody,
   UpdateMyNoteParams,
@@ -121,6 +122,37 @@ router.patch(
         updatedAt: note.updatedAt,
       }),
     );
+  },
+);
+
+router.delete(
+  "/me/notes/:noteId",
+  requireAuth,
+  async (req, res): Promise<void> => {
+    const params = DeleteMyNoteParams.safeParse(req.params);
+    if (!params.success) {
+      res.status(400).json({ error: "Invalid note." });
+      return;
+    }
+
+    const me = req.currentUser!;
+    const [deleted] = await db
+      .delete(noteDraftsTable)
+      .where(
+        and(
+          eq(noteDraftsTable.id, params.data.noteId),
+          eq(noteDraftsTable.userId, me.id),
+          eq(noteDraftsTable.companyId, me.companyId),
+        ),
+      )
+      .returning({ id: noteDraftsTable.id });
+
+    if (!deleted) {
+      res.status(404).json({ error: "Note not found." });
+      return;
+    }
+
+    res.sendStatus(204);
   },
 );
 

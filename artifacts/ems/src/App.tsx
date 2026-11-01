@@ -18,6 +18,7 @@ import ActivatePage from '@/pages/activate';
 
 import ManagementDashboard from '@/pages/management/dashboard';
 import EmployeeDashboard from '@/pages/employee/dashboard';
+import NotesPage from '@/pages/notes';
 import EmployeeProfileSelfPage from '@/pages/employee/my-profile';
 import EmployeeAttendancePage from '@/pages/employee/attendance';
 import EmployeeLeavePage from '@/pages/employee/leave';
@@ -109,6 +110,7 @@ function Router() {
       </Route>
       {([
         ["/employee/profile", EmployeeProfileSelfPage],
+        ["/employee/notes", NotesPage],
         ["/employee/attendance", EmployeeAttendancePage],
         ["/employee/leave", EmployeeLeavePage],
         ["/employee/projects", EmployeeProjectsPage],
@@ -199,6 +201,7 @@ function Router() {
       
       {([
         ["/attendance", ManagementAttendancePage],
+        ["/notes", NotesPage],
         ["/leave", ManagementLeavePage],
         ["/projects", ManagementProjectsPage],
         ["/fund-requests", ManagementFundRequestsPage],

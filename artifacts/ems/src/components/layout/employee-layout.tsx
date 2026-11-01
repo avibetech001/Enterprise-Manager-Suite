@@ -55,6 +55,7 @@ const NAV = [
     items: [
       { href: "/employee/attendance", icon: CalendarClock, title: "Attendance" },
       { href: "/employee/chat", icon: MessagesSquare, title: "Team Chat" },
+      { href: "/employee/notes", icon: NotebookPen, title: "Notes" },
       { href: "/employee/projects", icon: FolderKanban, title: "My Projects" },
       { href: "/employee/knowledge-base", icon: BookOpen, title: "Idea Dump" },
       { href: "/employee/appraisals", icon: ClipboardCheck, title: "My Appraisals" },

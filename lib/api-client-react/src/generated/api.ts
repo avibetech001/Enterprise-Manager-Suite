@@ -3379,6 +3379,77 @@ export const useUpdateMyNote = <TError = ErrorType<ErrorResponse>,
       return useMutation(getUpdateMyNoteMutationOptions(options));
     }
 
+export const getDeleteMyNoteUrl = (noteId: number,) => {
+
+
+
+
+  return `/api/me/notes/${noteId}`
+}
+
+/**
+ * @summary Delete one of the current user's private dashboard notes
+ */
+export const deleteMyNote = async (noteId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteMyNoteUrl(noteId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getDeleteMyNoteMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMyNote>>, TError,{noteId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteMyNote>>, TError,{noteId: number}, TContext> => {
+
+const mutationKey = ['deleteMyNote'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteMyNote>>, {noteId: number}> = (props) => {
+          const {noteId} = props ?? {};
+
+          return  deleteMyNote(noteId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteMyNoteMutationResult = NonNullable<Awaited<ReturnType<typeof deleteMyNote>>>
+
+    export type DeleteMyNoteMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Delete one of the current user's private dashboard notes
+ */
+export const useDeleteMyNote = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteMyNote>>, TError,{noteId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteMyNote>>,
+        TError,
+        {noteId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteMyNoteMutationOptions(options));
+    }
+
 export const getChangeMyPasswordUrl = () => {
 
 
