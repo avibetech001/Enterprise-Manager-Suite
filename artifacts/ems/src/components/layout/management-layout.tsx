@@ -78,20 +78,20 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                   </SidebarMenuItem>
 
                   <SidebarMenuItem>
-                    <SidebarMenuButton isActive={location === "/notes"} asChild>
-                      <Link href="/notes">
-                        <NotebookPen className="h-4 w-4" />
-                        <span>Notes</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
                     <SidebarMenuButton isActive={location === "/chat"} asChild>
                       <Link href="/chat">
                         <MessagesSquare className="h-4 w-4" />
                         <span>Team Chat</span>
                         <PrivateChatUnreadBadge />
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive={location === "/notes"} asChild>
+                      <Link href="/notes">
+                        <NotebookPen className="h-4 w-4" />
+                        <span>Notes</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
