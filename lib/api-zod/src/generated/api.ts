@@ -2337,7 +2337,7 @@ export const DeleteProjectResponse = zod.void()
 
 
 /**
- * @summary Approve or decline a completed project (super admin)
+ * @summary Send feedback or approve/decline a completed project (super admin)
  */
 export const ReviewProjectParams = zod.object({
   "id": zod.coerce.number()
@@ -2348,9 +2348,9 @@ export const reviewProjectBodyCommentMax = 2000;
 
 
 export const ReviewProjectBody = zod.object({
-  "status": zod.enum(['approved', 'declined']),
+  "status": zod.enum(['approved', 'declined']).optional(),
   "comment": zod.string().max(reviewProjectBodyCommentMax).optional()
-})
+}).describe('Provide a status decision, nonblank comment, or both.')
 
 export const ReviewProjectResponse = zod.object({
   "id": zod.number(),

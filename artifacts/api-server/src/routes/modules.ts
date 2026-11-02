@@ -1623,6 +1623,14 @@ router.patch(
       res.status(400).json({ error: "Invalid project review." });
       return;
     }
+    const comment = parsed.data.comment?.trim() ?? "";
+    const status = parsed.data.status;
+    if (!status && !comment) {
+      res.status(400).json({
+        error: "Provide feedback or choose approve or decline.",
+      });
+      return;
+    }
 
     const companyId = req.currentUser!.companyId;
     const [project] = await db
@@ -1648,8 +1656,13 @@ router.patch(
     const [updated] = await db
       .update(projectsTable)
       .set({
-        reviewStatus: parsed.data.status,
-        reviewComment: parsed.data.comment?.trim() || null,
+        ...(status ? { reviewStatus: status } : {}),
+        ...(parsed.data.comment !== undefined
+          ? { reviewComment: comment || null }
+          : {}),
+        ...(status === "declined"
+          ? { status: "active", progress: 85 }
+          : {}),
         reviewedAt: new Date(),
       })
       .where(
@@ -1668,6 +1681,40 @@ router.patch(
         error: "A project can only be reviewed when completed or at 100% progress.",
       });
       return;
+    }
+
+    const members = await db
+      .select({ userId: projectMembersTable.userId })
+      .from(projectMembersTable)
+      .innerJoin(usersTable, eq(projectMembersTable.userId, usersTable.id))
+      .where(
+        and(
+          eq(projectMembersTable.projectId, id),
+          eq(usersTable.companyId, companyId),
+          eq(usersTable.status, "active"),
+          eq(usersTable.archived, false),
+        ),
+      );
+    const notificationMessage = status
+      ? comment
+        ? `Project "${project.name}" was ${status}. Super Admin feedback: ${comment}`
+        : `Project "${project.name}" was ${status} by a Super Admin.`
+      : `New feedback on project "${project.name}": ${comment}`;
+    for (const member of members) {
+      try {
+        await notify(
+          companyId,
+          "project_review",
+          notificationMessage,
+          member.userId,
+          `projects?id=${id}`,
+        );
+      } catch (error) {
+        req.log.warn(
+          { err: error, projectId: id, userId: member.userId },
+          "Failed to notify project member about review",
+        );
+      }
     }
 
     const [full] = await loadProjects(companyId).then((all) =>

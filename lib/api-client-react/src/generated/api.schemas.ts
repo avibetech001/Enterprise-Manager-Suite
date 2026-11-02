@@ -1000,8 +1000,11 @@ export const ProjectReviewInputStatus = {
   declined: 'declined',
 } as const;
 
+/**
+ * Provide a status decision, nonblank comment, or both.
+ */
 export interface ProjectReviewInput {
-  status: ProjectReviewInputStatus;
+  status?: ProjectReviewInputStatus;
   /** @maxLength 2000 */
   comment?: string;
 }

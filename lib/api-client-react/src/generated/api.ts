@@ -5839,7 +5839,7 @@ export const getReviewProjectUrl = (id: number,) => {
 }
 
 /**
- * @summary Approve or decline a completed project (super admin)
+ * @summary Send feedback or approve/decline a completed project (super admin)
  */
 export const reviewProject = async (id: number,
     projectReviewInput: ProjectReviewInput, options?: RequestInit): Promise<ProjectDetail> => {
@@ -5889,7 +5889,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type ReviewProjectMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Approve or decline a completed project (super admin)
+ * @summary Send feedback or approve/decline a completed project (super admin)
  */
 export const useReviewProject = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewProject>>, TError,{id: number;data: BodyType<ProjectReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}

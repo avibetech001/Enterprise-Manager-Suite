@@ -1899,7 +1899,7 @@ paths:
     patch:
       operationId: reviewProject
       tags: [projects]
-      summary: Approve or decline a completed project (super admin)
+      summary: Send feedback or approve/decline a completed project (super admin)
       parameters:
         - name: id
           in: path
@@ -4498,7 +4498,7 @@ components:
 
     ProjectReviewInput:
       type: object
-      required: [status]
+      description: Provide a status decision, nonblank comment, or both.
       properties:
         status:
           type: string

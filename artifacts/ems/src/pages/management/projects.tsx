@@ -109,6 +109,28 @@ function ProjectReviewPanel({
     );
   };
 
+  const sendFeedback = () => {
+    const trimmedComment = comment.trim();
+    if (!trimmedComment) {
+      toast.error("Add feedback before sending.");
+      return;
+    }
+    reviewProject.mutate(
+      { id: project.id, data: { comment: trimmedComment } },
+      {
+        onSuccess: () => {
+          onReviewed();
+          toast.success("Feedback sent to the project team");
+        },
+        onError: (error) => {
+          toast.error("Could not send feedback", {
+            description: error.data?.error || "Please try again.",
+          });
+        },
+      },
+    );
+  };
+
   return (
     <section className="space-y-3 rounded-md border bg-background/70 p-3">
       <div className="flex items-center justify-between gap-2">
@@ -132,6 +154,15 @@ function ProjectReviewPanel({
             />
           </div>
           <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              disabled={reviewProject.isPending || !comment.trim()}
+              onClick={sendFeedback}
+            >
+              Send Feedback
+            </Button>
             <Button
               type="button"
               size="sm"
@@ -166,7 +197,7 @@ function ProjectReviewPanel({
       )}
       {project.reviewedAt && (
         <p className="text-[11px] text-muted-foreground">
-          Last reviewed {new Date(project.reviewedAt).toLocaleDateString()}
+          Last review activity {new Date(project.reviewedAt).toLocaleDateString()}
         </p>
       )}
     </section>
