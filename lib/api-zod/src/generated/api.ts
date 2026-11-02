@@ -3248,6 +3248,21 @@ export const ListChatGroupsResponse = zod.array(ListChatGroupsResponseItem)
 
 
 /**
+ * @summary List unread group-message counts for chats available to the current user
+ */
+export const listChatUnreadCountsResponseUnreadCountMin = 0;
+
+
+
+export const ListChatUnreadCountsResponseItem = zod.object({
+  "groupId": zod.string(),
+  "kind": zod.enum(['company', 'department', 'team']),
+  "unreadCount": zod.number().min(listChatUnreadCountsResponseUnreadCountMin)
+})
+export const ListChatUnreadCountsResponse = zod.array(ListChatUnreadCountsResponseItem)
+
+
+/**
  * @summary List members of a chat group (for tagging)
  */
 export const ListChatGroupMembersParams = zod.object({

@@ -35,6 +35,7 @@ import type {
   ChatMessageDeleteResult,
   ChatMessageInput,
   ChatPresenceHeartbeat,
+  ChatUnreadCount,
   CheckInInput,
   CheckOutInput,
   Client,
@@ -8335,6 +8336,83 @@ export function useListChatGroups<TData = Awaited<ReturnType<typeof listChatGrou
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getListChatGroupsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListChatUnreadCountsUrl = () => {
+
+
+
+
+  return `/api/chat/unread-counts`
+}
+
+/**
+ * @summary List unread group-message counts for chats available to the current user
+ */
+export const listChatUnreadCounts = async ( options?: RequestInit): Promise<ChatUnreadCount[]> => {
+
+  return customFetch<ChatUnreadCount[]>(getListChatUnreadCountsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListChatUnreadCountsQueryKey = () => {
+    return [
+    `/api/chat/unread-counts`
+    ] as const;
+    }
+
+
+export const getListChatUnreadCountsQueryOptions = <TData = Awaited<ReturnType<typeof listChatUnreadCounts>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatUnreadCounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListChatUnreadCountsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listChatUnreadCounts>>> = ({ signal }) => listChatUnreadCounts({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listChatUnreadCounts>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListChatUnreadCountsQueryResult = NonNullable<Awaited<ReturnType<typeof listChatUnreadCounts>>>
+export type ListChatUnreadCountsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List unread group-message counts for chats available to the current user
+ */
+
+export function useListChatUnreadCounts<TData = Awaited<ReturnType<typeof listChatUnreadCounts>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listChatUnreadCounts>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListChatUnreadCountsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

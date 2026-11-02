@@ -5,13 +5,13 @@ description: How team chat group membership and file auth work in the EMS
 
 General and department chat membership is derived at request time:
 - `company` includes every user in the company.
-- `dept-<id>` includes employees whose department matches, plus super_admin users. An employee's department lives in `employment_info.department_id`; never use `users.department_id` for authorization.
-- Management-created team chats use explicit `chat_teams` and `chat_team_members` rows. Only active, non-archived employee members and management with `manage_departments` can access them. Archived employees are removed from memberships and lead assignments.
+- `dept-<id>` includes employees whose department matches, plus active super_admin users. An employee's department lives in `employment_info.department_id`; never use `users.department_id` for authorization.
+- Management-created team chats use explicit `chat_teams` and `chat_team_members` rows. Active, non-archived employee members can access assigned teams; active super_admin users can access all teams. Other management roles do not get automatic cross-team access. Archived employees are removed from memberships and lead assignments.
 - Growth and Brand Social Creative are not automatic rooms; create them as managed team chats if needed.
 
-**Why:** company and department rooms should automatically reflect employment changes, while user-managed teams need explicit membership and lead assignment. The fixed Growth and Creative rooms were removed so management can create the desired teams manually.
+**Why:** company and department rooms should automatically reflect employment changes, while user-managed teams need explicit membership and lead assignment. The user specified that only super admins should be included across every group.
 
-**How to apply:** group access must go through `resolveGroup()`; mentions and team-report submissions must use the resolved/assigned member set. Keep private team attachment checks in the storage route synchronized with group access, including manager permission and active team membership. Messages query newest-200 desc then reverse. Team report rows retain a team-name snapshot if a managed team is deleted.
+**How to apply:** group access must go through `resolveGroup()`; mentions, unread counts, and team-report submissions must use the resolved/assigned member set. Include active super admins in every group's member list and `@all` recipients. Keep private team attachment checks in the storage route synchronized with group access. Messages query newest-200 desc then reverse. Team report rows retain a team-name snapshot if a managed team is deleted.
 
 The `@management` group-chat mention targets active super admins only. It does not grant HR or other management roles new access; super admins already have access to all department and managed-team chats.
 

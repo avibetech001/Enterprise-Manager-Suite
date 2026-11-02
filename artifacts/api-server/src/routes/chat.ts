@@ -31,6 +31,7 @@ import {
   UpdateManagedChatTeamBody,
   UpdateManagedChatTeamResponse,
   LookupChatMessagesQueryParams,
+  ListChatUnreadCountsResponse,
 } from "@workspace/api-zod";
 import {
   DeleteChatMessageResponse,
@@ -73,11 +74,8 @@ router.get(
   },
 );
 
-function canManageTeamChats(user: CurrentUser): boolean {
-  return (
-    user.role === "super_admin" ||
-    (user.role === "hr" && user.permissions.includes("manage_departments"))
-  );
+function canViewAllChatGroups(user: CurrentUser): boolean {
+  return user.role === "super_admin";
 }
 
 async function managedTeamResponse(teamId: number, companyId: number) {
@@ -660,7 +658,7 @@ async function resolveGroup(
         ),
       );
     const memberUserIds = memberRows.map((row) => row.userId);
-    if (!memberUserIds.includes(me.id) && !canManageTeamChats(me)) return null;
+    if (!memberUserIds.includes(me.id) && !canViewAllChatGroups(me)) return null;
     return {
       id: groupId,
       name: team.name,
@@ -746,7 +744,7 @@ router.get(
       .where(eq(chatTeamMembersTable.userId, me.id));
     const myTeamIds = new Set(myTeamRows.map((row) => row.teamId));
     for (const team of managedTeams) {
-      if (!canManageTeamChats(me) && !myTeamIds.has(team.id)) continue;
+      if (!canViewAllChatGroups(me) && !myTeamIds.has(team.id)) continue;
       groups.push({
         id: `custom-team-${team.id}`,
         name: team.name,
@@ -756,6 +754,126 @@ router.get(
       });
     }
     res.json(groups.map((g) => ChatGroup.parse(g)));
+  },
+);
+
+router.get(
+  "/chat/unread-counts",
+  requireAuth,
+  async (req: Request, res: Response): Promise<void> => {
+    const me = req.currentUser!;
+    const groups: Array<{
+      id: string;
+      kind: "company" | "department" | "team";
+      scope: ResolvedGroup;
+    }> = [
+      {
+        id: "company",
+        kind: "company",
+        scope: {
+          id: "company",
+          name: "General",
+          departmentId: null,
+          teamKey: null,
+        },
+      },
+    ];
+
+    const myDeptId = await departmentIdOf(me.id);
+    const departments = await db
+      .select({ id: departmentsTable.id, name: departmentsTable.name })
+      .from(departmentsTable)
+      .where(eq(departmentsTable.companyId, me.companyId));
+    for (const department of departments) {
+      if (canViewAllChatGroups(me) || myDeptId === department.id) {
+        const id = `dept-${department.id}`;
+        groups.push({
+          id,
+          kind: "department",
+          scope: {
+            id,
+            name: department.name,
+            departmentId: department.id,
+            teamKey: null,
+          },
+        });
+      }
+    }
+
+    const managedTeams = await db
+      .select({ id: chatTeamsTable.id, name: chatTeamsTable.name })
+      .from(chatTeamsTable)
+      .where(eq(chatTeamsTable.companyId, me.companyId));
+    const myTeams = await db
+      .select({ teamId: chatTeamMembersTable.teamId })
+      .from(chatTeamMembersTable)
+      .innerJoin(chatTeamsTable, eq(chatTeamsTable.id, chatTeamMembersTable.teamId))
+      .where(
+        and(
+          eq(chatTeamMembersTable.userId, me.id),
+          eq(chatTeamsTable.companyId, me.companyId),
+        ),
+      );
+    const myTeamIds = new Set(myTeams.map((team) => team.teamId));
+    for (const team of managedTeams) {
+      if (!canViewAllChatGroups(me) && !myTeamIds.has(team.id)) continue;
+      const id = `custom-team-${team.id}`;
+      groups.push({
+        id,
+        kind: "team",
+        scope: {
+          id,
+          name: team.name,
+          departmentId: null,
+          teamKey: `managed-team:${team.id}`,
+          managedTeamId: team.id,
+        },
+      });
+    }
+
+    const unreadRows = await db
+      .select({
+        departmentId: chatMessagesTable.departmentId,
+        teamKey: chatMessagesTable.teamKey,
+        unreadCount: sql<number>`count(*)::int`,
+      })
+      .from(chatMessagesTable)
+      .leftJoin(
+        chatMessageReadReceiptsTable,
+        and(
+          eq(chatMessageReadReceiptsTable.messageId, chatMessagesTable.id),
+          eq(chatMessageReadReceiptsTable.userId, me.id),
+        ),
+      )
+      .where(
+        and(
+          eq(chatMessagesTable.companyId, me.companyId),
+          ne(chatMessagesTable.userId, me.id),
+          isNull(chatMessageReadReceiptsTable.id),
+          or(...groups.map(({ scope }) => groupMessageScope(scope))),
+        ),
+      )
+      .groupBy(chatMessagesTable.departmentId, chatMessagesTable.teamKey);
+
+    const unreadByGroupId = new Map<string, number>();
+    for (const row of unreadRows) {
+      const groupId = row.teamKey
+        ? `custom-team-${row.teamKey.slice("managed-team:".length)}`
+        : row.departmentId === null
+          ? "company"
+          : `dept-${row.departmentId}`;
+      unreadByGroupId.set(groupId, row.unreadCount);
+    }
+
+    res.json(
+      ListChatUnreadCountsResponse.parse(
+        groups.map(({ id, kind }) => ({
+          groupId: id,
+          kind,
+          unreadCount: unreadByGroupId.get(id) ?? 0,
+        })),
+      ),
+    );
   },
 );
 
@@ -794,8 +912,10 @@ router.get(
       : null;
     const members = rows.filter((u) =>
       teamMemberIds
-        ? teamMemberIds.has(u.id) || (me.role === "super_admin" && u.id === me.id)
-        : group.departmentId === null || u.departmentId === group.departmentId,
+        ? teamMemberIds.has(u.id) || u.role === "super_admin"
+        : group.departmentId === null ||
+          group.departmentId === u.departmentId ||
+          u.role === "super_admin",
     );
     const presence = await presenceByUserId(
       me.companyId,
@@ -960,8 +1080,10 @@ router.post(
       allMembers
         .filter((u) =>
           teamIds
-            ? teamIds.has(u.id)
-            : group.departmentId === null || u.departmentId === group.departmentId,
+            ? teamIds.has(u.id) || u.role === "super_admin"
+            : group.departmentId === null ||
+              group.departmentId === u.departmentId ||
+              u.role === "super_admin",
         )
         .map((u) => u.id),
     );

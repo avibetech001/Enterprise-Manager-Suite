@@ -58,6 +58,22 @@ export interface ChatGroup {
   teamLeadName: string | null;
 }
 
+export type ChatUnreadCountKind = typeof ChatUnreadCountKind[keyof typeof ChatUnreadCountKind];
+
+
+export const ChatUnreadCountKind = {
+  company: 'company',
+  department: 'department',
+  team: 'team',
+} as const;
+
+export interface ChatUnreadCount {
+  groupId: string;
+  kind: ChatUnreadCountKind;
+  /** @minimum 0 */
+  unreadCount: number;
+}
+
 export interface TeamChatEmployee {
   id: number;
   fullName: string;

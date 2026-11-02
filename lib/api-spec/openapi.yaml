@@ -2603,6 +2603,21 @@ paths:
                 items:
                   $ref: "#/components/schemas/ChatGroup"
 
+  /chat/unread-counts:
+    get:
+      operationId: listChatUnreadCounts
+      tags: [chat]
+      summary: List unread group-message counts for chats available to the current user
+      responses:
+        "200":
+          description: Unread counts by group
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChatUnreadCount"
+
   /chat/groups/{groupId}/members:
     get:
       operationId: listChatGroupMembers
@@ -3076,6 +3091,19 @@ components:
           type: ["integer", "null"]
         teamLeadName:
           type: ["string", "null"]
+
+    ChatUnreadCount:
+      type: object
+      required: [groupId, kind, unreadCount]
+      properties:
+        groupId:
+          type: string
+        kind:
+          type: string
+          enum: [company, department, team]
+        unreadCount:
+          type: integer
+          minimum: 0
 
     TeamChatEmployee:
       type: object

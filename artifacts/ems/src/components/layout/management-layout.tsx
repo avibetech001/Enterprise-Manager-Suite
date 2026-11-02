@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { NotificationsBell } from "./notifications-bell";
 import { UnreadNavBadge } from "./unread-nav-badge";
 import { PrivateChatUnreadBadge } from "./private-chat-unread-badge";
+import { GroupChatUnreadBadge } from "./group-chat-unread-badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ChatPresenceHeartbeat } from "@/components/chat-presence-heartbeat";
 
@@ -82,6 +83,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                       <Link href="/chat">
                         <MessagesSquare className="h-4 w-4" />
                         <span>Team Chat</span>
+                        <GroupChatUnreadBadge scope="all" />
                         <PrivateChatUnreadBadge />
                       </Link>
                     </SidebarMenuButton>
@@ -149,6 +151,7 @@ export function ManagementLayout({ children }: { children: ReactNode }) {
                         <Link href="/departments">
                           <Building2 className="h-4 w-4" />
                           <span>Departments</span>
+                          <GroupChatUnreadBadge scope="departments" />
                         </Link>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -217,8 +217,6 @@ router.get('/storage/objects/*path', async (req: Request, res: Response) => {
                 );
               allowed =
                 me.role === "super_admin" ||
-                (me.role === "hr" &&
-                  me.permissions.includes("manage_departments")) ||
                 Boolean(membership);
             }
           }

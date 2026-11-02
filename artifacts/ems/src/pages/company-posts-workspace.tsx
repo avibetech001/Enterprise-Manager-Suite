@@ -5,6 +5,7 @@ import {
   useCreatePost,
   useDeletePost,
   useListPosts,
+  useUpdatePost,
   type CompanyPost,
   type CompanyPostInput,
 } from "@workspace/api-client-react";
@@ -21,6 +22,7 @@ import {
   Link2,
   LoaderCircle,
   Paperclip,
+  Pencil,
   Plus,
   Search,
   ShieldCheck,
@@ -170,11 +172,13 @@ function LinkPreview({ link }: { link: string | null }) {
   );
 }
 
-function PostCard({ post, management, onDelete, deleting }: {
+function PostCard({ post, management, onDelete, onEdit, deleting, updating }: {
   post: CompanyPost;
   management: boolean;
   onDelete?: (id: number) => void;
+  onEdit?: (post: CompanyPost) => void;
   deleting?: boolean;
+  updating?: boolean;
 }) {
   return (
     <article className="group rounded-2xl border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md sm:p-6">
@@ -192,10 +196,34 @@ function PostCard({ post, management, onDelete, deleting }: {
             {post.createdByName && <span className="before:mr-3 before:text-border before:content-['·']">By {post.createdByName}</span>}
           </div>
         </div>
-        {management && onDelete && (
-          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive" onClick={() => onDelete(post.id)} disabled={deleting} aria-label={`Delete ${post.title}`}>
-            {deleting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-          </Button>
+        {management && (onEdit || onDelete) && (
+          <div className="flex shrink-0 items-center gap-1">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-primary"
+                onClick={() => onEdit(post)}
+                disabled={updating}
+                aria-label={`Edit policy ${post.title}`}
+                title="Edit policy"
+              >
+                {updating ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 text-muted-foreground hover:text-destructive"
+                onClick={() => onDelete(post.id)}
+                disabled={deleting}
+                aria-label={`Delete ${post.title}`}
+              >
+                {deleting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              </Button>
+            )}
+          </div>
         )}
       </div>
       {post.body && <p className="mt-4 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{post.body}</p>}
@@ -212,12 +240,14 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
   const queryClient = useQueryClient();
   const postsQuery = useListPosts(params, { query: { queryKey } });
   const createPost = useCreatePost();
+  const updatePost = useUpdatePost();
   const deletePost = useDeletePost();
   const { uploadFile, isUploading } = useUpload({
     onError: (error) => toast.error("Upload failed", { description: error.message }),
   });
   const fileRef = useRef<HTMLInputElement>(null);
   const [showForm, setShowForm] = useState(false);
+  const [editingPost, setEditingPost] = useState<CompanyPost | null>(null);
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [category, setCategory] = useState("idea_dump");
@@ -232,7 +262,7 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
     const needle = search.trim().toLowerCase();
     return !needle || `${post.title} ${post.body} ${post.createdByName || ""}`.toLowerCase().includes(needle);
   });
-  const pending = createPost.isPending || isUploading;
+  const pending = createPost.isPending || updatePost.isPending || isUploading;
 
   const selectFile = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0] || null;
@@ -246,6 +276,7 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
   };
 
   const resetForm = () => {
+    setEditingPost(null);
     setTitle("");
     setBody("");
     setCategory("idea_dump");
@@ -254,12 +285,27 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
     setShowForm(false);
   };
 
+  const openCreateForm = () => {
+    resetForm();
+    setShowForm(true);
+  };
+
+  const startEditingPolicy = (post: CompanyPost) => {
+    setEditingPost(post);
+    setTitle(post.title);
+    setBody(post.body);
+    setCategory(post.category || "idea_dump");
+    setLink(post.link || "");
+    setFile(null);
+    setShowForm(true);
+  };
+
   const submit = async () => {
     if (!title.trim()) {
       toast.error("Add a title before publishing.");
       return;
     }
-    if (!body.trim() && !link.trim() && !file) {
+    if (!body.trim() && !link.trim() && !file && !editingPost?.attachmentPath) {
       toast.error("Add some details, a link, or an attachment.");
       return;
     }
@@ -284,18 +330,37 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
       title: title.trim(),
       body: body.trim(),
       link: link.trim() ? normalizeUrl(link.trim()) : null,
-      attachmentPath: uploaded?.objectPath || null,
-      attachmentFileName: file?.name || null,
-      attachmentContentType: file ? file.type || "application/octet-stream" : null,
+      attachmentPath: uploaded?.objectPath || (file ? null : editingPost?.attachmentPath || null),
+      attachmentFileName: file?.name || editingPost?.attachmentFileName || null,
+      attachmentContentType:
+        (file ? file.type || "application/octet-stream" : editingPost?.attachmentContentType) || null,
     };
-    createPost.mutate({ data: payload }, {
+    const mutationCallbacks = {
       onSuccess: () => {
-        toast.success(isKnowledge ? "Idea shared with the team." : "Policy published.");
+        toast.success(
+          editingPost
+            ? "Policy updated."
+            : isKnowledge
+              ? "Idea shared with the team."
+              : "Policy published.",
+        );
         resetForm();
         queryClient.invalidateQueries({ queryKey });
       },
-      onError: () => toast.error(isKnowledge ? "Could not share this idea." : "Could not publish this policy."),
-    });
+      onError: () =>
+        toast.error(
+          editingPost
+            ? "Could not update this policy."
+            : isKnowledge
+              ? "Could not share this idea."
+              : "Could not publish this policy.",
+        ),
+    };
+    if (editingPost) {
+      updatePost.mutate({ id: editingPost.id, data: payload }, mutationCallbacks);
+    } else {
+      createPost.mutate({ data: payload }, mutationCallbacks);
+    }
   };
 
   const remove = (id: number) => {
@@ -332,7 +397,7 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
               </p>
             </div>
             {management && (
-              <Button onClick={() => setShowForm((open) => !open)} className="h-11 shrink-0 rounded-xl px-5">
+              <Button onClick={() => (showForm ? resetForm() : openCreateForm())} className="h-11 shrink-0 rounded-xl px-5">
                 {showForm ? <X className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
                 {showForm ? "Close form" : isKnowledge ? "Add an idea" : "Publish policy"}
               </Button>
@@ -363,8 +428,12 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
         {showForm && (
           <Card className="overflow-hidden rounded-2xl border-primary/15 shadow-sm">
             <div className="border-b border-border bg-primary/[0.035] px-5 py-4 sm:px-6">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-primary">New {isKnowledge ? "team contribution" : "company guidance"}</p>
-              <h2 className="mt-1 font-serif text-2xl tracking-tight">{isKnowledge ? "Put a good idea somewhere useful." : "Make the policy easy to follow."}</h2>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.17em] text-primary">
+                {editingPost ? "Edit company policy" : `New ${isKnowledge ? "team contribution" : "company guidance"}`}
+              </p>
+              <h2 className="mt-1 font-serif text-2xl tracking-tight">
+                {editingPost ? "Update the policy details." : isKnowledge ? "Put a good idea somewhere useful." : "Make the policy easy to follow."}
+              </h2>
             </div>
             <CardContent className="space-y-5 p-5 sm:p-6">
               <div className={`grid gap-4 ${isKnowledge ? "sm:grid-cols-[minmax(0,1fr)_220px]" : ""}`}>
@@ -407,6 +476,11 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
                       <Upload className="h-4 w-4" /> Choose file
                     </button>
                   )}
+                  {editingPost?.attachmentFileName && !file && (
+                    <p className="text-xs text-muted-foreground">
+                      Current attachment: {editingPost.attachmentFileName}. Choose a file to replace it.
+                    </p>
+                  )}
                 </div>
               </div>
               {isUploading && (
@@ -417,8 +491,8 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
               <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
                 <Button variant="outline" className="rounded-xl" onClick={resetForm} disabled={pending}>Cancel</Button>
                 <Button className="rounded-xl px-5" onClick={submit} disabled={pending || !title.trim()}>
-                  {pending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                  {isUploading ? "Uploading…" : createPost.isPending ? "Publishing…" : isKnowledge ? "Share with the team" : "Publish policy"}
+                  {pending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : editingPost ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}
+                  {isUploading ? "Uploading…" : createPost.isPending || updatePost.isPending ? "Saving…" : editingPost ? "Save changes" : isKnowledge ? "Share with the team" : "Publish policy"}
                 </Button>
               </div>
             </CardContent>
@@ -461,12 +535,22 @@ export default function CompanyPostsWorkspace({ kind, management, hideHeader = f
               {search || filterCategory ? "Try a different search or clear the category filter." : isKnowledge ? "Add the first practical tip, resource or example for the team." : "When management publishes a policy, the latest guidance will appear here."}
             </p>
             {!search && !filterCategory && (management || isKnowledge) && (
-              <Button variant="outline" className="mt-5 rounded-xl" onClick={() => setShowForm(true)}><Plus className="mr-2 h-4 w-4" />{isKnowledge ? "Share an idea" : "Publish the first policy"}</Button>
+              <Button variant="outline" className="mt-5 rounded-xl" onClick={openCreateForm}><Plus className="mr-2 h-4 w-4" />{isKnowledge ? "Share an idea" : "Publish the first policy"}</Button>
             )}
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredPosts.map((post) => <PostCard key={post.id} post={post} management={management} onDelete={management ? remove : undefined} deleting={deletePost.isPending} />)}
+            {filteredPosts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                management={management}
+                onDelete={management ? remove : undefined}
+                onEdit={management && kind === "policy" ? startEditingPolicy : undefined}
+                deleting={deletePost.isPending}
+                updating={updatePost.isPending}
+              />
+            ))}
           </div>
         )}
       </div>

@@ -28,6 +28,8 @@ export * from './chatMessageDeleteResult';
 export * from './chatMessageInput';
 export * from './chatMessageInputKind';
 export * from './chatPresenceHeartbeat';
+export * from './chatUnreadCount';
+export * from './chatUnreadCountKind';
 export * from './checkInInput';
 export * from './checkOutInput';
 export * from './client';
