@@ -133,6 +133,9 @@ export const projectsTable = pgTable("projects", {
   submittedBy: integer("submitted_by").references(() => usersTable.id, {
     onDelete: "set null",
   }),
+  reviewStatus: text("review_status").notNull().default("pending"),
+  reviewComment: text("review_comment"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

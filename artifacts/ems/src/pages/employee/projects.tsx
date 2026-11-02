@@ -290,7 +290,13 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
   };
 
   return (
-    <Card className="flex flex-col">
+    <Card
+      className={`flex flex-col ${
+        p.reviewStatus === "approved"
+          ? "border-emerald-400 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/30"
+          : ""
+      }`}
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-lg flex items-center gap-2">
@@ -305,6 +311,17 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
             <Badge variant="outline" className={statusBadgeClass(p.status)}>
               <span className="capitalize">{p.status.replace("_", " ")}</span>
             </Badge>
+            {p.reviewStatus === "approved" && (
+              <Badge
+                variant="outline"
+                className="border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+              >
+                Approved
+              </Badge>
+            )}
+            {p.reviewStatus === "declined" && (
+              <Badge variant="destructive">Declined</Badge>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -319,6 +336,17 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
       </CardHeader>
       <CardContent className="flex-1 space-y-4">
         {p.description && <p className="text-sm text-muted-foreground">{p.description}</p>}
+        {p.reviewComment && (
+          <div className="rounded-md border bg-background/70 p-3 text-sm">
+            <p className="mb-1 font-medium">Super Admin feedback</p>
+            <p className="whitespace-pre-wrap text-muted-foreground">{p.reviewComment}</p>
+            {p.reviewedAt && (
+              <p className="mt-2 text-[11px] text-muted-foreground">
+                Reviewed {new Date(p.reviewedAt).toLocaleDateString()}
+              </p>
+            )}
+          </div>
+        )}
 
         {editing ? (
           <div className="space-y-3 rounded-lg border p-3 bg-muted/30">

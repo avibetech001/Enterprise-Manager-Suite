@@ -1895,6 +1895,49 @@ paths:
         "204":
           description: Deleted
 
+  /projects/{id}/review:
+    patch:
+      operationId: reviewProject
+      tags: [projects]
+      summary: Approve or decline a completed project (super admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectReviewInput"
+      responses:
+        "200":
+          description: Reviewed project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProjectDetail"
+        "400":
+          description: Project is not complete or review input is invalid
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Super admin access required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Project not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /fund-requests/me:
     get:
       operationId: listMyFundRequests
@@ -4319,6 +4362,9 @@ components:
           submissionLink,
           submissionNote,
           submittedAt,
+          reviewStatus,
+          reviewComment,
+          reviewedAt,
           createdAt,
         ]
       properties:
@@ -4361,6 +4407,14 @@ components:
         submissionNote:
           type: ["string", "null"]
         submittedAt:
+          type: ["string", "null"]
+          format: date-time
+        reviewStatus:
+          type: string
+          enum: [pending, approved, declined]
+        reviewComment:
+          type: ["string", "null"]
+        reviewedAt:
           type: ["string", "null"]
           format: date-time
         createdAt:
@@ -4441,6 +4495,17 @@ components:
               status:
                 type: string
                 enum: [pending, in_progress, done]
+
+    ProjectReviewInput:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [approved, declined]
+        comment:
+          type: string
+          maxLength: 2000
 
     ClientStatus:
       type: string

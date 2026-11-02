@@ -1887,6 +1887,9 @@ export const ListMyProjectsResponseItem = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListMyProjectsResponse = zod.array(ListMyProjectsResponseItem)
@@ -1947,6 +1950,9 @@ export const CreateMyProjectResponse = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2048,6 +2054,9 @@ export const SubmitMyProjectResponse = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2087,6 +2096,9 @@ export const DeleteMyProjectSubmissionResponse = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2140,6 +2152,9 @@ export const UpdateMyProjectProgressResponse = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2175,6 +2190,9 @@ export const ListProjectsResponseItem = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 export const ListProjectsResponse = zod.array(ListProjectsResponseItem)
@@ -2235,6 +2253,9 @@ export const CreateProjectResponse = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2298,6 +2319,9 @@ export const UpdateProjectResponse = zod.object({
   "submissionLink": zod.string().nullable(),
   "submissionNote": zod.string().nullable(),
   "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
   "createdAt": zod.coerce.date()
 })
 
@@ -2310,6 +2334,57 @@ export const DeleteProjectParams = zod.object({
 })
 
 export const DeleteProjectResponse = zod.void()
+
+
+/**
+ * @summary Approve or decline a completed project (super admin)
+ */
+export const ReviewProjectParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const reviewProjectBodyCommentMax = 2000;
+
+
+
+export const ReviewProjectBody = zod.object({
+  "status": zod.enum(['approved', 'declined']),
+  "comment": zod.string().max(reviewProjectBodyCommentMax).optional()
+})
+
+export const ReviewProjectResponse = zod.object({
+  "id": zod.number(),
+  "companyId": zod.number(),
+  "name": zod.string(),
+  "description": zod.string().nullable(),
+  "status": zod.string(),
+  "startDate": zod.string().nullable(),
+  "deadline": zod.string().nullable(),
+  "progress": zod.number(),
+  "leadUserId": zod.number().nullable(),
+  "leadName": zod.string().nullable(),
+  "members": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string()
+})),
+  "deliverables": zod.array(zod.object({
+  "id": zod.number(),
+  "projectId": zod.number(),
+  "title": zod.string(),
+  "dueDate": zod.string().nullable(),
+  "status": zod.string()
+})),
+  "urgent": zod.boolean(),
+  "submissionFilePath": zod.string().nullable(),
+  "submissionFileName": zod.string().nullable(),
+  "submissionLink": zod.string().nullable(),
+  "submissionNote": zod.string().nullable(),
+  "submittedAt": zod.coerce.date().nullable(),
+  "reviewStatus": zod.enum(['pending', 'approved', 'declined']),
+  "reviewComment": zod.string().nullable(),
+  "reviewedAt": zod.coerce.date().nullable(),
+  "createdAt": zod.coerce.date()
+})
 
 
 /**

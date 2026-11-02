@@ -1,11 +1,13 @@
 import { useNotificationFocus } from "@/lib/use-notification-focus";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useListProjects,
   useCreateProject,
   useUpdateProject,
   useDeleteProject,
+  useReviewProject,
+  useGetCurrentSession,
   useListEmployees,
   useListDepartments,
   getListProjectsQueryKey,
@@ -59,6 +61,118 @@ function statusBadge(status: string) {
   );
 }
 
+function reviewBadge(status: string) {
+  if (status === "pending") return null;
+  return (
+    <Badge
+      variant="outline"
+      className={
+        status === "approved"
+          ? "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
+          : "border-red-300 bg-red-100 text-red-800 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300"
+      }
+    >
+      {status === "approved" ? "Approved" : "Declined"}
+    </Badge>
+  );
+}
+
+function ProjectReviewPanel({
+  project,
+  onReviewed,
+}: {
+  project: ProjectDetail;
+  onReviewed: () => void;
+}) {
+  const reviewProject = useReviewProject();
+  const [comment, setComment] = useState(project.reviewComment ?? "");
+  const reviewAllowed = project.status === "completed" || project.progress >= 100;
+
+  useEffect(() => {
+    setComment(project.reviewComment ?? "");
+  }, [project.reviewComment]);
+
+  const submitReview = (status: "approved" | "declined") => {
+    reviewProject.mutate(
+      { id: project.id, data: { status, comment: comment.trim() } },
+      {
+        onSuccess: () => {
+          onReviewed();
+          toast.success(status === "approved" ? "Project approved" : "Project declined");
+        },
+        onError: (error) => {
+          toast.error("Could not review project", {
+            description: error.data?.error || "Please try again.",
+          });
+        },
+      },
+    );
+  };
+
+  return (
+    <section className="space-y-3 rounded-md border bg-background/70 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-medium">Super Admin Review</p>
+        {reviewBadge(project.reviewStatus)}
+      </div>
+      {reviewAllowed ? (
+        <>
+          <div className="space-y-1.5">
+            <Label htmlFor={`project-review-${project.id}`} className="text-xs">
+              Comment (optional)
+            </Label>
+            <Textarea
+              id={`project-review-${project.id}`}
+              value={comment}
+              onChange={(event) => setComment(event.target.value)}
+              maxLength={2000}
+              rows={3}
+              placeholder="Add feedback for the project team..."
+              className="resize-y"
+            />
+          </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={reviewProject.isPending}
+              onClick={() => submitReview("declined")}
+            >
+              Decline
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              className="bg-emerald-600 text-white hover:bg-emerald-700"
+              disabled={reviewProject.isPending}
+              onClick={() => submitReview("approved")}
+            >
+              Approve
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Review is available after the project is marked completed or reaches 100% progress.
+          </p>
+          {project.reviewComment && (
+            <p className="whitespace-pre-wrap rounded bg-muted/60 p-2 text-sm">
+              {project.reviewComment}
+            </p>
+          )}
+        </div>
+      )}
+      {project.reviewedAt && (
+        <p className="text-[11px] text-muted-foreground">
+          Last reviewed {new Date(project.reviewedAt).toLocaleDateString()}
+        </p>
+      )}
+    </section>
+  );
+}
+
 interface FormState {
   name: string;
   description: string;
@@ -87,6 +201,7 @@ const emptyForm: FormState = {
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
+  const { data: session } = useGetCurrentSession();
   const { data: projects, isLoading } = useListProjects();
   useNotificationFocus(!!projects);
   const { data: employees } = useListEmployees();
@@ -94,6 +209,7 @@ export default function ProjectsPage() {
   const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
+  const isSuperAdmin = session?.user?.role === "super_admin";
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ProjectDetail | null>(null);
@@ -268,7 +384,15 @@ export default function ProjectsPage() {
       ) : projects && projects.length > 0 ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
-            <Card key={p.id} id={`focus-${p.id}`} className="flex flex-col">
+            <Card
+              key={p.id}
+              id={`focus-${p.id}`}
+              className={`flex flex-col ${
+                p.reviewStatus === "approved"
+                  ? "border-emerald-400 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/30"
+                  : ""
+              }`}
+            >
               <CardContent className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
                   <h3 className="font-semibold text-lg flex items-center gap-2">
@@ -297,7 +421,10 @@ export default function ProjectsPage() {
                     </Button>
                   </div>
                 </div>
-                <div className="mb-3">{statusBadge(p.status)}</div>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  {statusBadge(p.status)}
+                  {reviewBadge(p.reviewStatus)}
+                </div>
                 {p.description && (
                   <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{p.description}</p>
                 )}
@@ -344,6 +471,20 @@ export default function ProjectsPage() {
                         <p className="text-muted-foreground whitespace-pre-wrap">{p.submissionNote}</p>
                       )}
                     </div>
+                  )}
+                  {!isSuperAdmin && p.reviewComment && (
+                    <div className="rounded-md border bg-background/70 p-2.5 text-xs">
+                      <p className="mb-1 font-medium">Super Admin comment</p>
+                      <p className="whitespace-pre-wrap text-muted-foreground">
+                        {p.reviewComment}
+                      </p>
+                    </div>
+                  )}
+                  {isSuperAdmin && (
+                    <ProjectReviewPanel
+                      project={p}
+                      onReviewed={() => invalidate()}
+                    />
                   )}
                   <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                     <span className="flex items-center gap-1">

@@ -99,6 +99,7 @@ import type {
   ProjectDetail,
   ProjectInput,
   ProjectProgressUpdateInput,
+  ProjectReviewInput,
   ProjectSubmissionInput,
   PushPublicKey,
   PushSubscriptionInput,
@@ -5827,6 +5828,78 @@ export const useDeleteProject = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteProjectMutationOptions(options));
+    }
+
+export const getReviewProjectUrl = (id: number,) => {
+
+
+
+
+  return `/api/projects/${id}/review`
+}
+
+/**
+ * @summary Approve or decline a completed project (super admin)
+ */
+export const reviewProject = async (id: number,
+    projectReviewInput: ProjectReviewInput, options?: RequestInit): Promise<ProjectDetail> => {
+
+  return customFetch<ProjectDetail>(getReviewProjectUrl(id),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(projectReviewInput)
+  }
+);}
+
+
+
+
+
+export const getReviewProjectMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewProject>>, TError,{id: number;data: BodyType<ProjectReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reviewProject>>, TError,{id: number;data: BodyType<ProjectReviewInput>}, TContext> => {
+
+const mutationKey = ['reviewProject'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reviewProject>>, {id: number;data: BodyType<ProjectReviewInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reviewProject(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReviewProjectMutationResult = NonNullable<Awaited<ReturnType<typeof reviewProject>>>
+    export type ReviewProjectMutationBody = BodyType<ProjectReviewInput>
+    export type ReviewProjectMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Approve or decline a completed project (super admin)
+ */
+export const useReviewProject = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reviewProject>>, TError,{id: number;data: BodyType<ProjectReviewInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reviewProject>>,
+        TError,
+        {id: number;data: BodyType<ProjectReviewInput>},
+        TContext
+      > => {
+      return useMutation(getReviewProjectMutationOptions(options));
     }
 
 export const getListMyFundRequestsUrl = () => {

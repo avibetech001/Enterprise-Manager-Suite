@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { ProjectDeliverable } from './projectDeliverable';
+import type { ProjectDetailReviewStatus } from './projectDetailReviewStatus';
 import type { ProjectMember } from './projectMember';
 
 export interface ProjectDetail {
@@ -37,5 +38,10 @@ export interface ProjectDetail {
   submissionNote: string | null;
   /** @nullable */
   submittedAt: Date | null;
+  reviewStatus: ProjectDetailReviewStatus;
+  /** @nullable */
+  reviewComment: string | null;
+  /** @nullable */
+  reviewedAt: Date | null;
   createdAt: Date;
 }

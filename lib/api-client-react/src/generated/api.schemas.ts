@@ -871,6 +871,15 @@ export interface ProjectMember {
   fullName: string;
 }
 
+export type ProjectDetailReviewStatus = typeof ProjectDetailReviewStatus[keyof typeof ProjectDetailReviewStatus];
+
+
+export const ProjectDetailReviewStatus = {
+  pending: 'pending',
+  approved: 'approved',
+  declined: 'declined',
+} as const;
+
 export interface ProjectDetail {
   id: number;
   companyId: number;
@@ -900,6 +909,11 @@ export interface ProjectDetail {
   submissionNote: string | null;
   /** @nullable */
   submittedAt: string | null;
+  reviewStatus: ProjectDetailReviewStatus;
+  /** @nullable */
+  reviewComment: string | null;
+  /** @nullable */
+  reviewedAt: string | null;
   createdAt: string;
 }
 
@@ -976,6 +990,20 @@ export interface ProjectProgressUpdateInput {
      */
   progress?: number;
   deliverables?: ProjectProgressUpdateInputDeliverablesItem[];
+}
+
+export type ProjectReviewInputStatus = typeof ProjectReviewInputStatus[keyof typeof ProjectReviewInputStatus];
+
+
+export const ProjectReviewInputStatus = {
+  approved: 'approved',
+  declined: 'declined',
+} as const;
+
+export interface ProjectReviewInput {
+  status: ProjectReviewInputStatus;
+  /** @maxLength 2000 */
+  comment?: string;
 }
 
 export type ClientStatus = typeof ClientStatus[keyof typeof ClientStatus];

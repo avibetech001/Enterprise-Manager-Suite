@@ -92,6 +92,8 @@ import {
   ListRequisitionsResponse,
   ReviewFundRequestBody,
   ReviewFundRequestResponse,
+  ReviewProjectBody,
+  ReviewProjectResponse,
   ReviewLeaveRequestBody,
   ReviewLeaveRequestResponse,
   ReviewRequisitionBody,
@@ -1607,6 +1609,71 @@ router.get(
         await loadProjects(req.currentUser!.companyId),
       ),
     );
+  },
+);
+
+router.patch(
+  "/projects/:id/review",
+  requireAuth,
+  requireRole("super_admin"),
+  async (req, res): Promise<void> => {
+    const id = Number(req.params.id);
+    const parsed = ReviewProjectBody.safeParse(req.body);
+    if (!parsed.success || !Number.isInteger(id) || id <= 0) {
+      res.status(400).json({ error: "Invalid project review." });
+      return;
+    }
+
+    const companyId = req.currentUser!.companyId;
+    const [project] = await db
+      .select()
+      .from(projectsTable)
+      .where(
+        and(
+          eq(projectsTable.id, id),
+          eq(projectsTable.companyId, companyId),
+        ),
+      );
+    if (!project) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    if (project.status !== "completed" && project.progress < 100) {
+      res.status(400).json({
+        error: "A project can only be reviewed when completed or at 100% progress.",
+      });
+      return;
+    }
+
+    const [updated] = await db
+      .update(projectsTable)
+      .set({
+        reviewStatus: parsed.data.status,
+        reviewComment: parsed.data.comment?.trim() || null,
+        reviewedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(projectsTable.id, id),
+          eq(projectsTable.companyId, companyId),
+          or(
+            eq(projectsTable.status, "completed"),
+            gte(projectsTable.progress, 100),
+          ),
+        ),
+      )
+      .returning();
+    if (!updated) {
+      res.status(400).json({
+        error: "A project can only be reviewed when completed or at 100% progress.",
+      });
+      return;
+    }
+
+    const [full] = await loadProjects(companyId).then((all) =>
+      all.filter((item) => item.id === id),
+    );
+    res.json(ReviewProjectResponse.parse(full));
   },
 );
 
