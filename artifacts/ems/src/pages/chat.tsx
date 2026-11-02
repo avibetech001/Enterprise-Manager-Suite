@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import {
   useListChatGroups,
   getListChatGroupsQueryKey,
+  useListChatUnreadCounts,
+  getListChatUnreadCountsQueryKey,
   useListChatMessages,
   useListChatGroupMembers,
   getListChatGroupMembersQueryKey,
@@ -217,6 +219,12 @@ export default function TeamChatPage() {
       refetchInterval: 15_000,
     },
   });
+  const { data: groupUnreadCounts } = useListChatUnreadCounts({
+    query: {
+      queryKey: getListChatUnreadCountsQueryKey(),
+      refetchInterval: 10_000,
+    },
+  });
   const { data: privateConversations } = useListPrivateConversations({
     query: {
       queryKey: getListPrivateConversationsQueryKey(),
@@ -341,33 +349,49 @@ export default function TeamChatPage() {
       )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {(groups || []).map((g) => (
-          <button
-            key={g.id}
-            onClick={() => setActiveGroupId(g.id)}
-            className="text-left rounded-lg border bg-card p-4 hover:border-primary hover:shadow-sm transition-all"
-          >
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                {g.kind === "department" ? (
-                  <Building2 className="h-5 w-5 text-primary" />
-                ) : (
-                  <Users className="h-5 w-5 text-primary" />
-                )}
+        {(groups || []).map((g) => {
+          const unreadCount =
+            groupUnreadCounts?.find((count) => count.groupId === g.id)
+              ?.unreadCount ?? 0;
+          return (
+            <button
+              key={g.id}
+              onClick={() => setActiveGroupId(g.id)}
+              className="text-left rounded-lg border bg-card p-4 hover:border-primary hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  {g.kind === "department" ? (
+                    <Building2 className="h-5 w-5 text-primary" />
+                  ) : (
+                    <Users className="h-5 w-5 text-primary" />
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <p className="min-w-0 flex-1 truncate font-medium">{g.name}</p>
+                    {unreadCount > 0 && (
+                      <Badge
+                        variant="destructive"
+                        aria-label={`${unreadCount} unread messages in ${g.name}`}
+                        className="h-5 min-w-5 shrink-0 rounded-full px-1.5 text-[10px]"
+                      >
+                        {unreadCount > 99 ? "99+" : unreadCount}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {g.kind === "company"
+                      ? "Everyone in the company"
+                      : g.kind === "team"
+                        ? "Role-based team chat"
+                        : "Department group"}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="font-medium truncate">{g.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {g.kind === "company"
-                    ? "Everyone in the company"
-                    : g.kind === "team"
-                      ? "Role-based team chat"
-                      : "Department group"}
-                </p>
-              </div>
-            </div>
-          </button>
-        ))}
+            </button>
+          );
+        })}
       </div>
 
       <div className="space-y-3">
