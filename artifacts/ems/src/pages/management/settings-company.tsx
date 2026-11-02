@@ -343,7 +343,7 @@ export default function SettingsCompanyPage() {
                     <FormItem>
                       <FormLabel>Vision</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Our vision is..." className="resize-none" {...field} disabled={!isSuperAdmin} />
+                        <Textarea placeholder="Our vision is..." className="resize-none" {...field} disabled={!canManageSettings} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -357,7 +357,7 @@ export default function SettingsCompanyPage() {
                     <FormItem>
                       <FormLabel>Mission</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="Our mission is..." className="resize-none" {...field} disabled={!isSuperAdmin} />
+                        <Textarea placeholder="Our mission is..." className="resize-none" {...field} disabled={!canManageSettings} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -371,7 +371,7 @@ export default function SettingsCompanyPage() {
                     <FormItem>
                       <FormLabel>Core Values</FormLabel>
                       <FormControl>
-                        <Textarea placeholder="List your core values..." className="resize-none" {...field} disabled={!isSuperAdmin} />
+                        <Textarea placeholder="List your core values..." className="resize-none" {...field} disabled={!canManageSettings} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -393,7 +393,7 @@ export default function SettingsCompanyPage() {
                 />
               </div>
             </CardContent>
-            {isSuperAdmin && (
+            {canManageSettings && (
               <CardFooter className="border-t px-6 py-4 bg-muted/20">
                 <Button type="submit" disabled={updateCompany.isPending}>
                   {updateCompany.isPending ? "Saving..." : "Save Changes"}
@@ -404,9 +404,9 @@ export default function SettingsCompanyPage() {
         </Form>
       </Card>
       
-      {!isSuperAdmin && (
+      {!canManageSettings && (
         <p className="text-sm text-muted-foreground text-center">
-          Only the Super Admin can modify company settings.
+          A Super Admin must grant you the Company Settings permission to edit these values.
         </p>
       )}
     </div>
