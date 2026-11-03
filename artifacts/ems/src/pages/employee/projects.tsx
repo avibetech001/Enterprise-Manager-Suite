@@ -6,18 +6,12 @@ import {
   useUpdateMyProjectProgress,
   useSubmitMyProject,
   useDeleteMyProjectSubmission,
-  useCreateMyProject,
+  useDeleteProject,
   useGetCurrentSession,
+  useListPrivateChatContacts,
   getListMyProjectsQueryKey,
   type ProjectDetail,
 } from "@workspace/api-client-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { useUpload } from "@workspace/object-storage-web";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,7 +30,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { FolderKanban, CalendarDays, Pencil, X, Upload, FileCheck2, Plus } from "lucide-react";
+import {
+  FolderKanban,
+  CalendarDays,
+  Pencil,
+  X,
+  Upload,
+  FileCheck2,
+  Plus,
+  Settings2,
+  Trash2,
+} from "lucide-react";
+import { ProjectManagementDialog } from "./project-management-dialog";
 
 const PROJECT_STATUSES = ["planning", "active", "on_hold", "completed"] as const;
 const DELIVERABLE_STATUSES = ["pending", "in_progress", "done"] as const;
@@ -243,9 +248,18 @@ function SubmitWorkSection({ project: p }: { project: ProjectDetail }) {
   );
 }
 
-function ProjectCard({ project: p }: { project: ProjectDetail }) {
+function ProjectCard({
+  project: p,
+  canManageDetails,
+  onEditDetails,
+}: {
+  project: ProjectDetail;
+  canManageDetails: boolean;
+  onEditDetails: () => void;
+}) {
   const queryClient = useQueryClient();
   const updateProgress = useUpdateMyProjectProgress();
+  const deleteProject = useDeleteProject();
   const [editing, setEditing] = useState(false);
   const [status, setStatus] = useState(p.status);
   const [progress, setProgress] = useState(String(p.progress));
@@ -289,6 +303,32 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
     );
   };
 
+  const handleDeleteProject = () => {
+    if (
+      !window.confirm(
+        `Delete "${p.name}" and its project details, members, and deliverables?`,
+      )
+    ) {
+      return;
+    }
+    deleteProject.mutate(
+      { id: p.id },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getListMyProjectsQueryKey() });
+          toast.success("Project deleted");
+        },
+        onError: (error) => {
+          toast.error("Could not delete project", {
+            description:
+              (error as { data?: { error?: string } | null }).data?.error ||
+              "Please try again.",
+          });
+        },
+      },
+    );
+  };
+
   return (
     <Card
       className={`flex flex-col ${
@@ -308,6 +348,31 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
             {p.name}
           </CardTitle>
           <div className="flex items-center gap-2">
+            {canManageDetails && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  title="Manage project"
+                  aria-label="Manage project"
+                  onClick={onEditDetails}
+                >
+                  <Settings2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  title="Delete project"
+                  aria-label="Delete project"
+                  disabled={deleteProject.isPending}
+                  onClick={handleDeleteProject}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
             <Badge variant="outline" className={statusBadgeClass(p.status)}>
               <span className="capitalize">{p.status.replace("_", " ")}</span>
             </Badge>
@@ -488,124 +553,37 @@ function ProjectCard({ project: p }: { project: ProjectDetail }) {
   );
 }
 
-function NewProjectDialog({
-  open,
-  onOpenChange,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}) {
-  const queryClient = useQueryClient();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [deadline, setDeadline] = useState("");
-
-  const createProject = useCreateMyProject({
-    mutation: {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListMyProjectsQueryKey() });
-        toast.success("Project started", {
-          description: "Your new project has been created.",
-        });
-        setName("");
-        setDescription("");
-        setStartDate("");
-        setDeadline("");
-        onOpenChange(false);
-      },
-      onError: (err: any) => {
-        toast.error("Couldn't start project", {
-          description: err?.response?.data?.error || "Please try again.",
-        });
-      },
-    },
-  });
-
-  const handleCreate = () => {
-    if (!name.trim()) {
-      toast.error("Project name is required");
-      return;
-    }
-    createProject.mutate({
-      data: {
-        name: name.trim(),
-        ...(description.trim() ? { description: description.trim() } : {}),
-        ...(startDate ? { startDate } : {}),
-        ...(deadline ? { deadline } : {}),
-      },
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Start a New Project</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="np-name">Project name</Label>
-            <Input
-              id="np-name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. Client onboarding videos"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="np-desc">Description (optional)</Label>
-            <Textarea
-              id="np-desc"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="What is this project about?"
-              rows={3}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="np-start">Start date</Label>
-              <Input
-                id="np-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="np-deadline">Deadline</Label>
-              <Input
-                id="np-deadline"
-                type="date"
-                value={deadline}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            You will be the project lead. Management can add more team members later.
-          </p>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleCreate} disabled={createProject.isPending}>
-            {createProject.isPending ? "Creating..." : "Create Project"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
 export default function EmployeeProjects() {
   const { data: projects, isLoading } = useListMyProjects();
   const { data: session } = useGetCurrentSession();
+  const { data: contacts } = useListPrivateChatContacts();
   const canCreate = session?.user?.canCreateProjects === true;
-  const [newProjectOpen, setNewProjectOpen] = useState(false);
+  const currentUserId = session?.user?.id ?? null;
+  const people = [
+    ...(session?.user
+      ? [{ id: session.user.id, fullName: session.user.fullName }]
+      : []),
+    ...(contacts ?? []).map(({ id, fullName }) => ({ id, fullName })),
+  ].filter(
+    (person, index, all) =>
+      all.findIndex((candidate) => candidate.id === person.id) === index,
+  );
+  const [projectDialogOpen, setProjectDialogOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState<ProjectDetail | null>(null);
   useNotificationFocus(!!projects);
+
+  const openNewProject = () => {
+    setEditingProject(null);
+    setProjectDialogOpen(true);
+  };
+  const openProjectEditor = (project: ProjectDetail) => {
+    setEditingProject(project);
+    setProjectDialogOpen(true);
+  };
+  const changeProjectDialogState = (open: boolean) => {
+    setProjectDialogOpen(open);
+    if (!open) setEditingProject(null);
+  };
 
   if (isLoading) {
     return (
@@ -624,18 +602,24 @@ export default function EmployeeProjects() {
             My Projects
           </h1>
           <p className="text-muted-foreground mt-1">
-            Projects you are assigned to. Update the status, progress, and deliverables as you work.
+            Projects assigned to you. Project leads with start-project access can manage their project and team.
           </p>
         </div>
         {canCreate && (
-          <Button onClick={() => setNewProjectOpen(true)}>
+          <Button onClick={openNewProject}>
             <Plus className="h-4 w-4 mr-1" />
             New Project
           </Button>
         )}
       </div>
       {canCreate && (
-        <NewProjectDialog open={newProjectOpen} onOpenChange={setNewProjectOpen} />
+        <ProjectManagementDialog
+          open={projectDialogOpen}
+          onOpenChange={changeProjectDialogState}
+          project={editingProject}
+          currentUserId={currentUserId}
+          people={people}
+        />
       )}
 
       {!projects || projects.length === 0 ? (
@@ -650,7 +634,13 @@ export default function EmployeeProjects() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {projects.map((p) => (
             <div key={p.id} id={`focus-${p.id}`}>
-              <ProjectCard project={p} />
+              <ProjectCard
+                project={p}
+                canManageDetails={
+                  canCreate && currentUserId !== null && p.leadUserId === currentUserId
+                }
+                onEditDetails={() => openProjectEditor(p)}
+              />
             </div>
           ))}
         </div>

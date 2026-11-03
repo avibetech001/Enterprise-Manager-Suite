@@ -4960,7 +4960,7 @@ export const getListMyProjectsUrl = () => {
 }
 
 /**
- * @summary List projects the current employee is assigned to
+ * @summary List projects the current employee is assigned to or leads
  */
 export const listMyProjects = async ( options?: RequestInit): Promise<ProjectDetail[]> => {
 
@@ -5007,7 +5007,7 @@ export type ListMyProjectsQueryError = ErrorType<unknown>
 
 
 /**
- * @summary List projects the current employee is assigned to
+ * @summary List projects the current employee is assigned to or leads
  */
 
 export function useListMyProjects<TData = Awaited<ReturnType<typeof listMyProjects>>, TError = ErrorType<unknown>>(
@@ -5037,7 +5037,7 @@ export const getCreateMyProjectUrl = () => {
 }
 
 /**
- * @summary Start a project (employee with the canCreateProjects capability)
+ * @summary Start and manage a project (employee with the canCreateProjects capability)
  */
 export const createMyProject = async (projectInput: ProjectInput, options?: RequestInit): Promise<ProjectDetail> => {
 
@@ -5086,7 +5086,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type CreateMyProjectMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Start a project (employee with the canCreateProjects capability)
+ * @summary Start and manage a project (employee with the canCreateProjects capability)
  */
 export const useCreateMyProject = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createMyProject>>, TError,{data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -5696,7 +5696,7 @@ export const getUpdateProjectUrl = (id: number,) => {
 }
 
 /**
- * @summary Update a project, its members, and deliverables (management)
+ * @summary Update a project, its members, and deliverables (management or project lead)
  */
 export const updateProject = async (id: number,
     projectInput: ProjectInput, options?: RequestInit): Promise<ProjectDetail> => {
@@ -5746,7 +5746,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type UpdateProjectMutationError = ErrorType<ErrorResponse>
 
     /**
- * @summary Update a project, its members, and deliverables (management)
+ * @summary Update a project, its members, and deliverables (management or project lead)
  */
 export const useUpdateProject = <TError = ErrorType<ErrorResponse>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateProject>>, TError,{id: number;data: BodyType<ProjectInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
@@ -5768,7 +5768,7 @@ export const getDeleteProjectUrl = (id: number,) => {
 }
 
 /**
- * @summary Delete a project (management)
+ * @summary Delete a project (management or authorized project lead)
  */
 export const deleteProject = async (id: number, options?: RequestInit): Promise<void> => {
 
@@ -5817,7 +5817,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
     export type DeleteProjectMutationError = ErrorType<unknown>
 
     /**
- * @summary Delete a project (management)
+ * @summary Delete a project (management or authorized project lead)
  */
 export const useDeleteProject = <TError = ErrorType<unknown>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteProject>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}

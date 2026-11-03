@@ -1609,7 +1609,7 @@ paths:
     get:
       operationId: listMyProjects
       tags: [projects]
-      summary: List projects the current employee is assigned to
+      summary: List projects the current employee is assigned to or leads
       responses:
         "200":
           description: Projects with members and deliverables
@@ -1622,7 +1622,7 @@ paths:
     post:
       operationId: createMyProject
       tags: [projects]
-      summary: Start a project (employee with the canCreateProjects capability)
+      summary: Start and manage a project (employee with the canCreateProjects capability)
       requestBody:
         required: true
         content:
@@ -1855,7 +1855,7 @@ paths:
     patch:
       operationId: updateProject
       tags: [projects]
-      summary: Update a project, its members, and deliverables (management)
+      summary: Update a project, its members, and deliverables (management or project lead)
       parameters:
         - name: id
           in: path
@@ -1884,7 +1884,7 @@ paths:
     delete:
       operationId: deleteProject
       tags: [projects]
-      summary: Delete a project (management)
+      summary: Delete a project (management or authorized project lead)
       parameters:
         - name: id
           in: path

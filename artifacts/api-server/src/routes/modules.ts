@@ -105,6 +105,7 @@ import {
 } from "@workspace/api-zod";
 import {
   hashPassword,
+  hasPermission,
   requireAuth,
   requireManagementPermission,
   requireRole,
@@ -320,7 +321,9 @@ async function loadProjects(companyId: number, onlyUserId?: number) {
     const mine = new Set(
       members.filter((m) => m.userId === onlyUserId).map((m) => m.projectId),
     );
-    projects = projects.filter((p) => mine.has(p.id));
+    projects = projects.filter(
+      (p) => mine.has(p.id) || p.leadUserId === onlyUserId,
+    );
   }
   const leadIds = [
     ...new Set(projects.map((p) => p.leadUserId).filter((v): v is number => v !== null)),
@@ -342,6 +345,59 @@ async function loadProjects(companyId: number, onlyUserId?: number) {
       .map(({ userId, fullName }) => ({ userId, fullName })),
     deliverables: deliverables.filter((d) => d.projectId === p.id),
   }));
+}
+
+function requireProjectManagementAccess() {
+  return async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    const me = req.currentUser;
+    if (!me) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+    const canManageAll =
+      (me.role === "super_admin" || me.role === "hr") &&
+      hasPermission(me, "manage_projects");
+    if (canManageAll) {
+      next();
+      return;
+    }
+    if (me.role !== "employee" || !me.canCreateProjects) {
+      res.status(403).json({ error: "Not permitted" });
+      return;
+    }
+    const rawId = Array.isArray(req.params.id)
+      ? req.params.id[0]
+      : req.params.id;
+    const projectId = Number(rawId);
+    if (!Number.isInteger(projectId) || projectId <= 0) {
+      res.status(400).json({ error: "Invalid project." });
+      return;
+    }
+    const [project] = await db
+      .select({ id: projectsTable.id, leadUserId: projectsTable.leadUserId })
+      .from(projectsTable)
+      .where(
+        and(
+          eq(projectsTable.id, projectId),
+          eq(projectsTable.companyId, me.companyId),
+        ),
+      );
+    if (!project) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    if (project.leadUserId !== me.id) {
+      res.status(403).json({
+        error: "You can only manage projects where you are the project lead.",
+      });
+      return;
+    }
+    next();
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -1435,7 +1491,10 @@ router.post(
           eq(projectMembersTable.userId, me.id),
         ),
       );
-    if (!membership) {
+    if (
+      !membership &&
+      !(me.canCreateProjects && project.leadUserId === me.id)
+    ) {
       res.status(404).json({ error: "You are not assigned to this project." });
       return;
     }
@@ -1506,7 +1565,10 @@ router.delete(
           eq(projectMembersTable.userId, me.id),
         ),
       );
-    if (!membership) {
+    if (
+      !membership &&
+      !(me.canCreateProjects && project.leadUserId === me.id)
+    ) {
       res.status(404).json({ error: "You are not assigned to this project." });
       return;
     }
@@ -1567,7 +1629,10 @@ router.patch(
           eq(projectMembersTable.userId, me.id),
         ),
       );
-    if (!membership) {
+    if (
+      !membership &&
+      !(me.canCreateProjects && project.leadUserId === me.id)
+    ) {
       res.status(404).json({ error: "You are not assigned to this project." });
       return;
     }
@@ -1807,6 +1872,14 @@ router.post(
     const { memberIds: rawMemberIds, deliverables, ...fields } = parsed.data;
     const memberIds = await validateMemberIds(me.companyId, rawMemberIds);
     const leadUserId = await resolveLeadUserId(me.companyId, fields.leadUserId);
+    const memberIdsWithLead =
+      memberIds === undefined
+        ? leadUserId === null
+          ? undefined
+          : [leadUserId]
+        : leadUserId === null
+          ? memberIds
+          : Array.from(new Set([...memberIds, leadUserId]));
     const [project] = await db
       .insert(projectsTable)
       .values({
@@ -1821,8 +1894,8 @@ router.post(
         leadUserId,
       })
       .returning();
-    await syncProjectRelations(project.id, memberIds, deliverables);
-    for (const userId of memberIds ?? []) {
+    await syncProjectRelations(project.id, memberIdsWithLead, deliverables);
+    for (const userId of memberIdsWithLead ?? []) {
       await notify(
         me.companyId,
         "project_assigned",
@@ -1841,7 +1914,7 @@ router.post(
 router.patch(
   "/projects/:id",
   requireAuth,
-  requireManagementPermission("manage_projects"),
+  requireProjectManagementAccess(),
   async (req, res): Promise<void> => {
     const parsed = UpdateProjectBody.safeParse(req.body);
     const id = Number(req.params.id);
@@ -1853,10 +1926,41 @@ router.patch(
     const { memberIds: rawMemberIds, deliverables, ...fields } = parsed.data;
     const memberIds = await validateMemberIds(me.companyId, rawMemberIds);
     const leadUserId = await resolveLeadUserId(me.companyId, fields.leadUserId);
+    const [existingProject] = await db
+      .select({ id: projectsTable.id, leadUserId: projectsTable.leadUserId })
+      .from(projectsTable)
+      .where(
+        and(
+          eq(projectsTable.id, id),
+          eq(projectsTable.companyId, me.companyId),
+        ),
+      );
+    if (!existingProject) {
+      res.status(404).json({ error: "Project not found." });
+      return;
+    }
+    const isProjectManager =
+      (me.role === "super_admin" || me.role === "hr") &&
+      hasPermission(me, "manage_projects");
+    if (!isProjectManager && existingProject.leadUserId !== me.id) {
+      res.status(403).json({
+        error: "You can only manage projects where you are the project lead.",
+      });
+      return;
+    }
     const previousMembers = await db
       .select()
       .from(projectMembersTable)
       .where(eq(projectMembersTable.projectId, id));
+    const previousMemberIds = previousMembers.map((member) => member.userId);
+    const membersToSync =
+      memberIds === undefined
+        ? leadUserId !== null && !previousMemberIds.includes(leadUserId)
+          ? [...previousMemberIds, leadUserId]
+          : undefined
+        : leadUserId === null
+          ? memberIds
+          : Array.from(new Set([...memberIds, leadUserId]));
     const [project] = await db
       .update(projectsTable)
       .set({
@@ -1877,9 +1981,9 @@ router.patch(
       res.status(404).json({ error: "Project not found." });
       return;
     }
-    await syncProjectRelations(project.id, memberIds, deliverables);
+    await syncProjectRelations(project.id, membersToSync, deliverables);
     const previousIds = new Set(previousMembers.map((m) => m.userId));
-    for (const userId of memberIds ?? []) {
+    for (const userId of membersToSync ?? []) {
       if (!previousIds.has(userId)) {
         await notify(
           me.companyId,
@@ -1900,7 +2004,7 @@ router.patch(
 router.delete(
   "/projects/:id",
   requireAuth,
-  requireManagementPermission("manage_projects"),
+  requireProjectManagementAccess(),
   async (req, res): Promise<void> => {
     const id = Number(req.params.id);
     await db

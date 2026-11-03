@@ -1857,7 +1857,7 @@ export const DeleteClientMaterialResponse = zod.void()
 
 
 /**
- * @summary List projects the current employee is assigned to
+ * @summary List projects the current employee is assigned to or leads
  */
 export const ListMyProjectsResponseItem = zod.object({
   "id": zod.number(),
@@ -1896,7 +1896,7 @@ export const ListMyProjectsResponse = zod.array(ListMyProjectsResponseItem)
 
 
 /**
- * @summary Start a project (employee with the canCreateProjects capability)
+ * @summary Start and manage a project (employee with the canCreateProjects capability)
  */
 
 export const createMyProjectBodyProgressMin = 0;
@@ -2261,7 +2261,7 @@ export const CreateProjectResponse = zod.object({
 
 
 /**
- * @summary Update a project, its members, and deliverables (management)
+ * @summary Update a project, its members, and deliverables (management or project lead)
  */
 export const UpdateProjectParams = zod.object({
   "id": zod.coerce.number()
@@ -2327,7 +2327,7 @@ export const UpdateProjectResponse = zod.object({
 
 
 /**
- * @summary Delete a project (management)
+ * @summary Delete a project (management or authorized project lead)
  */
 export const DeleteProjectParams = zod.object({
   "id": zod.coerce.number()
