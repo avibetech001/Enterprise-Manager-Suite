@@ -58,7 +58,7 @@ export function NotificationsBell() {
   };
 
   const unreadCount = notifications?.filter((n) => !n.readAt).length || 0;
-  const recentNotifications = notifications?.slice(0, 10) || [];
+  const allNotifications = notifications || [];
 
   const getIconForType = (type: string) => {
     switch (type) {
@@ -122,9 +122,9 @@ export function NotificationsBell() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="max-h-[300px] overflow-y-auto">
-          {recentNotifications.length > 0 ? (
+          {allNotifications.length > 0 ? (
             <DropdownMenuGroup>
-              {recentNotifications.map((notification) => (
+              {allNotifications.map((notification) => (
                 <DropdownMenuItem 
                   key={notification.id} 
                   className={`flex items-start gap-3 p-3 cursor-pointer ${!notification.readAt ? "bg-muted/50" : ""}`}

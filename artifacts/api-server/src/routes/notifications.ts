@@ -33,7 +33,6 @@ router.get("/notifications", requireAuth, async (req, res): Promise<void> => {
     .from(notificationsTable)
     .where(feedFilter(req.currentUser!))
     .orderBy(desc(notificationsTable.createdAt))
-    .limit(100);
   res.json(ListNotificationsResponse.parse(rows));
 });
 
