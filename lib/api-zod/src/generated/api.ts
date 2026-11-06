@@ -1191,6 +1191,153 @@ export const CreateMyNoteResponse = zod.object({
 
 
 /**
+ * @summary List active employees who can receive a shared note
+ */
+export const ListNoteShareOptionsResponseItem = zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string()
+})
+export const ListNoteShareOptionsResponse = zod.array(ListNoteShareOptionsResponseItem)
+
+
+/**
+ * @summary List notes shared with the current employee
+ */
+export const ListSharedNotesResponseItem = zod.object({
+  "id": zod.number(),
+  "ownerName": zod.string(),
+  "content": zod.string(),
+  "updatedAt": zod.coerce.date(),
+  "sharedAt": zod.coerce.date()
+})
+export const ListSharedNotesResponse = zod.array(ListSharedNotesResponseItem)
+
+
+/**
+ * @summary Get sharing settings for a note owned by the current user
+ */
+
+
+
+export const GetMyNoteSharesParams = zod.object({
+  "noteId": zod.coerce.number().min(1)
+})
+
+export const GetMyNoteSharesResponse = zod.object({
+  "recipients": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string()
+})),
+  "externalShareActive": zod.boolean()
+})
+
+
+/**
+ * @summary Replace employee access to a note owned by the current user
+ */
+
+
+
+export const UpdateMyNoteSharesParams = zod.object({
+  "noteId": zod.coerce.number().min(1)
+})
+
+
+export const updateMyNoteSharesBodyRecipientUserIdsMax = 100;
+
+
+
+export const UpdateMyNoteSharesBody = zod.object({
+  "recipientUserIds": zod.array(zod.number().min(1)).max(updateMyNoteSharesBodyRecipientUserIdsMax)
+})
+
+export const UpdateMyNoteSharesResponse = zod.object({
+  "recipients": zod.array(zod.object({
+  "userId": zod.number(),
+  "fullName": zod.string(),
+  "email": zod.string()
+})),
+  "externalShareActive": zod.boolean()
+})
+
+
+/**
+ * @summary Create or renew an external guest link for a note
+ */
+
+
+
+export const CreateExternalNoteShareParams = zod.object({
+  "noteId": zod.coerce.number().min(1)
+})
+
+export const CreateExternalNoteShareResponse = zod.object({
+  "token": zod.string()
+})
+
+
+/**
+ * @summary Revoke the external guest link for a note
+ */
+
+
+
+export const RevokeExternalNoteShareParams = zod.object({
+  "noteId": zod.coerce.number().min(1)
+})
+
+export const RevokeExternalNoteShareResponse = zod.void()
+
+
+/**
+ * @summary Request a temporary code from the owner of a shared note
+ */
+export const requestExternalNoteCodeBodyTokenMin = 40;
+export const requestExternalNoteCodeBodyTokenMax = 60;
+
+export const requestExternalNoteCodeBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+
+
+export const RequestExternalNoteCodeBody = zod.object({
+  "token": zod.string().min(requestExternalNoteCodeBodyTokenMin).max(requestExternalNoteCodeBodyTokenMax),
+  "email": zod.string().regex(requestExternalNoteCodeBodyEmailRegExp)
+})
+
+export const RequestExternalNoteCodeResponse = zod.object({
+  "message": zod.string()
+})
+
+
+/**
+ * @summary Verify a one-time code and read a shared note
+ */
+export const verifyExternalNoteCodeBodyTokenMin = 40;
+export const verifyExternalNoteCodeBodyTokenMax = 60;
+
+export const verifyExternalNoteCodeBodyEmailRegExp = new RegExp('^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$');
+export const verifyExternalNoteCodeBodyCodeMin = 8;
+export const verifyExternalNoteCodeBodyCodeMax = 8;
+
+
+export const verifyExternalNoteCodeBodyCodeRegExp = new RegExp('^[0-9]{8}$');
+
+
+export const VerifyExternalNoteCodeBody = zod.object({
+  "token": zod.string().min(verifyExternalNoteCodeBodyTokenMin).max(verifyExternalNoteCodeBodyTokenMax),
+  "email": zod.string().regex(verifyExternalNoteCodeBodyEmailRegExp),
+  "code": zod.string().min(verifyExternalNoteCodeBodyCodeMin).max(verifyExternalNoteCodeBodyCodeMax).regex(verifyExternalNoteCodeBodyCodeRegExp)
+})
+
+export const VerifyExternalNoteCodeResponse = zod.object({
+  "ownerName": zod.string(),
+  "content": zod.string(),
+  "updatedAt": zod.coerce.date()
+})
+
+
+/**
  * @summary Update one of the current user's private dashboard notes
  */
 

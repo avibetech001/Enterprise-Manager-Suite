@@ -62,6 +62,11 @@ import type {
   EmployeeSummary,
   EmployeeUpdate,
   ErrorResponse,
+  ExternalNoteAccessRequest,
+  ExternalNoteAccessRequestResult,
+  ExternalNoteCodeVerification,
+  ExternalNoteContent,
+  ExternalNoteShare,
   FundRequest,
   FundRequestInput,
   FundRequestWithUser,
@@ -91,6 +96,9 @@ import type {
   ManagementUserInput,
   ManagementUserUpdate,
   MyProfileUpdate,
+  NoteShareRecipient,
+  NoteSharingSettings,
+  NoteSharingUpdate,
   Notification,
   PendingCounts,
   PermissionDef,
@@ -113,6 +121,7 @@ import type {
   ReviewInput,
   SetupInput,
   SetupStatus,
+  SharedNote,
   TeamChatEmployee,
   UploadUrlRequest,
   UploadUrlResponse,
@@ -3307,6 +3316,593 @@ export const useCreateMyNote = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getCreateMyNoteMutationOptions(options));
+    }
+
+export const getListNoteShareOptionsUrl = () => {
+
+
+
+
+  return `/api/me/notes/share-options`
+}
+
+/**
+ * @summary List active employees who can receive a shared note
+ */
+export const listNoteShareOptions = async ( options?: RequestInit): Promise<NoteShareRecipient[]> => {
+
+  return customFetch<NoteShareRecipient[]>(getListNoteShareOptionsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListNoteShareOptionsQueryKey = () => {
+    return [
+    `/api/me/notes/share-options`
+    ] as const;
+    }
+
+
+export const getListNoteShareOptionsQueryOptions = <TData = Awaited<ReturnType<typeof listNoteShareOptions>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNoteShareOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListNoteShareOptionsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listNoteShareOptions>>> = ({ signal }) => listNoteShareOptions({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listNoteShareOptions>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListNoteShareOptionsQueryResult = NonNullable<Awaited<ReturnType<typeof listNoteShareOptions>>>
+export type ListNoteShareOptionsQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List active employees who can receive a shared note
+ */
+
+export function useListNoteShareOptions<TData = Awaited<ReturnType<typeof listNoteShareOptions>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listNoteShareOptions>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListNoteShareOptionsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getListSharedNotesUrl = () => {
+
+
+
+
+  return `/api/me/shared-notes`
+}
+
+/**
+ * @summary List notes shared with the current employee
+ */
+export const listSharedNotes = async ( options?: RequestInit): Promise<SharedNote[]> => {
+
+  return customFetch<SharedNote[]>(getListSharedNotesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListSharedNotesQueryKey = () => {
+    return [
+    `/api/me/shared-notes`
+    ] as const;
+    }
+
+
+export const getListSharedNotesQueryOptions = <TData = Awaited<ReturnType<typeof listSharedNotes>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSharedNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListSharedNotesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listSharedNotes>>> = ({ signal }) => listSharedNotes({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listSharedNotes>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListSharedNotesQueryResult = NonNullable<Awaited<ReturnType<typeof listSharedNotes>>>
+export type ListSharedNotesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary List notes shared with the current employee
+ */
+
+export function useListSharedNotes<TData = Awaited<ReturnType<typeof listSharedNotes>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listSharedNotes>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListSharedNotesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getGetMyNoteSharesUrl = (noteId: number,) => {
+
+
+
+
+  return `/api/me/notes/${noteId}/shares`
+}
+
+/**
+ * @summary Get sharing settings for a note owned by the current user
+ */
+export const getMyNoteShares = async (noteId: number, options?: RequestInit): Promise<NoteSharingSettings> => {
+
+  return customFetch<NoteSharingSettings>(getGetMyNoteSharesUrl(noteId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMyNoteSharesQueryKey = (noteId: number,) => {
+    return [
+    `/api/me/notes/${noteId}/shares`
+    ] as const;
+    }
+
+
+export const getGetMyNoteSharesQueryOptions = <TData = Awaited<ReturnType<typeof getMyNoteShares>>, TError = ErrorType<ErrorResponse>>(noteId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyNoteShares>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMyNoteSharesQueryKey(noteId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMyNoteShares>>> = ({ signal }) => getMyNoteShares(noteId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: noteId !== null && noteId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMyNoteShares>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMyNoteSharesQueryResult = NonNullable<Awaited<ReturnType<typeof getMyNoteShares>>>
+export type GetMyNoteSharesQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get sharing settings for a note owned by the current user
+ */
+
+export function useGetMyNoteShares<TData = Awaited<ReturnType<typeof getMyNoteShares>>, TError = ErrorType<ErrorResponse>>(
+ noteId: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMyNoteShares>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMyNoteSharesQueryOptions(noteId,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getUpdateMyNoteSharesUrl = (noteId: number,) => {
+
+
+
+
+  return `/api/me/notes/${noteId}/shares`
+}
+
+/**
+ * @summary Replace employee access to a note owned by the current user
+ */
+export const updateMyNoteShares = async (noteId: number,
+    noteSharingUpdate: NoteSharingUpdate, options?: RequestInit): Promise<NoteSharingSettings> => {
+
+  return customFetch<NoteSharingSettings>(getUpdateMyNoteSharesUrl(noteId),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(noteSharingUpdate)
+  }
+);}
+
+
+
+
+
+export const getUpdateMyNoteSharesMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyNoteShares>>, TError,{noteId: number;data: BodyType<NoteSharingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateMyNoteShares>>, TError,{noteId: number;data: BodyType<NoteSharingUpdate>}, TContext> => {
+
+const mutationKey = ['updateMyNoteShares'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateMyNoteShares>>, {noteId: number;data: BodyType<NoteSharingUpdate>}> = (props) => {
+          const {noteId,data} = props ?? {};
+
+          return  updateMyNoteShares(noteId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateMyNoteSharesMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyNoteShares>>>
+    export type UpdateMyNoteSharesMutationBody = BodyType<NoteSharingUpdate>
+    export type UpdateMyNoteSharesMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Replace employee access to a note owned by the current user
+ */
+export const useUpdateMyNoteShares = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateMyNoteShares>>, TError,{noteId: number;data: BodyType<NoteSharingUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateMyNoteShares>>,
+        TError,
+        {noteId: number;data: BodyType<NoteSharingUpdate>},
+        TContext
+      > => {
+      return useMutation(getUpdateMyNoteSharesMutationOptions(options));
+    }
+
+export const getCreateExternalNoteShareUrl = (noteId: number,) => {
+
+
+
+
+  return `/api/me/notes/${noteId}/external-share`
+}
+
+/**
+ * @summary Create or renew an external guest link for a note
+ */
+export const createExternalNoteShare = async (noteId: number, options?: RequestInit): Promise<ExternalNoteShare> => {
+
+  return customFetch<ExternalNoteShare>(getCreateExternalNoteShareUrl(noteId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getCreateExternalNoteShareMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExternalNoteShare>>, TError,{noteId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createExternalNoteShare>>, TError,{noteId: number}, TContext> => {
+
+const mutationKey = ['createExternalNoteShare'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createExternalNoteShare>>, {noteId: number}> = (props) => {
+          const {noteId} = props ?? {};
+
+          return  createExternalNoteShare(noteId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateExternalNoteShareMutationResult = NonNullable<Awaited<ReturnType<typeof createExternalNoteShare>>>
+
+    export type CreateExternalNoteShareMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create or renew an external guest link for a note
+ */
+export const useCreateExternalNoteShare = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createExternalNoteShare>>, TError,{noteId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createExternalNoteShare>>,
+        TError,
+        {noteId: number},
+        TContext
+      > => {
+      return useMutation(getCreateExternalNoteShareMutationOptions(options));
+    }
+
+export const getRevokeExternalNoteShareUrl = (noteId: number,) => {
+
+
+
+
+  return `/api/me/notes/${noteId}/external-share`
+}
+
+/**
+ * @summary Revoke the external guest link for a note
+ */
+export const revokeExternalNoteShare = async (noteId: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeExternalNoteShareUrl(noteId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+
+export const getRevokeExternalNoteShareMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeExternalNoteShare>>, TError,{noteId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeExternalNoteShare>>, TError,{noteId: number}, TContext> => {
+
+const mutationKey = ['revokeExternalNoteShare'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeExternalNoteShare>>, {noteId: number}> = (props) => {
+          const {noteId} = props ?? {};
+
+          return  revokeExternalNoteShare(noteId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeExternalNoteShareMutationResult = NonNullable<Awaited<ReturnType<typeof revokeExternalNoteShare>>>
+
+    export type RevokeExternalNoteShareMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Revoke the external guest link for a note
+ */
+export const useRevokeExternalNoteShare = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeExternalNoteShare>>, TError,{noteId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeExternalNoteShare>>,
+        TError,
+        {noteId: number},
+        TContext
+      > => {
+      return useMutation(getRevokeExternalNoteShareMutationOptions(options));
+    }
+
+export const getRequestExternalNoteCodeUrl = () => {
+
+
+
+
+  return `/api/public/note-shares/request-code`
+}
+
+/**
+ * @summary Request a temporary code from the owner of a shared note
+ */
+export const requestExternalNoteCode = async (externalNoteAccessRequest: ExternalNoteAccessRequest, options?: RequestInit): Promise<ExternalNoteAccessRequestResult> => {
+
+  return customFetch<ExternalNoteAccessRequestResult>(getRequestExternalNoteCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(externalNoteAccessRequest)
+  }
+);}
+
+
+
+
+
+export const getRequestExternalNoteCodeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestExternalNoteCode>>, TError,{data: BodyType<ExternalNoteAccessRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof requestExternalNoteCode>>, TError,{data: BodyType<ExternalNoteAccessRequest>}, TContext> => {
+
+const mutationKey = ['requestExternalNoteCode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof requestExternalNoteCode>>, {data: BodyType<ExternalNoteAccessRequest>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  requestExternalNoteCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RequestExternalNoteCodeMutationResult = NonNullable<Awaited<ReturnType<typeof requestExternalNoteCode>>>
+    export type RequestExternalNoteCodeMutationBody = BodyType<ExternalNoteAccessRequest>
+    export type RequestExternalNoteCodeMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Request a temporary code from the owner of a shared note
+ */
+export const useRequestExternalNoteCode = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof requestExternalNoteCode>>, TError,{data: BodyType<ExternalNoteAccessRequest>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof requestExternalNoteCode>>,
+        TError,
+        {data: BodyType<ExternalNoteAccessRequest>},
+        TContext
+      > => {
+      return useMutation(getRequestExternalNoteCodeMutationOptions(options));
+    }
+
+export const getVerifyExternalNoteCodeUrl = () => {
+
+
+
+
+  return `/api/public/note-shares/verify`
+}
+
+/**
+ * @summary Verify a one-time code and read a shared note
+ */
+export const verifyExternalNoteCode = async (externalNoteCodeVerification: ExternalNoteCodeVerification, options?: RequestInit): Promise<ExternalNoteContent> => {
+
+  return customFetch<ExternalNoteContent>(getVerifyExternalNoteCodeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(externalNoteCodeVerification)
+  }
+);}
+
+
+
+
+
+export const getVerifyExternalNoteCodeMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyExternalNoteCode>>, TError,{data: BodyType<ExternalNoteCodeVerification>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyExternalNoteCode>>, TError,{data: BodyType<ExternalNoteCodeVerification>}, TContext> => {
+
+const mutationKey = ['verifyExternalNoteCode'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyExternalNoteCode>>, {data: BodyType<ExternalNoteCodeVerification>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  verifyExternalNoteCode(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyExternalNoteCodeMutationResult = NonNullable<Awaited<ReturnType<typeof verifyExternalNoteCode>>>
+    export type VerifyExternalNoteCodeMutationBody = BodyType<ExternalNoteCodeVerification>
+    export type VerifyExternalNoteCodeMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Verify a one-time code and read a shared note
+ */
+export const useVerifyExternalNoteCode = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyExternalNoteCode>>, TError,{data: BodyType<ExternalNoteCodeVerification>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyExternalNoteCode>>,
+        TError,
+        {data: BodyType<ExternalNoteCodeVerification>},
+        TContext
+      > => {
+      return useMutation(getVerifyExternalNoteCodeMutationOptions(options));
     }
 
 export const getUpdateMyNoteUrl = (noteId: number,) => {

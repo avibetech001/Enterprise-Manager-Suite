@@ -25,8 +25,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { FileText, NotebookPen, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { FileText, NotebookPen, Pencil, Plus, Save, Share2, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { NoteSharingDialog } from "@/components/note-sharing-dialog";
 
 function notePreview(content: string): string {
   return content.trim() || "Empty note";
@@ -52,6 +53,7 @@ export function DashboardNote({ allNotesVisible = false }: { allNotesVisible?: b
   const [isNewNote, setIsNewNote] = useState(false);
   const [content, setContent] = useState("");
   const [saved, setSaved] = useState(false);
+  const [sharingNote, setSharingNote] = useState<{ id: number; content: string } | null>(null);
 
   useEffect(() => {
     if (isLoading || isNewNote || activeNoteId !== null || !notes?.length) return;
@@ -188,6 +190,19 @@ export function DashboardNote({ allNotesVisible = false }: { allNotesVisible?: b
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8"
+                          aria-label="Share saved note"
+                          title="Share note"
+                          onClick={() =>
+                            setSharingNote({ id: note.id, content: note.content })
+                          }
+                        >
+                          <Share2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
                           aria-label="Edit saved note"
                           title="Edit note"
                           onClick={() => openNote(note.id)}
@@ -263,6 +278,17 @@ export function DashboardNote({ allNotesVisible = false }: { allNotesVisible?: b
           </div>
         </CardContent>
       </Card>
+
+      {sharingNote && (
+        <NoteSharingDialog
+          noteId={sharingNote.id}
+          noteContent={sharingNote.content}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSharingNote(null);
+          }}
+        />
+      )}
 
       <AlertDialog
         open={deleteNoteId !== null}

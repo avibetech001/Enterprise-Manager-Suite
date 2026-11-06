@@ -15,6 +15,7 @@ import SetupPage from '@/pages/setup';
 import ManagementLogin from '@/pages/management-login';
 import EmployeeLogin from '@/pages/employee-login';
 import ActivatePage from '@/pages/activate';
+import SharedNoteGuestPage from '@/pages/shared-note-guest';
 
 import ManagementDashboard from '@/pages/management/dashboard';
 import EmployeeDashboard from '@/pages/employee/dashboard';
@@ -98,6 +99,10 @@ function Router() {
             <ActivatePage />
           </GuestGuard>
         </SetupGuard>
+      </Route>
+
+      <Route path="/shared-note">
+        <SharedNoteGuestPage />
       </Route>
 
       {/* Employee Routes */}

@@ -14,6 +14,7 @@ import chatRouter from "./chat";
 import appraisalsRouter from "./appraisals";
 import clientsRouter from "./clients";
 import noteDraftsRouter from "./note-drafts";
+import noteSharingRouter from "./note-sharing";
 
 const router: IRouter = Router();
 
@@ -32,5 +33,6 @@ router.use(chatRouter);
 router.use(appraisalsRouter);
 router.use(clientsRouter);
 router.use(noteDraftsRouter);
+router.use(noteSharingRouter);
 
 export default router;

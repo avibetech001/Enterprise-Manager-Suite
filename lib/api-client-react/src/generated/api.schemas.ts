@@ -713,6 +713,73 @@ export interface DashboardNoteUpdate {
   content: string;
 }
 
+export interface NoteShareRecipient {
+  userId: number;
+  fullName: string;
+  email: string;
+}
+
+export interface NoteSharingSettings {
+  recipients: NoteShareRecipient[];
+  externalShareActive: boolean;
+}
+
+export interface NoteSharingUpdate {
+  /**
+     * @maxItems 100
+     * @items.minimum 1
+     */
+  recipientUserIds: number[];
+}
+
+export interface SharedNote {
+  id: number;
+  ownerName: string;
+  content: string;
+  updatedAt: string;
+  sharedAt: string;
+}
+
+export interface ExternalNoteShare {
+  token: string;
+}
+
+export interface ExternalNoteAccessRequest {
+  /**
+     * @minLength 40
+     * @maxLength 60
+     */
+  token: string;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+}
+
+export interface ExternalNoteAccessRequestResult {
+  message: string;
+}
+
+export interface ExternalNoteCodeVerification {
+  /**
+     * @minLength 40
+     * @maxLength 60
+     */
+  token: string;
+  /** @pattern ^[^\s@]+@[^\s@]+\.[^\s@]+$ */
+  email: string;
+  /**
+     * @minLength 8
+     * @maxLength 8
+     * @pattern ^[0-9]{8}$
+     */
+  code: string;
+}
+
+export interface ExternalNoteContent {
+  ownerName: string;
+  content: string;
+  updatedAt: string;
+}
+
 export interface AttendanceCode {
   code: string;
 }

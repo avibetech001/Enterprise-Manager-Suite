@@ -1049,6 +1049,222 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /me/notes/share-options:
+    get:
+      operationId: listNoteShareOptions
+      tags: [me]
+      summary: List active employees who can receive a shared note
+      responses:
+        "200":
+          description: Employees in the current user's company
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NoteShareRecipient"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /me/shared-notes:
+    get:
+      operationId: listSharedNotes
+      tags: [me]
+      summary: List notes shared with the current employee
+      responses:
+        "200":
+          description: Notes shared with the current user
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SharedNote"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /me/notes/{noteId}/shares:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    get:
+      operationId: getMyNoteShares
+      tags: [me]
+      summary: Get sharing settings for a note owned by the current user
+      responses:
+        "200":
+          description: Current sharing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteSharingSettings"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateMyNoteShares
+      tags: [me]
+      summary: Replace employee access to a note owned by the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NoteSharingUpdate"
+      responses:
+        "200":
+          description: Updated sharing settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NoteSharingSettings"
+        "400":
+          description: Invalid recipients
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /me/notes/{noteId}/external-share:
+    parameters:
+      - name: noteId
+        in: path
+        required: true
+        schema:
+          type: integer
+          minimum: 1
+    post:
+      operationId: createExternalNoteShare
+      tags: [me]
+      summary: Create or renew an external guest link for a note
+      responses:
+        "200":
+          description: New external share token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalNoteShare"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      operationId: revokeExternalNoteShare
+      tags: [me]
+      summary: Revoke the external guest link for a note
+      responses:
+        "204":
+          description: External link revoked
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note or external link not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/note-shares/request-code:
+    post:
+      operationId: requestExternalNoteCode
+      tags: [me]
+      summary: Request a temporary code from the owner of a shared note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExternalNoteAccessRequest"
+      responses:
+        "202":
+          description: Generic response that does not reveal whether the link exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalNoteAccessRequestResult"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /public/note-shares/verify:
+    post:
+      operationId: verifyExternalNoteCode
+      tags: [me]
+      summary: Verify a one-time code and read a shared note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExternalNoteCodeVerification"
+      responses:
+        "200":
+          description: Read-only note contents
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalNoteContent"
+        "400":
+          description: Invalid or expired code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Share link not found or revoked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /me/notes/{noteId}:
     patch:
       operationId: updateMyNote
@@ -4064,6 +4280,111 @@ components:
         content:
           type: string
           maxLength: 50000
+
+    NoteShareRecipient:
+      type: object
+      required: [userId, fullName, email]
+      properties:
+        userId:
+          type: integer
+        fullName:
+          type: string
+        email:
+          type: string
+
+    NoteSharingSettings:
+      type: object
+      required: [recipients, externalShareActive]
+      properties:
+        recipients:
+          type: array
+          items:
+            $ref: "#/components/schemas/NoteShareRecipient"
+        externalShareActive:
+          type: boolean
+
+    NoteSharingUpdate:
+      type: object
+      required: [recipientUserIds]
+      properties:
+        recipientUserIds:
+          type: array
+          maxItems: 100
+          items:
+            type: integer
+            minimum: 1
+
+    SharedNote:
+      type: object
+      required: [id, ownerName, content, updatedAt, sharedAt]
+      properties:
+        id:
+          type: integer
+        ownerName:
+          type: string
+        content:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+        sharedAt:
+          type: string
+          format: date-time
+
+    ExternalNoteShare:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+
+    ExternalNoteAccessRequest:
+      type: object
+      required: [token, email]
+      properties:
+        token:
+          type: string
+          minLength: 40
+          maxLength: 60
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+
+    ExternalNoteAccessRequestResult:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+
+    ExternalNoteCodeVerification:
+      type: object
+      required: [token, email, code]
+      properties:
+        token:
+          type: string
+          minLength: 40
+          maxLength: 60
+        email:
+          type: string
+          pattern: '^[^\s@]+@[^\s@]+\.[^\s@]+$'
+        code:
+          type: string
+          pattern: '^[0-9]{8}$'
+          minLength: 8
+          maxLength: 8
+
+    ExternalNoteContent:
+      type: object
+      required: [ownerName, content, updatedAt]
+      properties:
+        ownerName:
+          type: string
+        content:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
 
     AttendanceCode:
       type: object
