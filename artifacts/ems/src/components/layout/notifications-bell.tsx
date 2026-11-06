@@ -57,8 +57,8 @@ export function NotificationsBell() {
     }
   };
 
-  const unreadCount = notifications?.filter((n) => !n.readAt).length || 0;
-  const allNotifications = notifications || [];
+  const unreadNotifications = notifications?.filter((notification) => !notification.readAt) || [];
+  const unreadCount = unreadNotifications.length;
 
   const getIconForType = (type: string) => {
     switch (type) {
@@ -76,6 +76,11 @@ export function NotificationsBell() {
   const handleMarkRead = (id: number) => {
     markRead.mutate({ id }, {
       onSuccess: () => {
+        queryClient.setQueryData(
+          getListNotificationsQueryKey(),
+          (current: typeof notifications) =>
+            current?.filter((notification) => notification.id !== id),
+        );
         queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
       }
     });
@@ -84,20 +89,14 @@ export function NotificationsBell() {
   const handleMarkAllRead = () => {
     markAllRead.mutate(undefined, {
       onSuccess: () => {
+        queryClient.setQueryData(getListNotificationsQueryKey(), []);
         queryClient.invalidateQueries({ queryKey: getListNotificationsQueryKey() });
       }
     });
   };
 
-  // Opening the bell counts as "seeing" the notifications: clear the unread
-  // counter (nav badge + app icon number) once the panel closes.
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open && unreadCount > 0) handleMarkAllRead();
-  };
-
   return (
-    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size="icon" className="relative h-8 w-8 rounded-full">
           <Bell className="h-4 w-4" />
@@ -116,15 +115,15 @@ export function NotificationsBell() {
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">Notifications</p>
             <p className="text-xs text-muted-foreground">
-              You have {unreadCount} unread messages
+              You have {unreadCount} unread notifications
             </p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <div className="max-h-[300px] overflow-y-auto">
-          {allNotifications.length > 0 ? (
+          {unreadNotifications.length > 0 ? (
             <DropdownMenuGroup>
-              {allNotifications.map((notification) => (
+              {unreadNotifications.map((notification) => (
                 <DropdownMenuItem 
                   key={notification.id} 
                   className={`flex items-start gap-3 p-3 cursor-pointer ${!notification.readAt ? "bg-muted/50" : ""}`}
@@ -149,7 +148,7 @@ export function NotificationsBell() {
             </DropdownMenuGroup>
           ) : (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              No notifications yet
+              No unread notifications
             </div>
           )}
         </div>
