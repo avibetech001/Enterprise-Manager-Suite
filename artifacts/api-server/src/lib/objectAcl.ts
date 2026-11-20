@@ -1,21 +1,16 @@
-import { File } from '@google-cloud/storage';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 
-const ACL_POLICY_METADATA_KEY = 'custom:aclPolicy';
+export interface StoredObject {
+  absolutePath: string;
+  relativePath: string;
+}
 
-// Can be flexibly defined according to the use case.
-//
-// Examples:
-// - USER_LIST: the users from a list stored in the database;
-// - EMAIL_DOMAIN: the users whose email is in a specific domain;
-// - GROUP_MEMBER: the users who are members of a specific group;
-// - SUBSCRIBER: the users who are subscribers of a specific service / content
-//   creator.
+const ACL_POLICY_METADATA_KEY = 'aclPolicy';
+
 export enum ObjectAccessGroupType {}
 
 export interface ObjectAccessGroup {
   type: ObjectAccessGroupType;
-  // The logic id that identifies qualified group members. Format depends on the
-  // ObjectAccessGroupType — e.g. a user-list DB id, an email domain, a group id.
   id: string;
 }
 
@@ -29,7 +24,6 @@ export interface ObjectAclRule {
   permission: ObjectPermission;
 }
 
-// Stored as object custom metadata under "custom:aclPolicy" (JSON string).
 export interface ObjectAclPolicy {
   owner: string;
   visibility: 'public' | 'private';
@@ -46,52 +40,41 @@ function isPermissionAllowed(
   return granted === ObjectPermission.WRITE;
 }
 
-abstract class BaseObjectAccessGroup implements ObjectAccessGroup {
-  constructor(
-    public readonly type: ObjectAccessGroupType,
-    public readonly id: string,
-  ) {}
-
-  public abstract hasMember(userId: string): Promise<boolean>;
-}
-
-function createObjectAccessGroup(
-  group: ObjectAccessGroup,
-): BaseObjectAccessGroup {
-  switch (group.type) {
-    // Implement per access group type, e.g.:
-    // case "USER_LIST":
-    //   return new UserListAccessGroup(group.id);
-    default:
-      throw new Error(`Unknown access group type: ${group.type}`);
-  }
-}
-
 export async function setObjectAclPolicy(
-  objectFile: File,
+  objectFile: StoredObject,
   aclPolicy: ObjectAclPolicy,
 ): Promise<void> {
-  const [exists] = await objectFile.exists();
-  if (!exists) {
-    throw new Error(`Object not found: ${objectFile.name}`);
+  try {
+    if (!(await stat(objectFile.absolutePath)).isFile()) {
+      throw new Error(`Object not found: ${objectFile.relativePath}`);
+    }
+  } catch {
+    throw new Error(`Object not found: ${objectFile.relativePath}`);
   }
 
-  await objectFile.setMetadata({
-    metadata: {
-      [ACL_POLICY_METADATA_KEY]: JSON.stringify(aclPolicy),
-    },
+  let metadata: Record<string, unknown> = {};
+  try {
+    metadata = JSON.parse(await readFile(`${objectFile.absolutePath}.meta.json`, 'utf8'));
+  } catch {
+    // Metadata is optional for files uploaded by older versions.
+  }
+  metadata[ACL_POLICY_METADATA_KEY] = aclPolicy;
+  await writeFile(`${objectFile.absolutePath}.meta.json`, JSON.stringify(metadata), {
+    mode: 0o600,
   });
 }
 
 export async function getObjectAclPolicy(
-  objectFile: File,
+  objectFile: StoredObject,
 ): Promise<ObjectAclPolicy | null> {
-  const [metadata] = await objectFile.getMetadata();
-  const aclPolicy = metadata?.metadata?.[ACL_POLICY_METADATA_KEY];
-  if (!aclPolicy) {
+  try {
+    const metadata = JSON.parse(
+      await readFile(`${objectFile.absolutePath}.meta.json`, 'utf8'),
+    );
+    return metadata?.[ACL_POLICY_METADATA_KEY] || null;
+  } catch {
     return null;
   }
-  return JSON.parse(aclPolicy as string);
 }
 
 export async function canAccessObject({
@@ -100,13 +83,11 @@ export async function canAccessObject({
   requestedPermission,
 }: {
   userId?: string;
-  objectFile: File;
+  objectFile: StoredObject;
   requestedPermission: ObjectPermission;
 }): Promise<boolean> {
   const aclPolicy = await getObjectAclPolicy(objectFile);
-  if (!aclPolicy) {
-    return false;
-  }
+  if (!aclPolicy) return false;
 
   if (
     aclPolicy.visibility === 'public' &&
@@ -115,23 +96,18 @@ export async function canAccessObject({
     return true;
   }
 
-  if (!userId) {
-    return false;
-  }
+  if (!userId) return false;
+  if (aclPolicy.owner === userId) return true;
 
-  if (aclPolicy.owner === userId) {
-    return true;
-  }
-
+  // No access-group providers are configured in this deployment.
   for (const rule of aclPolicy.aclRules || []) {
-    const accessGroup = createObjectAccessGroup(rule.group);
     if (
-      (await accessGroup.hasMember(userId)) &&
+      rule.group?.type === 'USER' &&
+      rule.group.id === userId &&
       isPermissionAllowed(requestedPermission, rule.permission)
     ) {
       return true;
     }
   }
-
   return false;
 }

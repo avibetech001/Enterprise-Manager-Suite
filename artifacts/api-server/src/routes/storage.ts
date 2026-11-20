@@ -36,13 +36,19 @@ function hasAuthenticatedSession(req: Request): boolean {
   return req.currentUser != null;
 }
 
+function getMaxUploadBytes(): number {
+  const configuredLimit = Number(process.env.MAX_UPLOAD_SIZE_MB || 50);
+  return Number.isFinite(configuredLimit) && configuredLimit > 0
+    ? Math.floor(configuredLimit * 1024 * 1024)
+    : 50 * 1024 * 1024;
+}
+
 /**
  * POST /storage/uploads/request-url
  *
- * Request a presigned URL for file upload.
- * The client sends JSON metadata (name, size, contentType) — NOT the file.
- * Then uploads the file directly to the returned presigned URL.
- * Requires auth middleware so public callers cannot mint write-capable URLs.
+ * Request a same-origin upload URL.
+ * The client sends JSON metadata first, then PUTs the file to the authenticated
+ * upload endpoint. The returned object path is stored in application records.
  */
 router.post(
   '/storage/uploads/request-url',
@@ -61,10 +67,14 @@ router.post(
 
     try {
       const { name, size, contentType } = parsed.data;
+      if (size > getMaxUploadBytes()) {
+        res.status(413).json({ error: 'File exceeds the upload size limit' });
+        return;
+      }
 
-      const uploadURL = await objectStorageService.getObjectEntityUploadURL();
-      const objectPath =
-        objectStorageService.normalizeObjectEntityPath(uploadURL);
+      const objectId = objectStorageService.createUploadObjectId();
+      const uploadURL = `/api/storage/uploads/${objectId}`;
+      const objectPath = `/objects/uploads/${objectId}`;
 
       res.json(
         RequestUploadUrlResponse.parse({
@@ -76,6 +86,53 @@ router.post(
     } catch (error) {
       req.log.error({ err: error }, 'Error generating upload URL');
       res.status(500).json({ error: 'Failed to generate upload URL' });
+    }
+  },
+);
+
+/**
+ * PUT /storage/uploads/:objectId
+ *
+ * Receives the file on the EMS server and stores it outside public_html.
+ * This replaces Replit's presigned-object-storage upload endpoint.
+ */
+router.put(
+  '/storage/uploads/:objectId',
+  async (req: Request, res: Response) => {
+    if (!hasAuthenticatedSession(req)) {
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
+    }
+
+    const objectId = req.params.objectId;
+    if (typeof objectId !== 'string' || !/^[0-9a-f-]{36}$/i.test(objectId)) {
+      res.status(400).json({ error: 'Invalid upload identifier' });
+      return;
+    }
+
+    const maxBytes = getMaxUploadBytes();
+    const contentLength = Number(req.headers['content-length'] || 0);
+    if (contentLength > maxBytes) {
+      res.status(413).json({ error: 'File exceeds the upload size limit' });
+      return;
+    }
+
+    try {
+      await objectStorageService.saveUploadedObject(
+        objectId,
+        req,
+        String(req.headers['content-type'] || 'application/octet-stream'),
+        maxBytes,
+      );
+      res.status(204).end();
+    } catch (error) {
+      req.log.error({ err: error }, 'Error saving uploaded file');
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('byte limit')) {
+        res.status(413).json({ error: 'File exceeds the upload size limit' });
+        return;
+      }
+      res.status(500).json({ error: 'Failed to save uploaded file' });
     }
   },
 );
